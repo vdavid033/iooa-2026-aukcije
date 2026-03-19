@@ -46,10 +46,20 @@ app.get("/api/korisnici", authJwt.verifyTokenAdmin, (req, res) => {
 
 app.get("/getUnosPredmeta", authJwt.verifyTokenUser, function (request, response) {
   connection.query("SELECT * FROM korisnik", function (error, korisniciResults) {
-    if (error) throw error;
+    if (error) {
+      console.error("Error fetching korisnici for /getUnosPredmeta:", error);
+      return response.status(500).send({
+        message: "Dogodila se greska pri dohvatu korisnika.",
+      });
+    }
 
     connection.query("SELECT * FROM kategorija", function (error, kategorijeResults) {
-      if (error) throw error;
+      if (error) {
+        console.error("Error fetching kategorije for /getUnosPredmeta:", error);
+        return response.status(500).send({
+          message: "Dogodila se greska pri dohvatu kategorija.",
+        });
+      }
 
       response.send({
         korisnici: korisniciResults,

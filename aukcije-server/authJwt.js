@@ -48,8 +48,8 @@ verifyTokenUser = (req, res, next) => {
       });
     }
     req.userId = decoded.id;
+    next();
   });
-  next();
 };
 
 const authJwt = {
