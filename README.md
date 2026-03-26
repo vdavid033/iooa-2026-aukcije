@@ -4,3 +4,4 @@ Aukcije
 Članovi tima:
 
 - Lovro Krpan - 
+- Antonio Ćosić -
