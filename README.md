@@ -5,3 +5,4 @@ Aukcije
 
 - Lovro Krpan - 
 - Antonio Ćosić -
+- Duje Medak -
