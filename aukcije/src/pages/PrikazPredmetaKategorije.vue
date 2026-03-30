@@ -1,22 +1,56 @@
 <template>
   <div class="row justify-center q-pa-md">
-    <q-input v-model="Pretrazivanje" filled placeholder="Pretraži aukcije" dense class="q-input--width" />
+    <q-input
+      v-model="Pretrazivanje"
+      filled
+      placeholder="Pretraži aukcije"
+      dense
+      class="q-input--width"
+    />
     <div style="width: 227px">
-      <q-select filled lazy-rules emit-value v-model="selectedsortianje" label="Sortiraj po" :options="sortiranje" option-label="label" option-value="value" map-options @update:model-value="sortiranjeOpcija" />
+      <q-select
+        filled
+        lazy-rules
+        emit-value
+        v-model="selectedsortianje"
+        label="Sortiraj po"
+        :options="sortiranje"
+        option-label="label"
+        option-value="value"
+        map-options
+        @update:model-value="sortiranjeOpcija"
+      />
     </div>
   </div>
   <q-separator class="separator" />
-  <q-item class="q-pa-sm text-bold text-blue-7" style="font-size: 30px"></q-item>
+  <q-item
+    class="q-pa-sm text-bold text-blue-7"
+    style="font-size: 30px"
+  ></q-item>
   <div class="q-pa-sm row flex flex-center">
-    <div v-for="item in filteredItems" :key="item.id_predmeta" class="q-pa-md" style="width: 400px">
+    <div
+      v-for="item in filteredItems"
+      :key="item.id_predmeta"
+      class="q-pa-md"
+      style="width: 400px"
+    >
       <q-card @click="navigateToItem(item.id_predmeta)">
         <q-img v-if="item.slika" :src="item.slika" no-native-menu />
         <q-item-section>
-          <q-item class="q-pa-sm text-bold text-blue-7">{{ item.naziv_predmeta }} </q-item>
+          <q-item class="q-pa-sm text-bold text-blue-7"
+            >{{ item.naziv_predmeta }}
+          </q-item>
           <q-item>Početna cijena: {{ item.pocetna_cijena }}$</q-item>
-          <q-item>Vrijeme pocetka: {{ formattedDate(item.vrijeme_pocetka) }}</q-item>
-          <q-item>Vrijeme zavrsetka: {{ formattedDate(item.vrijeme_zavrsetka) }}</q-item>
-          <q-item>Preostalo vrijeme aukcije: {{ item.preostalo_vrijeme }} h </q-item>
+          <q-item
+            >Vrijeme pocetka: {{ formattedDate(item.vrijeme_pocetka) }}</q-item
+          >
+          <q-item
+            >Vrijeme zavrsetka:
+            {{ formattedDate(item.vrijeme_zavrsetka) }}</q-item
+          >
+          <q-item
+            >Preostalo vrijeme aukcije: {{ item.preostalo_vrijeme }} h
+          </q-item>
           <q-item>Trenutna cijena: {{ item.trenutna_cijena }}$</q-item>
         </q-item-section>
       </q-card>
@@ -25,6 +59,7 @@
 </template>
 
 <script>
+import { io } from "socket.io-client";
 import { ref } from "vue";
 import axios from "axios";
 
@@ -44,7 +79,12 @@ export default {
       // Filter items based on search query and ensure uniqueness
       this.items.forEach((item) => {
         // Check if the attraction is already in the map
-        if (!uniqueItemsMap.has(item.id_predmeta) && item.naziv_predmeta.toLowerCase().includes(this.Pretrazivanje.toLowerCase())) {
+        if (
+          !uniqueItemsMap.has(item.id_predmeta) &&
+          item.naziv_predmeta
+            .toLowerCase()
+            .includes(this.Pretrazivanje.toLowerCase())
+        ) {
           // If not, add it to the map
           uniqueItemsMap.set(item.id_predmeta, item);
         }
@@ -69,6 +109,7 @@ export default {
     return {
       Pretrazivanje: "",
       items: [],
+      socket: null,
       selectedsortianje: "",
       sortiranje: [
         { label: "Cijena: manja prema većoj", value: "price-asc" },
@@ -81,9 +122,29 @@ export default {
   },
 
   mounted() {
-    axios.get(baseUrl + "get-kategorija-predmet/" + this.id_kategorije, {}).then((response) => {
-      this.items = response.data;
-    });
+    axios
+      .get(baseUrl + "get-kategorija-predmet/" + this.id_kategorije, {})
+      .then((response) => {
+        this.items = response.data;
+
+        // ✅ DODAJ OVO — tek nakon što se items učitaju
+        this.socket = io("http://localhost:3000");
+
+        // Pridruži se sobi za svaki predmet koji je vidljiv na listi
+        this.items.forEach((item) => {
+          this.socket.emit("pridruzi_se_predmetu", item.id_predmeta);
+        });
+
+        // Slušaj ažuriranja cijene
+        this.socket.on("cijena_azurirana", (data) => {
+          const predmet = this.items.find(
+            (item) => item.id_predmeta == data.id_predmeta,
+          );
+          if (predmet) {
+            predmet.trenutna_cijena = data.nova_cijena;
+          }
+        });
+      });
   },
 
   methods: {
@@ -105,18 +166,31 @@ export default {
           this.items.sort((a, b) => b.pocetna_cijena - a.pocetna_cijena);
           break;
         case "name-asc":
-          this.items.sort((a, b) => a.naziv_predmeta.localeCompare(b.naziv_predmeta));
+          this.items.sort((a, b) =>
+            a.naziv_predmeta.localeCompare(b.naziv_predmeta),
+          );
           break;
         case "name-desc":
-          this.items.sort((a, b) => b.naziv_predmeta.localeCompare(a.naziv_predmeta));
+          this.items.sort((a, b) =>
+            b.naziv_predmeta.localeCompare(a.naziv_predmeta),
+          );
           break;
         case "expiration":
-          this.items.sort((a, b) => new Date(a.vrijeme_zavrsetka) - new Date(b.vrijeme_zavrsetka));
+          this.items.sort(
+            (a, b) =>
+              new Date(a.vrijeme_zavrsetka) - new Date(b.vrijeme_zavrsetka),
+          );
           break;
       }
     },
   },
 };
+
+beforeUnmount() {
+  if (this.socket) {
+    this.socket.disconnect();
+  }
+}
 </script>
 
 <style>

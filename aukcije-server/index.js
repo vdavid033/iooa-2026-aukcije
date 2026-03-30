@@ -11,6 +11,15 @@ const upload = multer();
 const jwt = require("jsonwebtoken");
 const config = require("../aukcije-server/auth.config.js");
 const authJwt = require("../aukcije-server/authJwt.js");
+const nodemailer = require("nodemailer");
+// Email transporter (koristi Gmail ili drugi SMTP)
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: "aukcijeaplikacija@gmail.com", // zamijeni svojim emailom
+    pass: "uqqodzjrlejpobet", // Gmail App Password (ne obična lozinka!)
+  },
+});
 
 const app = express();
 const port = 3000;
@@ -334,11 +343,19 @@ app.post(
         data.id_predmeta,
       ],
     ];
+
     connection.query(
       "INSERT INTO ponuda (vrijednost_ponude, vrijeme_ponude, id_korisnika, id_predmeta) VALUES ?",
       [ponuda],
-      function (error, results, fields) {
+      function (error, results) {
         if (error) throw error;
+
+        // ✅ NOVO: emitira svim korisnicima u sobi tog predmeta
+        io.to(`predmet_${data.id_predmeta}`).emit("cijena_azurirana", {
+          id_predmeta: data.id_predmeta,
+          nova_cijena: data.vrijednost_ponude,
+        });
+
         return response.send({
           error: false,
           data: results,
@@ -423,9 +440,10 @@ app.get("/api/get-predmet-trenutna-cijena/:id", (req, res) => {
   );
 });
 
-app.listen(port, () => {
+server.listen(port, () => {
   console.log("Server running at port: " + port);
 });
+
 app.post("/regaKorisnika", function (request, response) {
   const data = request.body;
   const saltRounds = 10;
@@ -448,12 +466,10 @@ app.post("/regaKorisnika", function (request, response) {
       function (error, results, fields) {
         if (error) {
           console.error("Registracija korisnika neuspješna.", error);
-          return response
-            .status(500)
-            .json({
-              error: true,
-              message: "Registracija korisnika neuspješna.",
-            });
+          return response.status(500).json({
+            error: true,
+            message: "Registracija korisnika neuspješna.",
+          });
         }
         console.log("data", data);
         return response.send({
@@ -496,20 +512,16 @@ app.post("/login", function (req, res) {
                 },
                 config.secret,
               );
-              res
-                .status(200)
-                .json({
-                  success: true,
-                  message: "Login successful",
-                  token: token,
-                });
+              res.status(200).json({
+                success: true,
+                message: "Login successful",
+                token: token,
+              });
             } else {
-              res
-                .status(401)
-                .json({
-                  success: false,
-                  message: "Invalid email or password ",
-                });
+              res.status(401).json({
+                success: false,
+                message: "Invalid email or password ",
+              });
             }
           },
         );

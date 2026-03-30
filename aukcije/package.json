@@ -17,7 +17,9 @@
     "browser-image-compression": "^2.0.2",
     "core-js": "^3.6.5",
     "jwt-decode": "^4.0.0",
+    "nodemailer": "^8.0.4",
     "quasar": "^2.6.0",
+    "socket.io-client": "^4.8.3",
     "vue": "^3.0.0",
     "vue-axios": "^3.5.2",
     "vue-router": "^4.0.0"
