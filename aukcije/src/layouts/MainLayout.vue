@@ -10,8 +10,19 @@
             </q-avatar>
           </router-link>
         </q-toolbar-title>
-        <q-space></q-space>
-        <q-space /><q-space /><q-space /><q-space /><q-space /><q-space /><q-space /><q-space />
+        <q-space />
+
+        <q-select
+          dense
+          borderless
+          emit-value
+          map-options
+          v-model="lang"
+          :options="languageOptions"
+          style="width: 90px"
+          @update:model-value="changeLanguage"
+        />
+
         <template v-if="isAuthenticated()">
           <div class="q-pa-md">
             <q-btn-dropdown  ripple="false" stretch flat text-color="white" color="primary" :label="`${userIme} ${userPrezime}`" >
@@ -105,11 +116,27 @@
 <script>
 import { defineComponent, ref, computed } from "vue";
 import { jwtDecode } from "jwt-decode";
+import { useI18n } from "vue-i18n";
 
 export default defineComponent({
   name: "MainLayout",
 
   setup() {
+    const { locale } = useI18n();
+
+    const lang = ref(localStorage.getItem("lang") || "hr-HR");
+
+    const languageOptions = [
+      { label: "HR", value: "hr-HR" },
+      { label: "ENG", value: "en-US" },
+    ];
+
+    const changeLanguage = (value) => {
+      lang.value = value;
+      locale.value = value;
+      localStorage.setItem("lang", value);
+    };
+
     const leftDrawerOpen = ref(false);
     const confirmLogoutDialog = ref(false);
 
@@ -175,6 +202,9 @@ export default defineComponent({
     };
 
     return {
+      lang,
+      languageOptions,
+      changeLanguage,
       leftDrawerOpen,
       confirmLogoutDialog,
       isAuthenticated,

@@ -2,20 +2,48 @@
   <q-page class="bg-blue window-height window-width row justify-center items-center">
     <div class="column">
       <div class="row">
-        <h5 class="text-h3 text-white q-my-md">Prijava</h5>
+        <h5 class="text-h3 text-white q-my-md">{{ t('loginPage.title') }}</h5>
       </div>
+
       <div class="row">
         <q-card square bordered class="q-pa-lg shadow-1">
           <q-card-section>
             <q-form class="q-gutter-md" @submit.prevent="login">
-              <q-input square filled v-model="email_korisnika" type="email" label="Vaš email" />
-              <q-input square filled v-model="lozinka_korisnika" type="password" label="Lozinka" />
-              <div class="text-center"><q-btn size="lg" type="submit" label="Prijava" color="light-blue-7" /></div>
+
+              <q-input
+                square
+                filled
+                v-model="email_korisnika"
+                type="email"
+                :label="t('loginPage.email')"
+              />
+
+              <q-input
+                square
+                filled
+                v-model="lozinka_korisnika"
+                type="password"
+                :label="t('loginPage.password')"
+              />
+
+              <div class="text-center">
+                <q-btn
+                  size="lg"
+                  type="submit"
+                  :label="t('loginPage.submit')"
+                  color="light-blue-7"
+                />
+              </div>
+
             </q-form>
           </q-card-section>
+
           <q-card-section class="text-center q-pa-none">
-            <router-link to="registracija" class="link-style"><p class="text-grey-6">Registrirajte se!</p></router-link>
+            <router-link to="registracija" class="link-style">
+              <p class="text-grey-6">{{ t('loginPage.register') }}</p>
+            </router-link>
           </q-card-section>
+
         </q-card>
       </div>
     </div>
@@ -24,14 +52,21 @@
 
 <script>
 import axios from "axios";
+import { useI18n } from "vue-i18n";
 
 export default {
+  setup() {
+    const { t } = useI18n();
+    return { t };
+  },
+
   data() {
     return {
       email_korisnika: "",
       lozinka_korisnika: "",
     };
   },
+
   methods: {
     async login() {
       try {
@@ -41,16 +76,12 @@ export default {
         });
 
         if (response.data.success) {
-          // Save the JWT token to local storage
           localStorage.setItem("token", response.data.token);
 
-          // Redirect to the desired page
           this.$router.push("/Pocetna").then(() => {
-            // Refresh the page
             window.location.reload();
           });
         } else {
-          // Show error message if login fails
           this.$q.notify({
             color: "negative",
             position: "top",
@@ -60,10 +91,11 @@ export default {
         }
       } catch (error) {
         console.error("Login failed:", error);
+
         this.$q.notify({
           color: "negative",
           position: "top",
-          message: "Prijava nije uspjela. Provjerite podatke i pokušajte ponovno.",
+          message: this.t("loginPage.failed"),
           icon: "warning",
         });
       }
@@ -71,9 +103,3 @@ export default {
   },
 };
 </script>
-
-<style>
-.q-pa-lg {
-  width: 360px;
-}
-</style>
