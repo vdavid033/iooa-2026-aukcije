@@ -1,35 +1,65 @@
 <template>
   <q-card>
     <div class="row justify-center q-pa-md">
-      <q-input v-model="Pretrazivanje" filled placeholder="Pretraži aukcije" dense class="q-input--width " />
+      <q-input
+        v-model="Pretrazivanje"
+        filled
+        :placeholder="t('homePage.searchPlaceholder')"
+        dense
+        class="q-input--width "
+      />
+
       <div style="width: 227px">
-        <q-select filled dense lazy-rules emit-value v-model="selectedsortianje" label="Sortiraj po" :options="sortiranje" option-label="label" option-value="value" map-options @update:model-value="sortiranjeOpcija" class="custom-height" />
+        <q-select
+          filled
+          dense
+          lazy-rules
+          emit-value
+          v-model="selectedsortianje"
+          :label="t('homePage.sortBy')"
+          :options="sortiranje"
+          option-label="label"
+          option-value="value"
+          map-options
+          @update:model-value="sortiranjeOpcija"
+          class="custom-height"
+        />
       </div>
     </div>
+
     <q-separator class="separator" />
-    <q-item class="q-pa-sm text-bold text-blue-7" style="font-size: 30px">Kategorije </q-item>
+
+    <q-item class="q-pa-sm text-bold text-blue-7" style="font-size: 30px">
+      {{ t('homePage.categories') }}
+    </q-item>
+
     <div class="q-pa-sm row flex flex-center">
       <div v-for="item in kategorija" :key="item.id_kategorije" class="q-pa-md" style="width: 400px">
         <q-card @click="navigateToItem1(item.id_kategorije)">
           <q-item-section>
-            <q-item class="q-pa-sm text-bold text-blue-7">{{ item.naziv_kategorije }} </q-item>
+            <q-item class="q-pa-sm text-bold text-blue-7">
+              {{ item.naziv_kategorije }}
+            </q-item>
           </q-item-section>
         </q-card>
       </div>
     </div>
 
-    <q-item class="q-pa-sm text-bold text-blue-7" style="font-size: 30px">Zadnje ili trenutne aukcije </q-item>
+    <q-item class="q-pa-sm text-bold text-blue-7" style="font-size: 30px">
+      {{ t('homePage.latestAuctions') }}
+    </q-item>
+
     <div class="q-pa-sm row flex flex-center">
       <div v-for="item in filteredItems" :key="item.id_predmeta" class="q-pa-md" style="width: 400px;">
         <q-card @click="navigateToItem(item.id_predmeta)">
           <q-img v-if="item.slika" :src="item.slika" no-native-menu />
           <q-item-section>
-            <q-item class="q-pa-sm text-bold text-blue-7">{{ item.naziv_predmeta }} </q-item>
-            <q-item>Početna cijena: {{ item.pocetna_cijena }}$</q-item>
-            <q-item>Vrijeme pocetka: {{ formattedDate(item.vrijeme_pocetka) }}</q-item>
-            <q-item>Vrijeme zavrsetka: {{ formattedDate(item.vrijeme_zavrsetka) }}</q-item>
-            <q-item>Preostalo vrijeme aukcije: {{ item.preostalo_vrijeme }} h </q-item>
-            <q-item>Trenutna cijena: {{ item.trenutna_cijena }}$</q-item>
+            <q-item class="q-pa-sm text-bold text-blue-7">{{ item.naziv_predmeta }}</q-item>
+            <q-item>{{ t('homePage.startingPrice') }}: {{ item.pocetna_cijena }}$</q-item>
+            <q-item>{{ t('homePage.startTime') }}: {{ formattedDate(item.vrijeme_pocetka) }}</q-item>
+            <q-item>{{ t('homePage.endTime') }}: {{ formattedDate(item.vrijeme_zavrsetka) }}</q-item>
+            <q-item>{{ t('homePage.timeRemaining') }}: {{ item.preostalo_vrijeme }} h</q-item>
+            <q-item>{{ t('homePage.currentPrice') }}: {{ item.trenutna_cijena }}$</q-item>
           </q-item-section>
         </q-card>
       </div>
@@ -39,13 +69,16 @@
 
 <script>
 import axios from "axios";
+import { useI18n } from "vue-i18n";
 
 const baseUrl = "http://localhost:3000/api/";
 
 export default {
   setup() {
-    return {};
+    const { t } = useI18n();
+    return { t };
   },
+
   data() {
     return {
       Pretrazivanje: "",
@@ -53,21 +86,19 @@ export default {
       kategorija: [],
       selectedsortianje: "",
       sortiranje: [
-        { label: "Cijena: manja prema većoj", value: "price-asc" },
-        { label: "Cijena: veća prema manjoj", value: "price-desc" },
-        { label: "Naziv: A do Z", value: "name-asc" },
-        { label: "Naziv: Z do A", value: "name-desc" },
-        { label: "Vrijeme isteka", value: "expiration" },
+        { label: this.t("homePage.sortPriceAsc"), value: "price-asc" },
+        { label: this.t("homePage.sortPriceDesc"), value: "price-desc" },
+        { label: this.t("homePage.sortNameAsc"), value: "name-asc" },
+        { label: this.t("homePage.sortNameDesc"), value: "name-desc" },
+        { label: this.t("homePage.sortExpiration"), value: "expiration" },
       ],
     };
   },
-  mounted() {
-    // Get the JWT token from local storage
-    const token = localStorage.getItem("token");
 
-    // Set up the request headers to include the JWT token
+  mounted() {
+    const token = localStorage.getItem("token");
     const headers = { Authorization: `Bearer ${token}` };
-    // Make the request to fetch all-predmet
+
     axios
       .get(baseUrl + "all-predmet", { headers })
       .then((response) => {
@@ -75,10 +106,8 @@ export default {
       })
       .catch((error) => {
         console.error("Error fetching all-predmet:", error);
-        // Handle errors as needed
       });
 
-    // Fetch all-kategorija without token
     axios
       .get(baseUrl + "all-kategorija", { headers })
       .then((response) => {
@@ -86,7 +115,6 @@ export default {
       })
       .catch((error) => {
         console.error("Error fetching all-kategorija:", error);
-        // Handle errors as needed
       });
   },
 
@@ -94,19 +122,17 @@ export default {
     filteredItems() {
       if (!this.Pretrazivanje) return this.items;
 
-      // Create a map to store unique attractions
       const uniqueItemsMap = new Map();
 
-      // Filter items based on search query and ensure uniqueness
       this.items.forEach((item) => {
-        // Check if the attraction is already in the map
-        if (!uniqueItemsMap.has(item.id_predmeta) && item.naziv_predmeta.toLowerCase().includes(this.Pretrazivanje.toLowerCase())) {
-          // If not, add it to the map
+        if (
+          !uniqueItemsMap.has(item.id_predmeta) &&
+          item.naziv_predmeta.toLowerCase().includes(this.Pretrazivanje.toLowerCase())
+        ) {
           uniqueItemsMap.set(item.id_predmeta, item);
         }
       });
 
-      // Convert map values back to array
       return Array.from(uniqueItemsMap.values());
     },
   },
@@ -119,9 +145,11 @@ export default {
     navigateToItem(id_predmeta) {
       this.$router.push({ path: "prikaz", query: { id_predmeta } });
     },
+
     navigateToItem1(id_kategorije) {
       this.$router.push({ path: "kategorija", query: { id_kategorije } });
     },
+
     sortiranjeOpcija(selectedsortianje) {
       switch (selectedsortianje) {
         case "price-asc":
@@ -144,10 +172,8 @@ export default {
   },
 };
 </script>
+
 <style>
-/*.q-carousel {
-    height: 300px;
-    max-width: 500px;*/
 .q-img {
   height: 300px;
   max-width: 500px;

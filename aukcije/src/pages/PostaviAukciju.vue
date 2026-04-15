@@ -2,41 +2,67 @@
   <q-card class="q-pa-sm q-gutter-sm" flat bordered>
     <q-card-section>
       <div class="text-h3 text-bold text-center text-blue-7 q-ml-sm">
-        Postavi aukciju
+        {{ t('createAuction.title') }}
       </div>
     </q-card-section>
+
     <q-separator color="red" />
+
     <div class="q-ml-sm flex flex-start q-gutter-sm">
       <div style="width: 500px">
-        <q-input filled type="text" label="Naziv proizvoda" v-model="naziv_predmeta" lazy-rules :rules="[(val) => (val !== null && val !== '') || 'Unesite naziv']" />
+        <q-input
+          filled
+          type="text"
+          :label="t('createAuction.productName')"
+          v-model="naziv_predmeta"
+          :rules="[(val) => (val !== null && val !== '') || t('createAuction.enterName')]"
+        />
       </div>
+
       <div style="width: 500px">
-        <q-select filled lazy-rules emit-value v-model="selectedKategorija" label="Kategorija" :options="kategorije" option-label="label" option-value="value" map-options :rules="[(val) => (val !== null && val !== '') || 'Odaberite kategoriju']" />
+        <q-select
+          filled
+          lazy-rules
+          emit-value
+          v-model="selectedKategorija"
+          :label="t('createAuction.category')"
+          :options="kategorije"
+          option-label="label"
+          option-value="value"
+          map-options
+          :rules="[(val) => (val !== null && val !== '') || t('createAuction.selectCategory')]"
+        />
       </div>
+
       <div style="width: 500px">
-        <q-input 
-        ref="pocetnaCijenaRef" 
-        filled 
-        type="number" 
-        label="Početna cijena proizvoda" 
-        v-model="pocetna_cijena" 
-        lazy-rules 
-        :rules="[
-          (val) => (val !== null && val !== '') || 'Unesite početnu cijenu (brojevi)',
-          (val) => val >= 0 || 'Početna cijena ne može biti negativna'
-        ]"> 
-      </q-input>
+        <q-input
+          ref="pocetnaCijenaRef"
+          filled
+          type="number"
+          :label="t('createAuction.startPrice')"
+          v-model="pocetna_cijena"
+          lazy-rules
+          :rules="[
+            (val) => (val !== null && val !== '') || t('createAuction.enterPrice'),
+            (val) => val >= 0 || t('createAuction.priceNotNegative')
+          ]"
+        />
       </div>
     </div>
+
     <div class="q-ml-sm flex flex-start q-gutter-sm">
       <div style="width: 500px">
-        <q-input filled v-model="vrijemePocetka" label="Datum i vrijeme početka aukcije">
+        <q-input
+          filled
+          v-model="vrijemePocetka"
+          :label="t('createAuction.startDate')"
+        >
           <template v-slot:prepend>
             <q-icon name="event" class="cursor-pointer">
-              <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+              <q-popup-proxy cover>
                 <q-date v-model="vrijemePocetka" mask="YYYY-MM-DD HH:mm">
                   <div class="row items-center justify-end">
-                    <q-btn v-close-popup label="Close" color="primary" flat />
+                    <q-btn v-close-popup :label="t('common.close')" color="primary" flat />
                   </div>
                 </q-date>
               </q-popup-proxy>
@@ -45,10 +71,10 @@
 
           <template v-slot:append>
             <q-icon name="access_time" class="cursor-pointer">
-              <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+              <q-popup-proxy cover>
                 <q-time v-model="vrijemePocetka" mask="YYYY-MM-DD HH:mm" format24h>
                   <div class="row items-center justify-end">
-                    <q-btn v-close-popup label="Close" color="primary" flat />
+                    <q-btn v-close-popup :label="t('common.close')" color="primary" flat />
                   </div>
                 </q-time>
               </q-popup-proxy>
@@ -58,13 +84,17 @@
       </div>
 
       <div style="width: 500px">
-        <q-input filled v-model="vrijemeZavrsetka" label="Datum i vrijeme završetka aukcije">
+        <q-input
+          filled
+          v-model="vrijemeZavrsetka"
+          :label="t('createAuction.endDate')"
+        >
           <template v-slot:prepend>
             <q-icon name="event" class="cursor-pointer">
-              <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+              <q-popup-proxy cover>
                 <q-date v-model="vrijemeZavrsetka" mask="YYYY-MM-DD HH:mm">
                   <div class="row items-center justify-end">
-                    <q-btn v-close-popup label="Close" color="primary" flat />
+                    <q-btn v-close-popup :label="t('common.close')" color="primary" flat />
                   </div>
                 </q-date>
               </q-popup-proxy>
@@ -73,10 +103,10 @@
 
           <template v-slot:append>
             <q-icon name="access_time" class="cursor-pointer">
-              <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+              <q-popup-proxy cover>
                 <q-time v-model="vrijemeZavrsetka" mask="YYYY-MM-DD HH:mm" format24h>
                   <div class="row items-center justify-end">
-                    <q-btn v-close-popup label="Close" color="primary" flat />
+                    <q-btn v-close-popup :label="t('common.close')" color="primary" flat />
                   </div>
                 </q-time>
               </q-popup-proxy>
@@ -84,40 +114,58 @@
           </template>
         </q-input>
       </div>
+
       <div style="width: 500px">
-        <q-input ref="opisPredmetaRef" filled type="text" label="Opis proizvoda" v-model="opis_predmeta" lazy-rules :rules="[(val) => (val !== null && val !== '') || 'Unesite opis']" />
+        <q-input
+          filled
+          type="text"
+          :label="t('createAuction.description')"
+          v-model="opis_predmeta"
+          :rules="[(val) => (val !== null && val !== '') || t('createAuction.enterDescription')]"
+        />
       </div>
     </div>
-
 
     <div>
-      <br>
-      <p style="font-size: 16px;" class="q-pl-md">Unesite sliku: </p>
-      <br>
-      <input class="q-pl-md" type="file" name="files" accept="image/*" @change="onFileChange" multiple />
+      <br />
+      <p class="q-pl-md">{{ t('createAuction.uploadImage') }}</p>
+      <br />
 
-      <q-separator></q-separator>
+      <input
+        class="q-pl-md"
+        type="file"
+        accept="image/*"
+        @change="onFileChange"
+        multiple
+      />
+
+      <q-separator />
+
       <div v-if="base64Image">
         <img :src="base64Image" />
-        <q-separator></q-separator>
-
-        <div class="q-pa-sm" style="max-width: 700px; overflow-wrap: break-word"></div>
-      </div>
-
-      <div>
-        <q-separator></q-separator>
+        <q-separator />
       </div>
     </div>
+
     <div class="q-ml-sm flex justify-center q-gutter-sm">
-      <q-btn label="Postavi" @click="submitForm" color="green" class="q-ml-sm" />
-      <q-btn label="Otkaži" @click="otkazi_gumb" color="red" class="q-ml-sm" />
+      <q-btn :label="t('createAuction.submit')" @click="submitForm" color="green" />
+      <q-btn :label="t('createAuction.cancel')" @click="otkazi_gumb" color="red" />
     </div>
 
     <q-dialog v-model="showDialog">
       <q-card>
-        <q-card-section> Predmet je uspješno dodan! </q-card-section>
+        <q-card-section>
+          {{ t('createAuction.success') }}
+        </q-card-section>
+
         <q-card-actions align="right">
-          <q-btn flat label="Close" color="primary" v-close-popup @click="closeAndReload" />
+          <q-btn
+            flat
+            :label="t('common.close')"
+            color="primary"
+            v-close-popup
+            @click="closeAndReload"
+          />
         </q-card-actions>
       </q-card>
     </q-dialog>
@@ -126,8 +174,14 @@
 <script>
 import imageCompression from "browser-image-compression";
 import axios from "axios";
+import { useI18n } from "vue-i18n";
 
 export default {
+  setup() {
+    const { t } = useI18n();
+    return { t };
+  },
+
   data() {
     return {
       sifra_predmeta: null,
@@ -160,7 +214,7 @@ export default {
         this.$q.notify({
           color: "negative",
           position: "top",
-          message: "Niste prijavljeni, pristup odbijen",
+          message: this.t("createAuction.notLoggedIn"),
           icon: "warning",
         });
         this.$router.push('pocetna');
@@ -175,7 +229,7 @@ export default {
         this.$q.notify({
           color: "negative",
           position: "top",
-          message: "Dopuštene su samo slike.",
+          message: this.t("createAuction.onlyImages"),
           icon: "warning",
         });
         this.files = [];
@@ -244,7 +298,7 @@ export default {
         this.$q.notify({
           color: "negative",
           position: "top",
-          message: "Niste ispunili sva polja",
+          message: this.t("createAuction.requiredFields"),
           icon: "warning",
         });
         return;
@@ -252,7 +306,7 @@ export default {
         this.$q.notify({
           color: "negative",
           position: "top",
-          message: "Molimo odaberite barem jednu sliku.",
+          message: this.t("createAuction.selectImage"),
           icon: "warning",
         });
         return;
@@ -268,7 +322,7 @@ export default {
         this.$q.notify({
           color: "negative",
           position: "top",
-          message: "Početna cijena ne može biti negativna.",
+          message: this.t("createAuction.priceNotNegative"),
           icon: "error",
         });
         return;
