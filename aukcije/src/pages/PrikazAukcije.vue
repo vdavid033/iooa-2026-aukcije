@@ -2,12 +2,20 @@
   <q-card class="q-pa-sm q-gutter-sm" flat bordered>
     <q-card-section>
       <div class="text-h3 text-bold text-center text-blue-7 q-ml-sm">
-        Prikaz aukcije
+        {{ t('auctionViewPage.title') }}
         <div class="q-ml-sm flex justify-end q-gutter-sm">
-          <q-btn size="15px" name="send" rel="stylesheet" to="/" color="red" label="Natrag" />
+          <q-btn
+            size="15px"
+            name="send"
+            rel="stylesheet"
+            to="/"
+            color="red"
+            :label="t('auctionViewPage.back')"
+          />
         </div>
       </div>
     </q-card-section>
+
     <q-separator color="red" />
 
     <div class="q-pa-sm col flex flex-start q-gutter-sm">
@@ -15,22 +23,40 @@
         <div style="width: 600px">
           <q-card-section class="q-pt-none">
             <template v-if="!showSingleImage && item.slike && item.slike.length > 1">
-              <q-carousel control-color="black" animated v-model="slide" navigation infinite :autoplay="autoplay" arrows transition-prev="slide-right" transition-next="slide-left" @mouseenter="autoplay = false" @mouseleave="autoplay = true">
-                <q-carousel-slide :key="index" v-for="(image, index) in item.slike" :name="index + startingIndex">
+              <q-carousel
+                control-color="black"
+                animated
+                v-model="slide"
+                navigation
+                infinite
+                :autoplay="autoplay"
+                arrows
+                transition-prev="slide-right"
+                transition-next="slide-left"
+                @mouseenter="autoplay = false"
+                @mouseleave="autoplay = true"
+              >
+                <q-carousel-slide
+                  :key="index"
+                  v-for="(image, index) in item.slike"
+                  :name="index + startingIndex"
+                >
                   <q-img :src="image" />
                 </q-carousel-slide>
               </q-carousel>
             </template>
+
             <template v-else>
               <q-img v-if="showSingleImage" :src="item.slike ? item.slike[0] : item.slika" />
             </template>
           </q-card-section>
         </div>
       </div>
+
       <div class="q-ml-sm col flex flex-start q-gutter-sm">
         <div class="q-ml-sm flex flex-start q-gutter-sm">
           <div style="width: 80%">
-            <q-field filled label="Naziv proizvoda" stack-label>
+            <q-field filled :label="t('auctionViewPage.productName')" stack-label>
               <template v-slot:control>
                 <div class="self-center full-width no-outline" tabindex="0">
                   {{ item.naziv_predmeta }}
@@ -38,8 +64,9 @@
               </template>
             </q-field>
           </div>
+
           <div style="width: 80%">
-            <q-field filled label="Opis proizvoda" stack-label>
+            <q-field filled :label="t('auctionViewPage.productDescription')" stack-label>
               <template v-slot:control>
                 <div class="self-center full-width no-outline" tabindex="0">
                   {{ item.opis_predmeta }}
@@ -47,8 +74,9 @@
               </template>
             </q-field>
           </div>
+
           <div style="width: 39.5%">
-            <q-field filled label="Početno vrijeme aukcije" stack-label>
+            <q-field filled :label="t('auctionViewPage.startTime')" stack-label>
               <template v-slot:control>
                 <div class="self-center full-width no-outline" tabindex="0">
                   {{ formattedDate(item.vrijeme_pocetka) }}
@@ -58,7 +86,7 @@
           </div>
 
           <div style="width: 39.5%">
-            <q-field filled label="Završno vrijeme aukcije" stack-label>
+            <q-field filled :label="t('auctionViewPage.endTime')" stack-label>
               <template v-slot:control>
                 <div class="self-center full-width no-outline" tabindex="0">
                   {{ formattedDate(item.vrijeme_zavrsetka) }}
@@ -66,8 +94,9 @@
               </template>
             </q-field>
           </div>
+
           <div style="width: 39.5%">
-            <q-field filled label="Početna cijena proizvoda" stack-label>
+            <q-field filled :label="t('auctionViewPage.startPrice')" stack-label>
               <template v-slot:control>
                 <div class="self-center full-width no-outline" tabindex="0">
                   {{ item.pocetna_cijena + "$" }}
@@ -75,8 +104,9 @@
               </template>
             </q-field>
           </div>
+
           <div style="width: 39.5%">
-            <q-field filled label="Trenutna cijena " stack-label>
+            <q-field filled :label="t('auctionViewPage.currentPrice')" stack-label>
               <div class="self-center full-width no-outline" tabindex="0">
                 {{ item.trenutna_cijena + "$" }}
               </div>
@@ -86,29 +116,39 @@
       </div>
     </div>
   </q-card>
+
   <div class="q-pa-md flex flex-center">
-    <q-btn label="Ponuda" color="primary" @click="showDialog = true" />
+    <q-btn :label="t('auctionViewPage.bid')" color="primary" @click="showDialog = true" />
+
     <q-dialog v-model="showDialog">
       <q-card style="width: 300px">
         <q-card-section>
-          <div class="text-h6">Ponudi</div>
+          <div class="text-h6">{{ t('auctionViewPage.makeBid') }}</div>
         </q-card-section>
+
         <q-card-section class="q-pt-none">
-          <q-select outlined v-model="odabranaCijena" :options="prices" label="Odaberi cijenu" />
+          <q-select
+            outlined
+            v-model="odabranaCijena"
+            :options="prices"
+            :label="t('auctionViewPage.selectPrice')"
+          />
         </q-card-section>
 
         <q-card-actions align="right" class="bg-white text-teal">
-          <q-btn flat label="Cancel" color="primary" v-close-popup />
-          <q-btn flat label="Potvrdi ponudu" @click="potvrdiPonudu" />
+          <q-btn flat :label="t('common.cancel')" color="primary" v-close-popup />
+          <q-btn flat :label="t('auctionViewPage.confirmBid')" @click="potvrdiPonudu" />
         </q-card-actions>
       </q-card>
     </q-dialog>
   </div>
 </template>
+
 <script>
 import { jwtDecode } from "jwt-decode";
 import { ref } from "vue";
 import axios from "axios";
+import { useI18n } from "vue-i18n";
 
 const baseUrl = "http://localhost:3000/api/";
 
@@ -122,6 +162,7 @@ export default {
       return 2;
     },
   },
+
   data() {
     return {
       item: [],
@@ -140,17 +181,17 @@ export default {
       index: 1,
     };
   },
+
   mounted() {
     axios.get(baseUrl + "get-predmet/" + this.id_predmeta, {}).then((response) => {
       this.item = response.data[0];
       this.item.trenutna_cijena = this.item.pocetna_cijena;
+
       if (this.item.slike && this.item.slike.length > 0) {
         if (this.item.slike.length === 1) {
-          // If there's only one image, showSingleImage should be true
           this.showSingleImage = true;
           this.item.slika = this.item.slike[0];
         } else {
-          // If there are multiple images, showSingleImage should be false
           this.showSingleImage = false;
         }
       }
@@ -160,29 +201,30 @@ export default {
       if (response.data.max_vrijednost_ponude != null) {
         this.item.trenutna_cijena = response.data.max_vrijednost_ponude;
       }
+
       this.prices = [
         {
-          label: "+ 10%: " + (this.item.trenutna_cijena * 1.1).toFixed(2) + " $",
+          label: `+ 10%: ${(this.item.trenutna_cijena * 1.1).toFixed(2)} $`,
           value: (this.item.trenutna_cijena * 1.1).toFixed(2),
         },
         {
-          label: "+ 20%: " + (this.item.trenutna_cijena * 1.2).toFixed(2) + " $",
+          label: `+ 20%: ${(this.item.trenutna_cijena * 1.2).toFixed(2)} $`,
           value: (this.item.trenutna_cijena * 1.2).toFixed(2),
         },
         {
-          label: "+ 30%: " + (this.item.trenutna_cijena * 1.3).toFixed(2) + " $",
+          label: `+ 30%: ${(this.item.trenutna_cijena * 1.3).toFixed(2)} $`,
           value: (this.item.trenutna_cijena * 1.3).toFixed(2),
         },
         {
-          label: "+ 40%: " + (this.item.trenutna_cijena * 1.4).toFixed(2) + " $",
+          label: `+ 40%: ${(this.item.trenutna_cijena * 1.4).toFixed(2)} $`,
           value: (this.item.trenutna_cijena * 1.4).toFixed(2),
         },
         {
-          label: "+ 50%: " + (this.item.trenutna_cijena * 1.5).toFixed(2) + " $",
+          label: `+ 50%: ${(this.item.trenutna_cijena * 1.5).toFixed(2)} $`,
           value: (this.item.trenutna_cijena * 1.5).toFixed(2),
         },
         {
-          label: "+ 100%: " + (this.item.trenutna_cijena * 2).toFixed(2) + " $",
+          label: `+ 100%: ${(this.item.trenutna_cijena * 2).toFixed(2)} $`,
           value: (this.item.trenutna_cijena * 2).toFixed(2),
         },
       ];
@@ -193,16 +235,13 @@ export default {
     formattedDate(dateString) {
       return new Date(dateString).toLocaleString("hr-HR").replace(",", "");
     },
+
     potvrdiPonudu() {
-      // Get the JWT token from local storage
       const token = localStorage.getItem("token");
       const headers = { Authorization: `Bearer ${token}` };
-
       const decodedToken = jwtDecode(token);
 
-      console.log(this.odabranaCijena.value);
       if (this.odabranaCijena) {
-        // Increase the current price based on the selected value
         const selectedPrice = parseInt(this.odabranaCijena.value);
 
         if (selectedPrice > this.item.trenutna_cijena) {
@@ -220,15 +259,12 @@ export default {
             .post("http://localhost:3000/unostrenutnaponuda", podaciPonude, { headers })
             .then((response) => {
               console.log("New price stored successfully:", response.data);
-              // Handle the response data
             })
             .catch((error) => {
               console.error("Error storing new price:", error);
-              // Handle the error
             });
-          // Update the displayed price
+
           this.item.trenutna_cijena = selectedPrice;
-          // Close the dialog
           this.showDialog = false;
         }
       }
@@ -236,7 +272,10 @@ export default {
   },
 
   setup() {
+    const { t } = useI18n();
+
     return {
+      t,
       date: ref("2023-03-27 12:44"),
       date2: ref("2023-03-27 12:44"),
       slide: ref(2),

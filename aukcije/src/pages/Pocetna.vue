@@ -85,13 +85,6 @@ export default {
       items: [],
       kategorija: [],
       selectedsortianje: "",
-      sortiranje: [
-        { label: this.t("homePage.sortPriceAsc"), value: "price-asc" },
-        { label: this.t("homePage.sortPriceDesc"), value: "price-desc" },
-        { label: this.t("homePage.sortNameAsc"), value: "name-asc" },
-        { label: this.t("homePage.sortNameDesc"), value: "name-desc" },
-        { label: this.t("homePage.sortExpiration"), value: "expiration" },
-      ],
     };
   },
 
@@ -119,23 +112,33 @@ export default {
   },
 
   computed: {
-    filteredItems() {
-      if (!this.Pretrazivanje) return this.items;
-
-      const uniqueItemsMap = new Map();
-
-      this.items.forEach((item) => {
-        if (
-          !uniqueItemsMap.has(item.id_predmeta) &&
-          item.naziv_predmeta.toLowerCase().includes(this.Pretrazivanje.toLowerCase())
-        ) {
-          uniqueItemsMap.set(item.id_predmeta, item);
-        }
-      });
-
-      return Array.from(uniqueItemsMap.values());
-    },
+  sortiranje() {
+    return [
+      { label: this.t("homePage.sortPriceAsc"), value: "price-asc" },
+      { label: this.t("homePage.sortPriceDesc"), value: "price-desc" },
+      { label: this.t("homePage.sortNameAsc"), value: "name-asc" },
+      { label: this.t("homePage.sortNameDesc"), value: "name-desc" },
+      { label: this.t("homePage.sortExpiration"), value: "expiration" },
+    ];
   },
+
+  filteredItems() {
+    if (!this.Pretrazivanje) return this.items;
+
+    const uniqueItemsMap = new Map();
+
+    this.items.forEach((item) => {
+      if (
+        !uniqueItemsMap.has(item.id_predmeta) &&
+        item.naziv_predmeta.toLowerCase().includes(this.Pretrazivanje.toLowerCase())
+      ) {
+        uniqueItemsMap.set(item.id_predmeta, item);
+      }
+    });
+
+    return Array.from(uniqueItemsMap.values());
+  },
+},
 
   methods: {
     formattedDate(dateString) {

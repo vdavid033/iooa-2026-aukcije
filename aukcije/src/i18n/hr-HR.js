@@ -68,6 +68,83 @@ export default {
   onlyImages: 'Dopuštene su samo slike.',
   requiredFields: 'Niste ispunili sva polja',
   selectImage: 'Molimo odaberite barem jednu sliku.'
-  }
+  },
+
+  profilePage: {
+  user: 'Korisnik',
+  currentFirstName: 'Trenutno ime',
+  currentLastName: 'Trenutno prezime',
+  currentEmail: 'Trenutni email',
+  currentAddress: 'Trenutna adresa',
+  editUserData: 'Izmjena korisničkih podataka',
+  yourAuctionItems: 'Vaši predmeti na aukciji',
+  startingPrice: 'Početna cijena',
+  startTime: 'Vrijeme početka',
+  endTime: 'Vrijeme završetka',
+  remainingTime: 'Preostalo vrijeme aukcije',
+  currentPrice: 'Trenutna cijena',
+  edit: 'Izmijeni',
+  delete: 'Obriši',
+  yourBids: 'Vaše ponude',
+  description: 'Opis',
+  bidValue: 'Vrijednost ponude',
+  bidTime: 'Vrijeme postavljanja ponude',
+  noAuctionItems: 'Nemate niti jedan predmet koji je ili je bio na aukciji!',
+  noBids: 'Nemate niti jednu ponudu!',
+  confirmDelete: 'Jeste li sigurni da želite obrisati predmet?',
+  deleteSuccess: 'Brisanje podataka uspješno!'
+  },
+  updateProfilePage: {
+  user: 'Korisnik',
+  firstName: 'Ime',
+  lastName: 'Prezime',
+  email: 'E-mail',
+  password: 'Lozinka',
+  confirmPassword: 'Potvrda lozinke',
+  address: 'Adresa',
+  edit: 'Izmijeni',
+  currentFirstName: 'Trenutno ime',
+  currentLastName: 'Trenutno prezime',
+  currentEmail: 'Trenutni email',
+  currentAddress: 'Trenutna adresa',
+  noChanges: 'Nije napravljena niti jedna izmjena!',
+  passwordMismatch: 'Lozinke se ne podudaraju!',
+  updateSuccess: 'Izmjena podataka uspješna!',
+  updateFailed: 'Izmjena podataka neuspješna.'
+  },
+
+  auctionViewPage: {
+  title: 'Prikaz aukcije',
+  back: 'Natrag',
+  productName: 'Naziv proizvoda',
+  productDescription: 'Opis proizvoda',
+  startTime: 'Početno vrijeme aukcije',
+  endTime: 'Završno vrijeme aukcije',
+  startPrice: 'Početna cijena proizvoda',
+  currentPrice: 'Trenutna cijena',
+  bid: 'Ponuda',
+  makeBid: 'Ponudi',
+  selectPrice: 'Odaberi cijenu',
+  confirmBid: 'Potvrdi ponudu'
+},
+
+common: {
+  cancel: 'Odustani'
+  },
+
+  categoryPage: {
+  searchAuctions: 'Pretraži aukcije',
+  sortBy: 'Sortiraj po',
+  startingPrice: 'Početna cijena',
+  startTime: 'Vrijeme početka',
+  endTime: 'Vrijeme završetka',
+  remainingTime: 'Preostalo vrijeme aukcije',
+  currentPrice: 'Trenutna cijena',
+  sortPriceAsc: 'Cijena: manja prema većoj',
+  sortPriceDesc: 'Cijena: veća prema manjoj',
+  sortNameAsc: 'Naziv: A do Z',
+  sortNameDesc: 'Naziv: Z do A',
+  sortExpiration: 'Vrijeme isteka'
+ }
 
 }
