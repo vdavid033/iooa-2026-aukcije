@@ -237,6 +237,9 @@
 .auction-card:hover,
 .bid-card:hover {
   transform: translateY(-4px);
+}
+</style>
+
 <script>
 import axios from "axios";
 
