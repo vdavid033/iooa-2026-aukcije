@@ -145,6 +145,68 @@ common: {
   sortNameAsc: 'Naziv: A do Z',
   sortNameDesc: 'Naziv: Z do A',
   sortExpiration: 'Vrijeme isteka'
- }
+  },
+
+ adminPage: {
+  title: 'Upravljačka ploča administratora',
+  categories: 'Kategorije',
+  users: 'Korisnički računi',
+  auctions: 'Aukcije',
+  addCategoryTitle: 'Unos kategorija',
+  categoryName: 'Naziv kategorije',
+  addCategory: 'Unesi kategoriju'
+  },
+
+  errorPage: {
+  message: 'Ups. Tražena stranica ne postoji...',
+  backHome: 'Povratak na početnu'
+  },
+
+  editAuctionPage: {
+  item: 'Predmet',
+  name: 'Naziv',
+  currentName: 'Trenutni naziv predmeta',
+  category: 'Kategorija',
+  currentCategory: 'Trenutna kategorija',
+  description: 'Opis',
+  currentDescription: 'Trenutni opis',
+  startPrice: 'Početna cijena',
+  currentStartPrice: 'Trenutna početna cijena',
+  startDate: 'Datum i vrijeme početka aukcije',
+  endDate: 'Datum i vrijeme završetka aukcije',
+  currentStartDate: 'Trenutni datum i vrijeme početka',
+  currentEndDate: 'Trenutni datum i vrijeme završetka',
+  edit: 'Izmijeni',
+  noChanges: 'Nije napravljena niti jedna izmjena!',
+  updateSuccess: 'Izmjena podataka uspješna!',
+  updateFailed: 'Izmjena podataka neuspješna.',
+  imageManagement: 'Upravljanje slikama',
+  deleteImage: 'Obriši sliku',
+  deleteImageHint: 'Ovaj gumb briše sliku koja je trenutno prikazana iznad.',
+  addImages: 'Dodaj nove slike',
+  imageDeleteSuccess: 'Slika uspješno obrisana.',
+  imageDeleteFailed: 'Brisanje slike neuspješno.',
+  addImagesSuccess: 'Dodavanje slika/e uspješno.',
+  addImagesFailed: 'Dodavanje slika/e neuspješno.',
+  imageCompressionError: 'Došlo je do pogreške prilikom kompresije slika.'
+    },
+
+  editCategoryPage: {
+  title: 'Ažuriranje kategorije',
+  name: 'Naziv',
+  currentName: 'Trenutni naziv',
+  edit: 'Izmijeni',
+  updateSuccess: 'Izmjena podataka uspješna!',
+  updateFailed: 'Izmjena podataka neuspješna.'
+  },
+
+  addCategoryPage: {
+  title: 'Unos nove kategorije',
+  name: 'Naziv',
+  add: 'Dodaj',
+  success: 'Kategorija uspješno unesena.',
+  error: 'Greška pri unosu kategorije!',
+  required: 'Niste unijeli naziv kategorije!'
+  }
 
 }

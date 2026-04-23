@@ -146,6 +146,68 @@ categoryPage: {
   sortNameAsc: 'Name: A to Z',
   sortNameDesc: 'Name: Z to A',
   sortExpiration: 'Expiration time'
+    },
+
+  adminPage: {
+  title: 'Admin Dashboard',
+  categories: 'Categories',
+  users: 'User Accounts',
+  auctions: 'Auctions',
+  addCategoryTitle: 'Add Category',
+  categoryName: 'Category name',
+  addCategory: 'Add Category'
+  },
+
+  errorPage: {
+  message: 'Oops. The page you are looking for does not exist...',
+  backHome: 'Back to home'
+  },
+
+  editAuctionPage: {
+  item: 'Item',
+  name: 'Name',
+  currentName: 'Current item name',
+  category: 'Category',
+  currentCategory: 'Current category',
+  description: 'Description',
+  currentDescription: 'Current description',
+  startPrice: 'Starting price',
+  currentStartPrice: 'Current starting price',
+  startDate: 'Auction start date and time',
+  endDate: 'Auction end date and time',
+  currentStartDate: 'Current start date and time',
+  currentEndDate: 'Current end date and time',
+  edit: 'Edit',
+  noChanges: 'No changes have been made!',
+  updateSuccess: 'Data updated successfully!',
+  updateFailed: 'Data update failed.',
+  imageManagement: 'Image management',
+  deleteImage: 'Delete image',
+  deleteImageHint: 'This button deletes the image currently shown above.',
+  addImages: 'Add new images',
+  imageDeleteSuccess: 'Image deleted successfully.',
+  imageDeleteFailed: 'Image deletion failed.',
+  addImagesSuccess: 'Image(s) added successfully.',
+  addImagesFailed: 'Adding image(s) failed.',
+  imageCompressionError: 'An error occurred while compressing images.'
+  },
+
+  editCategoryPage: {
+  title: 'Update category',
+  name: 'Name',
+  currentName: 'Current name',
+  edit: 'Edit',
+  updateSuccess: 'Data updated successfully!',
+  updateFailed: 'Data update failed.'
+  },
+
+  addCategoryPage: {
+  title: 'Add new category',
+  name: 'Name',
+  add: 'Add',
+  success: 'Category successfully added.',
+  error: 'Error while adding category!',
+  required: 'Category name is required!'
   }
   
 }
