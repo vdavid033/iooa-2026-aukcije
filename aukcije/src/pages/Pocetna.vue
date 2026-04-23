@@ -1,40 +1,154 @@
 <template>
-  <q-card>
-    <div class="row justify-center q-pa-md">
-      <q-input v-model="Pretrazivanje" filled placeholder="Pretraži aukcije" dense class="q-input--width " />
-      <div style="width: 227px">
-        <q-select filled dense lazy-rules emit-value v-model="selectedsortianje" label="Sortiraj po" :options="sortiranje" option-label="label" option-value="value" map-options @update:model-value="sortiranjeOpcija" class="custom-height" />
-      </div>
-    </div>
-    <q-separator class="separator" />
-    <q-item class="q-pa-sm text-bold text-blue-7" style="font-size: 30px">Kategorije </q-item>
-    <div class="q-pa-sm row flex flex-center">
-      <div v-for="item in kategorija" :key="item.id_kategorije" class="q-pa-md" style="width: 400px">
-        <q-card @click="navigateToItem1(item.id_kategorije)">
-          <q-item-section>
-            <q-item class="q-pa-sm text-bold text-blue-7">{{ item.naziv_kategorije }} </q-item>
-          </q-item-section>
-        </q-card>
-      </div>
-    </div>
+  <q-page class="bg-grey-2">
 
-    <q-item class="q-pa-sm text-bold text-blue-7" style="font-size: 30px">Zadnje ili trenutne aukcije </q-item>
-    <div class="q-pa-sm row flex flex-center">
-      <div v-for="item in filteredItems" :key="item.id_predmeta" class="q-pa-md" style="width: 400px;">
-        <q-card @click="navigateToItem(item.id_predmeta)">
-          <q-img v-if="item.slika" :src="item.slika" no-native-menu />
-          <q-item-section>
-            <q-item class="q-pa-sm text-bold text-blue-7">{{ item.naziv_predmeta }} </q-item>
-            <q-item>Početna cijena: {{ item.pocetna_cijena }}$</q-item>
-            <q-item>Vrijeme pocetka: {{ formattedDate(item.vrijeme_pocetka) }}</q-item>
-            <q-item>Vrijeme zavrsetka: {{ formattedDate(item.vrijeme_zavrsetka) }}</q-item>
-            <q-item>Preostalo vrijeme aukcije: {{ item.preostalo_vrijeme }} h </q-item>
-            <q-item>Trenutna cijena: {{ item.trenutna_cijena }}$</q-item>
-          </q-item-section>
-        </q-card>
+    <!-- HEADER -->
+    <q-header elevated class="bg-white text-dark">
+      <q-toolbar>
+        <q-btn flat dense icon="menu" class="lt-md" />
+
+        <q-toolbar-title class="row items-center">
+          <div class="logo">A</div>
+          <span class="q-ml-sm text-weight-bold">Aukcijska Platforma</span>
+        </q-toolbar-title>
+
+        <q-btn flat label="Registracija" />
+        <q-btn color="primary" label="Profil" class="q-ml-sm" />
+      </q-toolbar>
+    </q-header>
+
+    <q-page-container>
+      <div class="q-pa-md">
+
+        <!-- SEARCH -->
+        <div class="row q-col-gutter-md q-mb-lg">
+          <div class="col">
+            <q-input
+              filled
+              v-model="Pretrazivanje"
+              placeholder="Pretraži aukcije..."
+              dense
+            >
+              <template v-slot:prepend>
+                <q-icon name="search" />
+              </template>
+            </q-input>
+          </div>
+
+          <div class="col-3">
+            <q-select
+              filled
+              dense
+              v-model="selectedsortianje"
+              :options="sortiranje"
+              label="Sortiraj po"
+              emit-value
+              map-options
+
+            />
+          </div>
+        </div>
+
+        <!-- KATEGORIJE -->
+        <div class="text-h5 text-weight-bold q-mb-md">Kategorije</div>
+
+        <div class="row q-col-gutter-md">
+          <div
+            v-for="cat in kategorija"
+            :key="cat.id_kategorije"
+            class="col-6 col-sm-4 col-md-3"
+          >
+            <q-card
+              class="category-card"
+              @click="navigateToItem1(cat.id_kategorije)"
+            >
+              <div style="height: 220px; background: #1976d2; display:flex; align-items:flex-end;">
+                <div class="absolute-bottom text-white q-pa-sm">
+                  <div class="text-subtitle1 text-weight-bold">
+                    {{ cat.naziv_kategorije }}
+                  </div>
+                  <div class="text-caption">
+                    {{ cat.count || 0 }} aukcija
+                  </div>
+                </div>
+              </div>
+            </q-card>
+          </div>
+        </div>
+
+        <!-- AUKCIJE -->
+        <div class="row items-center justify-between q-mt-xl q-mb-md">
+          <div>
+            <div class="text-h5 text-weight-bold">
+              Zadnje ili trenutne aukcije
+            </div>
+            <div class="text-grey">
+              Najnovije i najpopularnije aukcije
+            </div>
+          </div>
+
+          <q-btn color="primary" label="Vidi sve" />
+        </div>
+
+        <div class="row q-col-gutter-md">
+          <div
+            v-for="item in items"
+            :key="item.id_predmeta"
+            class="col-12 col-sm-6 col-md-4"
+          >
+            <q-card class="auction-card" @click="navigateToItem(item.id_predmeta)">
+
+              <q-img :src="item.slika || defaultImg">
+                <div class="time-badge">
+                  ⏱ {{ item.preostalo_vrijeme }}h
+                </div>
+              </q-img>
+
+              <q-card-section>
+                <div class="text-subtitle1 text-weight-bold">
+                  {{ item.naziv_predmeta }}
+                </div>
+
+                <div class="q-mt-sm">
+                  <div class="row justify-between text-caption">
+                    <span>Početna:</span>
+                    <span>{{ item.pocetna_cijena }}€</span>
+                  </div>
+
+                  <div class="row justify-between text-weight-bold text-primary">
+                    <span>Trenutna:</span>
+                    <span>{{ item.trenutna_cijena }}€</span>
+                  </div>
+                </div>
+
+                <div class="row justify-between items-center q-mt-sm">
+                  <div class="text-caption">
+                    {{ item.bids || 0 }} ponuda
+                  </div>
+
+                  <q-badge color="green">Aktivna</q-badge>
+                </div>
+
+                <q-btn
+                  flat
+                  class="full-width q-mt-md"
+                  label="Pogledaj aukciju"
+                  color="primary"
+                />
+              </q-card-section>
+
+            </q-card>
+          </div>
+        </div>
+
       </div>
-    </div>
-  </q-card>
+    </q-page-container>
+
+    <!-- FOOTER -->
+    <q-footer class="bg-white text-grey text-center q-pa-md">
+      © 2026 Aukcijska Platforma
+    </q-footer>
+
+  </q-page>
 </template>
 
 <script>
@@ -43,121 +157,89 @@ import axios from "axios";
 const baseUrl = "http://localhost:3000/api/";
 
 export default {
-  setup() {
-    return {};
-  },
   data() {
     return {
       Pretrazivanje: "",
       items: [],
       kategorija: [],
       selectedsortianje: "",
+      defaultImg: "https://via.placeholder.com/400",
+
       sortiranje: [
-        { label: "Cijena: manja prema većoj", value: "price-asc" },
-        { label: "Cijena: veća prema manjoj", value: "price-desc" },
-        { label: "Naziv: A do Z", value: "name-asc" },
-        { label: "Naziv: Z do A", value: "name-desc" },
-        { label: "Vrijeme isteka", value: "expiration" },
-      ],
+        { label: "Cijena: Niska - Visoka", value: "price-asc" },
+        { label: "Cijena: Visoka - Niska", value: "price-desc" },
+        { label: "Naziv A-Z", value: "name-asc" },
+        { label: "Naziv Z-A", value: "name-desc" },
+        { label: "Završava uskoro", value: "expiration" }
+      ]
     };
   },
+
   mounted() {
-    // Get the JWT token from local storage
     const token = localStorage.getItem("token");
-
-    // Set up the request headers to include the JWT token
     const headers = { Authorization: `Bearer ${token}` };
-    // Make the request to fetch all-predmet
-    axios
-      .get(baseUrl + "all-predmet", { headers })
-      .then((response) => {
-        this.items = response.data;
-      })
-      .catch((error) => {
-        console.error("Error fetching all-predmet:", error);
-        // Handle errors as needed
-      });
 
-    // Fetch all-kategorija without token
-    axios
-      .get(baseUrl + "all-kategorija", { headers })
-      .then((response) => {
-        this.kategorija = response.data;
-      })
-      .catch((error) => {
-        console.error("Error fetching all-kategorija:", error);
-        // Handle errors as needed
-      });
+    axios.get(baseUrl + "all-predmet", { headers })
+      .then(res => this.items = res.data);
+
+    axios.get(baseUrl + "all-kategorija", { headers })
+      .then(res => this.kategorija = res.data);
   },
 
-  computed: {
-    filteredItems() {
-      if (!this.Pretrazivanje) return this.items;
-
-      // Create a map to store unique attractions
-      const uniqueItemsMap = new Map();
-
-      // Filter items based on search query and ensure uniqueness
-      this.items.forEach((item) => {
-        // Check if the attraction is already in the map
-        if (!uniqueItemsMap.has(item.id_predmeta) && item.naziv_predmeta.toLowerCase().includes(this.Pretrazivanje.toLowerCase())) {
-          // If not, add it to the map
-          uniqueItemsMap.set(item.id_predmeta, item);
-        }
-      });
-
-      // Convert map values back to array
-      return Array.from(uniqueItemsMap.values());
-    },
-  },
+  
 
   methods: {
-    formattedDate(dateString) {
-      return new Date(dateString).toLocaleString("hr-HR").replace(",", "");
+    navigateToItem(id) {
+      this.$router.push({ path: "prikaz", query: { id_predmeta: id } });
     },
 
-    navigateToItem(id_predmeta) {
-      this.$router.push({ path: "prikaz", query: { id_predmeta } });
-    },
-    navigateToItem1(id_kategorije) {
-      this.$router.push({ path: "kategorija", query: { id_kategorije } });
-    },
-    sortiranjeOpcija(selectedsortianje) {
-      switch (selectedsortianje) {
-        case "price-asc":
-          this.items.sort((a, b) => a.pocetna_cijena - b.pocetna_cijena);
-          break;
-        case "price-desc":
-          this.items.sort((a, b) => b.pocetna_cijena - a.pocetna_cijena);
-          break;
-        case "name-asc":
-          this.items.sort((a, b) => a.naziv_predmeta.localeCompare(b.naziv_predmeta));
-          break;
-        case "name-desc":
-          this.items.sort((a, b) => b.naziv_predmeta.localeCompare(a.naziv_predmeta));
-          break;
-        case "expiration":
-          this.items.sort((a, b) => new Date(a.vrijeme_zavrsetka) - new Date(b.vrijeme_zavrsetka));
-          break;
-      }
-    },
-  },
+    navigateToItem1(id) {
+      this.$router.push({ path: "kategorija", query: { id_kategorije: id } });
+    }
+
+
+  }
 };
 </script>
-<style>
-/*.q-carousel {
-    height: 300px;
-    max-width: 500px;*/
-.q-img {
-  height: 300px;
-  max-width: 500px;
+
+<style scoped>
+.logo {
+  width: 40px;
+  height: 40px;
+  background: #1976d2;
+  border-radius: 50%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color:white;
+  font-weight:bold;
 }
 
-.q-input--width {
-  width: 500px;
+.category-card {
+  overflow: hidden;
+  border-radius: 12px;
+  transition: 0.3s;
+}
+.category-card:hover {
+  transform: translateY(-5px);
 }
 
-.separator {
-  background-color: #1976d2;
+.auction-card {
+  border-radius: 12px;
+  transition: 0.3s;
+}
+.auction-card:hover {
+  transform: translateY(-5px);
+}
+
+.time-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: red;
+  color: white;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 12px;
 }
 </style>
