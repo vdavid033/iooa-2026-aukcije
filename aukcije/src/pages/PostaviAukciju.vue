@@ -36,7 +36,6 @@
 
       <div style="width: 500px">
         <q-input
-          ref="pocetnaCijenaRef"
           filled
           type="number"
           :label="t('createAuction.startPrice')"
@@ -62,7 +61,12 @@
               <q-popup-proxy cover>
                 <q-date v-model="vrijemePocetka" mask="YYYY-MM-DD HH:mm">
                   <div class="row items-center justify-end">
-                    <q-btn v-close-popup :label="t('common.close')" color="primary" flat />
+                    <q-btn
+                      v-close-popup
+                      :label="t('createAuction.close')"
+                      color="primary"
+                      flat
+                    />
                   </div>
                 </q-date>
               </q-popup-proxy>
@@ -74,7 +78,12 @@
               <q-popup-proxy cover>
                 <q-time v-model="vrijemePocetka" mask="YYYY-MM-DD HH:mm" format24h>
                   <div class="row items-center justify-end">
-                    <q-btn v-close-popup :label="t('common.close')" color="primary" flat />
+                    <q-btn
+                      v-close-popup
+                      :label="t('createAuction.close')"
+                      color="primary"
+                      flat
+                    />
                   </div>
                 </q-time>
               </q-popup-proxy>
@@ -94,7 +103,12 @@
               <q-popup-proxy cover>
                 <q-date v-model="vrijemeZavrsetka" mask="YYYY-MM-DD HH:mm">
                   <div class="row items-center justify-end">
-                    <q-btn v-close-popup :label="t('common.close')" color="primary" flat />
+                    <q-btn
+                      v-close-popup
+                      :label="t('createAuction.close')"
+                      color="primary"
+                      flat
+                    />
                   </div>
                 </q-date>
               </q-popup-proxy>
@@ -106,7 +120,12 @@
               <q-popup-proxy cover>
                 <q-time v-model="vrijemeZavrsetka" mask="YYYY-MM-DD HH:mm" format24h>
                   <div class="row items-center justify-end">
-                    <q-btn v-close-popup :label="t('common.close')" color="primary" flat />
+                    <q-btn
+                      v-close-popup
+                      :label="t('createAuction.close')"
+                      color="primary"
+                      flat
+                    />
                   </div>
                 </q-time>
               </q-popup-proxy>
@@ -161,7 +180,7 @@
         <q-card-actions align="right">
           <q-btn
             flat
-            :label="t('common.close')"
+            :label="t('createAuction.close')"
             color="primary"
             v-close-popup
             @click="closeAndReload"

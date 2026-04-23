@@ -7,37 +7,52 @@
         <q-toolbar-title>
           <router-link to="/" class="link-style">
             <q-avatar>
-              <img src="~assets\aukcije_logo.jpg" alt="Logo" />
+              <img src="~assets/aukcije_logo.jpg" alt="Logo" />
             </q-avatar>
           </router-link>
-          Admin dashboard
+          {{ t('adminLayout.title') }}
         </q-toolbar-title>
+
         <q-space /><q-space /><q-space /><q-space /><q-space /><q-space /><q-space /><q-space />
 
         <template v-if="isAuthenticated()">
-          <q-btn label="Odjava" color="negative" class="q-mr-md" @click="confirmLogout" />
+          <q-btn
+            :label="t('adminLayout.logout')"
+            color="negative"
+            class="q-mr-md"
+            @click="confirmLogout"
+          />
         </template>
       </q-toolbar>
     </q-header>
 
     <q-drawer show-if-above v-model="leftDrawerOpen" side="left" bordered>
-      <!-- drawer content -->
       <q-list>
-        <q-item-label header class="text-bold text-black"> Polja </q-item-label>
-        <!-- veze za druge stranice podlayouta-->
+        <q-item-label header class="text-bold text-black">
+          {{ t('adminLayout.menu') }}
+        </q-item-label>
+
         <div class="q-pa-sm col">
           <router-link to="kategorije" class="link-style" @click="toggleLeftDrawerClose">
-            <q-btn class="flex flex-center" color="positive" style="width: 280px"> Kategorije </q-btn>
+            <q-btn class="flex flex-center" color="positive" style="width: 280px">
+              {{ t('adminLayout.categories') }}
+            </q-btn>
           </router-link>
         </div>
+
         <div class="q-pa-sm col">
           <router-link to="pregledkorisnika" class="link-style" @click="toggleLeftDrawerClose">
-            <q-btn class="flex flex-center" color="positive" style="width: 280px"> Pregled korisnika </q-btn>
+            <q-btn class="flex flex-center" color="positive" style="width: 280px">
+              {{ t('adminLayout.users') }}
+            </q-btn>
           </router-link>
         </div>
+
         <div class="q-pa-sm col">
           <router-link to="/" class="link-style" @click="toggleLeftDrawerClose">
-            <q-btn class="flex flex-center" color="negative" style="width: 280px"> Izlazak </q-btn>
+            <q-btn class="flex flex-center" color="negative" style="width: 280px">
+              {{ t('adminLayout.exit') }}
+            </q-btn>
           </router-link>
         </div>
       </q-list>
@@ -46,35 +61,44 @@
     <q-page-container>
       <router-view />
     </q-page-container>
-    <!-- Logout Confirmation Dialog -->
+
+    <!-- Logout Dialog -->
     <q-dialog v-model="confirmLogoutDialog" persistent>
       <q-card>
         <q-card-section class="row items-center">
           <q-avatar icon="warning" color="negative" text-color="white" />
-          <span class="q-ml-sm">Jeste li sigurni da želite se odjaviti?</span>
+          <span class="q-ml-sm">
+            {{ t('adminLayout.logoutConfirm') }}
+          </span>
         </q-card-section>
 
         <q-card-actions align="right">
-          <q-btn flat label="Odustani" color="primary" v-close-popup />
+          <q-btn flat :label="t('common.cancel')" color="primary" v-close-popup />
           <router-link to="/" class="link-style" @click="toggleLeftDrawerClose">
-            <q-btn flat label="Odjavi se" color="negative" @click="logoutAndReload" />
+            <q-btn
+              flat
+              :label="t('adminLayout.logout')"
+              color="negative"
+              @click="logoutAndReload"
+            />
           </router-link>
         </q-card-actions>
       </q-card>
     </q-dialog>
   </q-layout>
 </template>
-
 <script>
 import Pocetna from "src/pages/Pocetna.vue";
 import router from "src/router";
 import { ref } from "vue";
+import { useI18n } from 'vue-i18n';
 
 export default {
   setup() {
     const confirmLogoutDialog = ref(false);
     const leftDrawerOpen = ref(false);
     const token = ref(localStorage.getItem("token"));
+    const { t } = useI18n();
 
     const isAuthenticated = () => {
       const token = localStorage.getItem("token");
@@ -100,6 +124,7 @@ export default {
       confirmLogout,
       leftDrawerOpen,
       logoutAndReload,
+      t,
       toggleLeftDrawer() {
         leftDrawerOpen.value = !leftDrawerOpen.value;
       },

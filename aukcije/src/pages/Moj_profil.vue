@@ -3,7 +3,7 @@
     <div class="user-info">
       <div class="user-info-header">
         <div class="row">
-          <h5 ref="h_korisnik" class="text-h3 text-blue q-my-md">
+          <h5 class="text-h3 text-blue q-my-md">
             {{ t('profilePage.user') }} {{ korisnik_trenutno.ime_korisnika }} {{ korisnik_trenutno.prezime_korisnika }}
           </h5>
         </div>
@@ -16,7 +16,7 @@
       </div>
 
       <div class="user-info-image">
-        <img src="~assets/profilna.png" alt="Profilna slika">
+        <img src="~assets/profilna.png" :alt="t('profilePage.profileImage')" />
       </div>
     </div>
 
@@ -27,7 +27,7 @@
     />
 
     <h3>{{ t('profilePage.yourAuctionItems') }}</h3>
-    <p ref="nema_predmete"></p>
+    <p>{{ noItemsMessage }}</p>
 
     <div class="q-pa-sm row flex flex-center">
       <div v-for="predmet in vlastitiPredmeti" :key="predmet.id_predmeta" class="q-pa-md" style="width: 400px">
@@ -57,7 +57,7 @@
     </div>
 
     <h3>{{ t('profilePage.yourBids') }}</h3>
-    <p ref="nema_ponude"></p>
+    <p>{{ noBidsMessage }}</p>
 
     <div class="q-pa-sm row flex flex-center">
       <div v-for="ponuda in vlastitePonude" :key="ponuda.id_ponude" class="q-pa-md" style="width: 400px">
@@ -75,7 +75,6 @@
     </div>
   </div>
 </template>
-
 
 <style scoped>
 .user-info {
@@ -124,7 +123,6 @@
 }
 </style>
 
-
 <script>
 import axios from "axios";
 import { useI18n } from "vue-i18n";
@@ -147,7 +145,9 @@ export default {
       },
       vlastitiPredmeti: [],
       vlastitePonude: [],
-    }
+      noItemsMessage: "",
+      noBidsMessage: "",
+    };
   },
 
   async mounted() {
@@ -158,8 +158,9 @@ export default {
       const headers = { Authorization: `Bearer ${token}` };
 
       this.korisnik_trenutno = userData;
-      this.dohvatPredmeta(userId, headers);
-      this.dohvatPonude(userId, headers);
+
+      await this.dohvatPredmeta(userId, headers);
+      await this.dohvatPonude(userId, headers);
     } catch (error) {
       console.error("Greška kod dohvaćanja vlastitih predmeta:", error);
     }
@@ -171,15 +172,17 @@ export default {
         .get("http://localhost:3000/api/vlastiti-predmeti/" + userId, { headers })
         .then((response) => {
           if (response.data.length === 0) {
-            this.$refs.nema_predmete.textContent = this.t("profilePage.noAuctionItems");
+            this.noItemsMessage = this.t("profilePage.noAuctionItems");
+            this.vlastitiPredmeti = [];
           } else {
+            this.noItemsMessage = "";
             this.vlastitiPredmeti = response.data;
           }
-        })
+        });
     },
 
     formattedDate(dateString) {
-      return new Date(dateString).toLocaleString("hr-HR").replace(",", "");
+      return new Date(dateString).toLocaleString(this.$i18n.locale).replace(",", "");
     },
 
     pregledPredmeta(id_predmeta) {
@@ -205,7 +208,7 @@ export default {
             message: this.t("profilePage.deleteSuccess"),
           });
 
-          this.dohvatPredmeta(userId, headers);
+          await this.dohvatPredmeta(userId, headers);
         } catch (error) {
           console.log("Greška pri brisanju predmeta: " + error);
         }
@@ -216,10 +219,11 @@ export default {
       await axios
         .get("http://localhost:3000/api/vlastita-ponuda-korisnik/" + userId, { headers })
         .then((response) => {
-          console.log("API Data:", response.data);
           if (response.data.length === 0) {
-            this.$refs.nema_ponude.textContent = this.t("profilePage.noBids");
+            this.noBidsMessage = this.t("profilePage.noBids");
+            this.vlastitePonude = [];
           } else {
+            this.noBidsMessage = "";
             this.vlastitePonude = response.data;
           }
         })
@@ -232,11 +236,16 @@ export default {
     deleteBid(bid) {},
 
     getUserIdFromToken(token) {
-      var base64Url = token.split('.')[1];
-      var base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-      var jsonPayload = decodeURIComponent(atob(base64).split('').map(function (c) {
-        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-      }).join(''));
+      const base64Url = token.split('.')[1];
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      const jsonPayload = decodeURIComponent(
+        atob(base64)
+          .split('')
+          .map(function (c) {
+            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+          })
+          .join('')
+      );
       return JSON.parse(jsonPayload).id;
     },
 
@@ -251,12 +260,12 @@ export default {
     },
 
     provjeriDatum(predmet) {
-      const vrijemePocetka = new Date(predmet.vrijeme_pocetka)
+      const vrijemePocetka = new Date(predmet.vrijeme_pocetka);
       if (vrijemePocetka < new Date()) {
         return false;
       }
       return true;
     }
   }
-}
+};
 </script>

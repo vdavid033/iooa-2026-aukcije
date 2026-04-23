@@ -1,6 +1,32 @@
 export default {
+
   common: {
-    hello: 'Pozdrav'
+    hello: 'Pozdrav',
+    close: 'Zatvori',
+    cancel: 'Odustani',
+    back: 'Natrag'
+  },
+
+  menu: {
+  title: 'Mogućnosti',
+  home: 'Početna stranica',
+  login: 'Prijava',
+  register: 'Registracija',
+  addAuction: 'Dodaj aukciju',
+  profile: 'Moj profil',
+  logout: 'Odjava',
+  logoutConfirm: 'Jeste li sigurni da se želite odjaviti?',
+  admin: 'Admin Dashboard'
+  },
+
+  adminLayout: {
+  title: 'Upravljačka ploča administratora',
+  logout: 'Odjava',
+  menu: 'Polja',
+  categories: 'Kategorije',
+  users: 'Pregled korisnika',
+  exit: 'Izlazak',
+  logoutConfirm: 'Jeste li sigurni da se želite odjaviti?'
   },
 
   loginPage: {
@@ -60,14 +86,17 @@ export default {
   endDate: 'Datum i vrijeme završetka aukcije',
   description: 'Opis proizvoda',
   enterDescription: 'Unesite opis',
-  uploadImage: 'Unesite sliku:',
+  uploadImage: 'Unesite sliku',
   submit: 'Postavi',
   cancel: 'Otkaži',
+  close: 'Zatvori',
   success: 'Predmet je uspješno dodan!',
   notLoggedIn: 'Niste prijavljeni, pristup odbijen',
   onlyImages: 'Dopuštene su samo slike.',
   requiredFields: 'Niste ispunili sva polja',
-  selectImage: 'Molimo odaberite barem jednu sliku.'
+  selectImage: 'Molimo odaberite barem jednu sliku.',
+  invalidDateRange: 'Datum početka ne može biti kasnije od datuma završetka',
+  imageCompressionError: 'Došlo je do pogreške prilikom kompresije slika.'
   },
 
   profilePage: {
@@ -76,6 +105,7 @@ export default {
   currentLastName: 'Trenutno prezime',
   currentEmail: 'Trenutni email',
   currentAddress: 'Trenutna adresa',
+  profileImage: 'Profilna slika',
   editUserData: 'Izmjena korisničkih podataka',
   yourAuctionItems: 'Vaši predmeti na aukciji',
   startingPrice: 'Početna cijena',
@@ -94,6 +124,7 @@ export default {
   confirmDelete: 'Jeste li sigurni da želite obrisati predmet?',
   deleteSuccess: 'Brisanje podataka uspješno!'
   },
+
   updateProfilePage: {
   user: 'Korisnik',
   firstName: 'Ime',
@@ -128,11 +159,9 @@ export default {
   confirmBid: 'Potvrdi ponudu'
 },
 
-common: {
-  cancel: 'Odustani'
-  },
 
-  categoryPage: {
+
+ categoryPage: {
   searchAuctions: 'Pretraži aukcije',
   sortBy: 'Sortiraj po',
   startingPrice: 'Početna cijena',
@@ -207,6 +236,69 @@ common: {
   success: 'Kategorija uspješno unesena.',
   error: 'Greška pri unosu kategorije!',
   required: 'Niste unijeli naziv kategorije!'
-  }
+  },
 
+  categoriesPage: {
+  title: 'Kategorije',
+  rowsPerPage: 'Broj prikazanih redova:',
+  name: 'Naziv kategorije',
+  actions: 'Dodatne mogućnosti',
+  edit: 'Izmijeni',
+  delete: 'Obriši',
+  addNew: 'Dodaj novu kategoriju',
+  deleteSuccess: 'Kategorija uspješno obrisana.',
+  deleteError: 'Greška pri brisanju kategorije!'
+  },
+
+  imageConverterPage: {
+  enterUrl: 'Unesi link slike',
+  convert: 'Konvertiraj u Base64',
+  copy: 'Kopiraj u međuspremnik',
+  noInput: 'Molimo odaberite sliku ili unesite URL slike.',
+  fetchError: 'Došlo je do pogreške prilikom dohvaćanja slike s URL-a.',
+  copySuccess: 'Tekst uspješno kopiran u međuspremnik!',
+  copyError: 'Kopiranje nije uspjelo.'
+  },
+
+  adminUserEditPage: {
+  user: 'Korisnik',
+  firstName: 'Ime',
+  lastName: 'Prezime',
+  email: 'E-mail',
+  password: 'Lozinka',
+  confirmPassword: 'Potvrda lozinke',
+  address: 'Adresa',
+  edit: 'Izmijeni',
+  currentFirstName: 'Trenutno ime',
+  currentLastName: 'Trenutno prezime',
+  currentEmail: 'Trenutni email',
+  currentAddress: 'Trenutna adresa',
+  noChanges: 'Nije napravljena niti jedna izmjena!',
+  passwordMismatch: 'Lozinke se ne podudaraju!',
+  updateSuccess: 'Izmjena podataka uspješna!',
+  updateFailed: 'Izmjena podataka neuspješna.'
+  },
+
+  adminUsersPage: {
+  title: "Korisnici",
+  rowsPerPage: "Broj prikazanih redova:",
+  firstName: "Ime",
+  lastName: "Prezime",
+  email: "E-mail",
+  address: "Adresa",
+  actions: "Dodatne mogućnosti",
+  confirmDelete: "Jeste li sigurni da želite obrisati korisnika?",
+  deleteSuccess: "Korisnik uspješno obrisan.",
+  deleteError: "Greška pri brisanju korisnika!"
+  },
+
+  auth: {
+  logoutSuccess: "Odjavljeni ste!",
+  logoutError: "Greška pri odjavi!"
+  },
+
+  accountsPage: {
+  title: "Računi"
+  }
+  
 }
