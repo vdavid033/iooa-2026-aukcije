@@ -121,6 +121,56 @@ app.get("/api/all-predmet", (req, res) => {
   });
 });
 
+
+
+app.get("/api/pretrazi-predmet", (req, res) => {
+  const keyword = (req.query.keyword || "").trim();
+
+  if (!keyword) {
+    return res.status(400).send({ message: "Ključna riječ je obavezna." });
+  }
+
+  const searchKeyword = `%${keyword.toLowerCase()}%`;
+
+  const query = `
+    SELECT
+        p.id_predmeta,
+        p.opis_predmeta,
+        p.naziv_predmeta,
+        p.pocetna_cijena,
+        p.vrijeme_pocetka,
+        p.vrijeme_zavrsetka,
+        CONCAT(
+            FLOOR(TIMESTAMPDIFF(SECOND, NOW(), p.vrijeme_zavrsetka) / (24 * 3600)),
+            ' dana, ',
+            TIME_FORMAT(
+                SEC_TO_TIME(TIMESTAMPDIFF(SECOND, NOW(), p.vrijeme_zavrsetka) % (24 * 3600)),
+                '%H:%i:%s'
+            )
+        ) AS preostalo_vrijeme,
+        (SELECT slika FROM slika WHERE id_predmeta = p.id_predmeta LIMIT 1) AS slika,
+        COALESCE(MAX(po.vrijednost_ponude), p.pocetna_cijena) AS trenutna_cijena
+    FROM predmet p
+    LEFT JOIN ponuda po ON p.id_predmeta = po.id_predmeta
+    WHERE p.vrijeme_zavrsetka > NOW()
+      AND (
+        LOWER(p.naziv_predmeta) LIKE ?
+        OR LOWER(p.opis_predmeta) LIKE ?
+      )
+    GROUP BY p.id_predmeta
+    ORDER BY p.vrijeme_zavrsetka ASC;
+  `;
+
+  connection.query(query, [searchKeyword, searchKeyword], (error, results) => {
+    if (error) {
+      console.error("Greška kod pretrage aukcija:", error);
+      return res.status(500).send({ message: "Greška kod pretrage aukcija." });
+    }
+
+    res.send(results);
+  });
+});
+
 app.get("/api/get-predmet/:id", (req, res) => {
   const { id } = req.params;
 
@@ -186,7 +236,57 @@ app.get("/api/all-kategorija", (req, res) => {
   });
 });
 
-/* app.get("/api/get-predmet/:id", (req, res) => {
+/* 
+
+app.get("/api/pretrazi-predmet", (req, res) => {
+  const keyword = (req.query.keyword || "").trim();
+
+  if (!keyword) {
+    return res.status(400).send({ message: "Ključna riječ je obavezna." });
+  }
+
+  const searchKeyword = `%${keyword.toLowerCase()}%`;
+
+  const query = `
+    SELECT
+        p.id_predmeta,
+        p.opis_predmeta,
+        p.naziv_predmeta,
+        p.pocetna_cijena,
+        p.vrijeme_pocetka,
+        p.vrijeme_zavrsetka,
+        CONCAT(
+            FLOOR(TIMESTAMPDIFF(SECOND, NOW(), p.vrijeme_zavrsetka) / (24 * 3600)),
+            ' dana, ',
+            TIME_FORMAT(
+                SEC_TO_TIME(TIMESTAMPDIFF(SECOND, NOW(), p.vrijeme_zavrsetka) % (24 * 3600)),
+                '%H:%i:%s'
+            )
+        ) AS preostalo_vrijeme,
+        (SELECT slika FROM slika WHERE id_predmeta = p.id_predmeta LIMIT 1) AS slika,
+        COALESCE(MAX(po.vrijednost_ponude), p.pocetna_cijena) AS trenutna_cijena
+    FROM predmet p
+    LEFT JOIN ponuda po ON p.id_predmeta = po.id_predmeta
+    WHERE p.vrijeme_zavrsetka > NOW()
+      AND (
+        LOWER(p.naziv_predmeta) LIKE ?
+        OR LOWER(p.opis_predmeta) LIKE ?
+      )
+    GROUP BY p.id_predmeta
+    ORDER BY p.vrijeme_zavrsetka ASC;
+  `;
+
+  connection.query(query, [searchKeyword, searchKeyword], (error, results) => {
+    if (error) {
+      console.error("Greška kod pretrage aukcija:", error);
+      return res.status(500).send({ message: "Greška kod pretrage aukcija." });
+    }
+
+    res.send(results);
+  });
+});
+
+app.get("/api/get-predmet/:id", (req, res) => {
   const { id } = req.params;
 
   connection.query("SELECT id_predmeta, naziv_predmeta,pocetna_cijena, vrijeme_pocetka, vrijeme_zavrsetka, TIME_FORMAT( SEC_TO_TIME(TIMESTAMPDIFF(SECOND, NOW(), vrijeme_zavrsetka)), '%H:%i:%s' ) AS preostalo_vrijeme FROM predmet WHERE id_predmeta = ?", [id], (error, results) => {

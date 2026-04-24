@@ -1,7 +1,35 @@
 <template>
   <q-card>
-    <div class="row justify-center q-pa-md">
-      <q-input v-model="Pretrazivanje" filled placeholder="Pretraži aukcije" dense class="q-input--width " />
+    <div class="row justify-center items-start q-pa-md q-gutter-sm">
+      <div>
+        <q-input
+          v-model="Pretrazivanje"
+          filled
+          placeholder="Pretraži aukcije po nazivu ili opisu"
+          dense
+          class="q-input--width"
+          @keyup.enter="pretraziAukcije"
+        />
+        <div v-if="porukaPretrage" class="text-negative q-mt-xs">
+          {{ porukaPretrage }}
+        </div>
+      </div>
+
+      <q-btn
+        color="primary"
+        label="Pretraži"
+        :loading="ucitavanjePretrage"
+        @click="pretraziAukcije"
+      />
+
+      <q-btn
+        v-if="pretragaAktivna"
+        flat
+        color="primary"
+        label="Prikaži sve"
+        @click="resetirajPretragu"
+      />
+
       <div style="width: 227px">
         <q-select filled dense lazy-rules emit-value v-model="selectedsortianje" label="Sortiraj po" :options="sortiranje" option-label="label" option-value="value" map-options @update:model-value="sortiranjeOpcija" class="custom-height" />
       </div>
@@ -18,9 +46,16 @@
       </div>
     </div>
 
-    <q-item class="q-pa-sm text-bold text-blue-7" style="font-size: 30px">Zadnje ili trenutne aukcije </q-item>
+    <q-item class="q-pa-sm text-bold text-blue-7" style="font-size: 30px">
+      {{ pretragaAktivna ? "Rezultati pretrage" : "Zadnje ili trenutne aukcije" }}
+    </q-item>
+
+    <div v-if="pretragaAktivna && items.length === 0 && !ucitavanjePretrage" class="q-pa-md text-center text-grey-8">
+      Nema aukcija koje odgovaraju unesenoj ključnoj riječi.
+    </div>
+
     <div class="q-pa-sm row flex flex-center">
-      <div v-for="item in filteredItems" :key="item.id_predmeta" class="q-pa-md" style="width: 400px;">
+      <div v-for="item in items" :key="item.id_predmeta" class="q-pa-md" style="width: 400px;">
         <q-card @click="navigateToItem(item.id_predmeta)">
           <q-img v-if="item.slika" :src="item.slika" no-native-menu />
           <q-item-section>
@@ -52,6 +87,9 @@ export default {
       items: [],
       kategorija: [],
       selectedsortianje: "",
+      pretragaAktivna: false,
+      porukaPretrage: "",
+      ucitavanjePretrage: false,
       sortiranje: [
         { label: "Cijena: manja prema većoj", value: "price-asc" },
         { label: "Cijena: veća prema manjoj", value: "price-desc" },
@@ -62,53 +100,8 @@ export default {
     };
   },
   mounted() {
-    // Get the JWT token from local storage
-    const token = localStorage.getItem("token");
-
-    // Set up the request headers to include the JWT token
-    const headers = { Authorization: `Bearer ${token}` };
-    // Make the request to fetch all-predmet
-    axios
-      .get(baseUrl + "all-predmet", { headers })
-      .then((response) => {
-        this.items = response.data;
-      })
-      .catch((error) => {
-        console.error("Error fetching all-predmet:", error);
-        // Handle errors as needed
-      });
-
-    // Fetch all-kategorija without token
-    axios
-      .get(baseUrl + "all-kategorija", { headers })
-      .then((response) => {
-        this.kategorija = response.data;
-      })
-      .catch((error) => {
-        console.error("Error fetching all-kategorija:", error);
-        // Handle errors as needed
-      });
-  },
-
-  computed: {
-    filteredItems() {
-      if (!this.Pretrazivanje) return this.items;
-
-      // Create a map to store unique attractions
-      const uniqueItemsMap = new Map();
-
-      // Filter items based on search query and ensure uniqueness
-      this.items.forEach((item) => {
-        // Check if the attraction is already in the map
-        if (!uniqueItemsMap.has(item.id_predmeta) && item.naziv_predmeta.toLowerCase().includes(this.Pretrazivanje.toLowerCase())) {
-          // If not, add it to the map
-          uniqueItemsMap.set(item.id_predmeta, item);
-        }
-      });
-
-      // Convert map values back to array
-      return Array.from(uniqueItemsMap.values());
-    },
+    this.dohvatiSveAukcije();
+    this.dohvatiKategorije();
   },
 
   methods: {
@@ -116,14 +109,86 @@ export default {
       return new Date(dateString).toLocaleString("hr-HR").replace(",", "");
     },
 
+    dohvatiSveAukcije() {
+      const token = localStorage.getItem("token");
+      const headers = { Authorization: `Bearer ${token}` };
+
+      axios
+        .get(baseUrl + "all-predmet", { headers })
+        .then((response) => {
+          this.items = response.data;
+          this.primijeniTrenutnoSortiranje();
+        })
+        .catch((error) => {
+          console.error("Error fetching all-predmet:", error);
+        });
+    },
+
+    dohvatiKategorije() {
+      const token = localStorage.getItem("token");
+      const headers = { Authorization: `Bearer ${token}` };
+
+      axios
+        .get(baseUrl + "all-kategorija", { headers })
+        .then((response) => {
+          this.kategorija = response.data;
+        })
+        .catch((error) => {
+          console.error("Error fetching all-kategorija:", error);
+        });
+    },
+
+    pretraziAukcije() {
+      const keyword = this.Pretrazivanje.trim();
+      this.porukaPretrage = "";
+
+      if (!keyword) {
+        this.porukaPretrage = "Unesite ključnu riječ za pretraživanje.";
+        return;
+      }
+
+      this.ucitavanjePretrage = true;
+
+      axios
+        .get(baseUrl + "pretrazi-predmet", {
+          params: { keyword },
+        })
+        .then((response) => {
+          this.items = response.data;
+          this.pretragaAktivna = true;
+          this.primijeniTrenutnoSortiranje();
+        })
+        .catch((error) => {
+          console.error("Greška kod pretrage aukcija:", error);
+          this.porukaPretrage = "Došlo je do greške kod pretrage aukcija.";
+        })
+        .finally(() => {
+          this.ucitavanjePretrage = false;
+        });
+    },
+
+    resetirajPretragu() {
+      this.Pretrazivanje = "";
+      this.porukaPretrage = "";
+      this.pretragaAktivna = false;
+      this.dohvatiSveAukcije();
+    },
+
     navigateToItem(id_predmeta) {
       this.$router.push({ path: "prikaz", query: { id_predmeta } });
     },
+
     navigateToItem1(id_kategorije) {
       this.$router.push({ path: "kategorija", query: { id_kategorije } });
     },
+
     sortiranjeOpcija(selectedsortianje) {
-      switch (selectedsortianje) {
+      this.selectedsortianje = selectedsortianje;
+      this.primijeniTrenutnoSortiranje();
+    },
+
+    primijeniTrenutnoSortiranje() {
+      switch (this.selectedsortianje) {
         case "price-asc":
           this.items.sort((a, b) => a.pocetna_cijena - b.pocetna_cijena);
           break;
