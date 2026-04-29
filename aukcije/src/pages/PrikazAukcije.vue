@@ -104,6 +104,18 @@
       </q-card>
     </q-dialog>
   </div>
+
+  <div class="q-pa-md">
+    <div class="text-h5 text-bold text-blue-7 q-mb-md">Povijest ponuda</div>
+    <q-table
+      :rows="ponude"
+      :columns="kolonePonuda"
+      row-key="id_ponude"
+      flat
+      bordered
+      no-data-label="Još nema ponuda za ovaj predmet."
+    />
+  </div>
 </template>
 <script>
 import { jwtDecode } from "jwt-decode";
@@ -138,6 +150,12 @@ export default {
       slike: [],
       showSingleImage: false,
       index: 1,
+      ponude: [],
+      kolonePonuda: [
+        { name: "korisnik", label: "Korisnik", field: (row) => `${row.ime_korisnika} ${row.prezime_korisnika}`, align: "left", sortable: true },
+        { name: "vrijednost", label: "Iznos ponude ($)", field: "vrijednost_ponude", align: "right", sortable: true },
+        { name: "vrijeme", label: "Vrijeme ponude", field: "vrijeme_ponude", align: "center", sortable: true },
+      ],
     };
   },
   mounted() {
@@ -154,6 +172,10 @@ export default {
           this.showSingleImage = false;
         }
       }
+    });
+
+    axios.get(baseUrl + "get-ponuda/" + this.id_predmeta).then((response) => {
+      this.ponude = response.data;
     });
 
     axios.get(baseUrl + "get-predmet-trenutna-cijena/" + this.id_predmeta, {}).then((response) => {
@@ -218,17 +240,15 @@ export default {
 
           axios
             .post("http://localhost:3000/unostrenutnaponuda", podaciPonude, { headers })
-            .then((response) => {
-              console.log("New price stored successfully:", response.data);
-              // Handle the response data
+            .then(() => {
+              this.item.trenutna_cijena = selectedPrice;
+              axios.get(baseUrl + "get-ponuda/" + this.id_predmeta).then((res) => {
+                this.ponude = res.data;
+              });
             })
             .catch((error) => {
               console.error("Error storing new price:", error);
-              // Handle the error
             });
-          // Update the displayed price
-          this.item.trenutna_cijena = selectedPrice;
-          // Close the dialog
           this.showDialog = false;
         }
       }

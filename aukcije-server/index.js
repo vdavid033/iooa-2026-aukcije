@@ -321,7 +321,11 @@ app.get("/api/get-ponuda/:id", (req, res) => {
   const { id } = req.params;
 
   connection.query(
-    'SELECT id_ponude, vrijednost_ponude, DATE_FORMAT(vrijeme_ponude, "%Y-%m-%d %H:%i:%s") as vrijeme_ponude, id_korisnika FROM ponuda WHERE id_predmeta = ?',
+    `SELECT po.id_ponude, po.vrijednost_ponude, DATE_FORMAT(po.vrijeme_ponude, "%Y-%m-%d %H:%i:%s") AS vrijeme_ponude, k.ime_korisnika, k.prezime_korisnika
+     FROM ponuda po
+     JOIN korisnik k ON po.id_korisnika = k.id_korisnika
+     WHERE po.id_predmeta = ?
+     ORDER BY po.vrijednost_ponude DESC`,
     [id],
     (error, results) => {
       if (error) throw error;
