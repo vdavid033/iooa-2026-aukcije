@@ -184,13 +184,13 @@ export default {
       }
     },
   },
-};
 
-beforeUnmount() {
-  if (this.socket) {
-    this.socket.disconnect();
-  }
-}
+  beforeUnmount() {
+    if (this.socket) {
+      this.socket.disconnect();
+    }
+  },
+};
 </script>
 
 <style>
