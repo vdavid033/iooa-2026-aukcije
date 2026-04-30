@@ -1,24 +1,68 @@
 <template>
-  <q-page class="bg-blue window-height window-width row justify-center items-center">
-    <div class="column">
-      <div class="row">
-        <h5 class="text-h3 text-white q-my-md">Prijava</h5>
-      </div>
-      <div class="row">
-        <q-card square bordered class="q-pa-lg shadow-1">
-          <q-card-section>
-            <q-form class="q-gutter-md" @submit.prevent="login">
-              <q-input square filled v-model="email_korisnika" type="email" label="Vaš email" />
-              <q-input square filled v-model="lozinka_korisnika" type="password" label="Lozinka" />
-              <div class="text-center"><q-btn size="lg" type="submit" label="Prijava" color="light-blue-7" /></div>
-            </q-form>
-          </q-card-section>
-          <q-card-section class="text-center q-pa-none">
-            <router-link to="registracija" class="link-style"><p class="text-grey-6">Registrirajte se!</p></router-link>
-          </q-card-section>
-        </q-card>
-      </div>
+  <q-page class="window-height window-width row justify-center items-center gradient-bg">
+
+    <div class="column items-center">
+
+      <q-card class="q-pa-xl shadow-10 rounded-card" style="width: 380px">
+
+        <div class="text-center q-mb-md">
+          <q-avatar size="70px" class="bg-primary text-white shadow-5">
+            <q-icon name="login" size="40px" />
+          </q-avatar>
+        </div>
+
+        <div class="text-center q-mb-lg">
+          <div class="text-h5 text-weight-bold">Prijava</div>
+          <div class="text-grey">Pristupite svom računu</div>
+        </div>
+
+        <q-form class="q-gutter-md" @submit.prevent="login">
+
+          <q-input filled v-model="email_korisnika" type="email" label="Vaš email">
+            <template v-slot:prepend>
+              <q-icon name="email" />
+            </template>
+          </q-input>
+
+          <q-input
+            filled
+            :type="showPassword ? 'text' : 'password'"
+            v-model="lozinka_korisnika"
+            label="Lozinka"
+          >
+            <template v-slot:prepend>
+              <q-icon name="lock" />
+            </template>
+
+            <template v-slot:append>
+              <q-icon
+                :name="showPassword ? 'visibility_off' : 'visibility'"
+                class="cursor-pointer"
+                @click="showPassword = !showPassword"
+              />
+            </template>
+          </q-input>
+
+          <q-btn
+            class="full-width q-mt-md"
+            size="lg"
+            type="submit"
+            label="PRIJAVA"
+            color="primary"
+            unelevated
+          />
+
+        </q-form>
+
+        <div class="text-center q-mt-md">
+          <router-link to="registracija" class="text-primary">
+            Registrirajte se
+          </router-link>
+        </div>
+
+      </q-card>
     </div>
+
   </q-page>
 </template>
 
@@ -30,8 +74,10 @@ export default {
     return {
       email_korisnika: "",
       lozinka_korisnika: "",
+      showPassword: false
     };
   },
+
   methods: {
     async login() {
       try {
@@ -41,16 +87,13 @@ export default {
         });
 
         if (response.data.success) {
-          // Save the JWT token to local storage
           localStorage.setItem("token", response.data.token);
 
-          // Redirect to the desired page
           this.$router.push("/Pocetna").then(() => {
-            // Refresh the page
             window.location.reload();
           });
+
         } else {
-          // Show error message if login fails
           this.$q.notify({
             color: "negative",
             position: "top",
@@ -58,12 +101,14 @@ export default {
             icon: "warning",
           });
         }
+
       } catch (error) {
         console.error("Login failed:", error);
+
         this.$q.notify({
           color: "negative",
           position: "top",
-          message: "Prijava nije uspjela. Provjerite podatke i pokušajte ponovno.",
+          message: "Prijava nije uspjela. Provjerite podatke.",
           icon: "warning",
         });
       }
@@ -73,7 +118,11 @@ export default {
 </script>
 
 <style>
-.q-pa-lg {
-  width: 360px;
+.gradient-bg {
+  background: linear-gradient(135deg, #3b82f6, #2563eb, #4f46e5);
+}
+
+.rounded-card {
+  border-radius: 20px;
 }
 </style>
