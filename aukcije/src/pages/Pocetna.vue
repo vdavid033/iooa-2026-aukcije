@@ -1,152 +1,129 @@
 <template>
   <q-page class="bg-grey-2">
 
-    <!-- HEADER -->
-    <q-header elevated class="bg-white text-dark">
-      <q-toolbar>
-        <q-btn flat dense icon="menu" class="lt-md" />
+    <div class="q-pa-md">
 
-        <q-toolbar-title class="row items-center">
-          <div class="logo">A</div>
-          <span class="q-ml-sm text-weight-bold">Aukcijska Platforma</span>
-        </q-toolbar-title>
+      <!-- KATEGORIJE -->
+      <div class="text-h5 text-weight-bold q-mb-md">Kategorije</div>
 
-        <q-btn flat label="Registracija" />
-        <q-btn color="primary" label="Profil" class="q-ml-sm" />
-      </q-toolbar>
-    </q-header>
-
-    <q-page-container>
-      <div class="q-pa-md">
-
-        <!-- SEARCH -->
-        <div class="row q-col-gutter-md q-mb-lg">
-          <div class="col">
-            <q-input
-              filled
-              v-model="Pretrazivanje"
-              placeholder="Pretraži aukcije..."
-              dense
-            >
-              <template v-slot:prepend>
-                <q-icon name="search" />
-              </template>
-            </q-input>
-          </div>
-
-          <div class="col-3">
-            <q-select
-              filled
-              dense
-              v-model="selectedsortianje"
-              :options="sortiranje"
-              label="Sortiraj po"
-              emit-value
-              map-options
-
-            />
-          </div>
-        </div>
-
-        <!-- KATEGORIJE -->
-        <div class="text-h5 text-weight-bold q-mb-md">Kategorije</div>
-
-        <div class="row q-col-gutter-md">
-          <div
-            v-for="cat in kategorija"
-            :key="cat.id_kategorije"
-            class="col-6 col-sm-4 col-md-3"
+      <div class="row q-col-gutter-md">
+        <div
+          v-for="cat in kategorija"
+          :key="cat.id_kategorije"
+          class="col-6 col-sm-4 col-md-3"
+        >
+          <q-card
+            class="category-card"
+            @click="navigateToItem1(cat.id_kategorije)"
           >
-            <q-card
-              class="category-card"
-              @click="navigateToItem1(cat.id_kategorije)"
-            >
-              <div style="height: 220px; background: #1976d2; display:flex; align-items:flex-end;">
-                <div class="absolute-bottom text-white q-pa-sm">
-                  <div class="text-subtitle1 text-weight-bold">
-                    {{ cat.naziv_kategorije }}
-                  </div>
-                  <div class="text-caption">
-                    {{ cat.count || 0 }} aukcija
-                  </div>
+            <q-img :src="cat.slika || defaultImg" style="height: 220px">
+              <div class="absolute-bottom text-white q-pa-sm">
+                <div class="text-subtitle1 text-weight-bold">
+                  {{ cat.naziv_kategorije }}
+                </div>
+                <div class="text-caption">
+                  {{ cat.count || 0 }} aukcija
                 </div>
               </div>
-            </q-card>
-          </div>
+            </q-img>
+          </q-card>
         </div>
-
-        <!-- AUKCIJE -->
-        <div class="row items-center justify-between q-mt-xl q-mb-md">
-          <div>
-            <div class="text-h5 text-weight-bold">
-              Zadnje ili trenutne aukcije
-            </div>
-            <div class="text-grey">
-              Najnovije i najpopularnije aukcije
-            </div>
-          </div>
-
-          <q-btn color="primary" label="Vidi sve" />
-        </div>
-
-        <div class="row q-col-gutter-md">
-          <div
-            v-for="item in items"
-            :key="item.id_predmeta"
-            class="col-12 col-sm-6 col-md-4"
-          >
-            <q-card class="auction-card" @click="navigateToItem(item.id_predmeta)">
-
-              <q-img :src="item.slika || defaultImg">
-                <div class="time-badge">
-                  ⏱ {{ item.preostalo_vrijeme }}h
-                </div>
-              </q-img>
-
-              <q-card-section>
-                <div class="text-subtitle1 text-weight-bold">
-                  {{ item.naziv_predmeta }}
-                </div>
-
-                <div class="q-mt-sm">
-                  <div class="row justify-between text-caption">
-                    <span>Početna:</span>
-                    <span>{{ item.pocetna_cijena }}€</span>
-                  </div>
-
-                  <div class="row justify-between text-weight-bold text-primary">
-                    <span>Trenutna:</span>
-                    <span>{{ item.trenutna_cijena }}€</span>
-                  </div>
-                </div>
-
-                <div class="row justify-between items-center q-mt-sm">
-                  <div class="text-caption">
-                    {{ item.bids || 0 }} ponuda
-                  </div>
-
-                  <q-badge color="green">Aktivna</q-badge>
-                </div>
-
-                <q-btn
-                  flat
-                  class="full-width q-mt-md"
-                  label="Pogledaj aukciju"
-                  color="primary"
-                />
-              </q-card-section>
-
-            </q-card>
-          </div>
-        </div>
-
       </div>
-    </q-page-container>
 
-    <!-- FOOTER -->
-    <q-footer class="bg-white text-grey text-center q-pa-md">
-      © 2026 Aukcijska Platforma
-    </q-footer>
+      <!-- AUKCIJE -->
+      <div class="row items-center justify-between q-mt-xl q-mb-md">
+        <div>
+          <div class="text-h5 text-weight-bold">
+            Zadnje ili trenutne aukcije
+          </div>
+          <div class="text-grey">
+            Najnovije i najpopularnije aukcije
+          </div>
+        </div>
+
+        <q-btn color="primary" label="Vidi sve" />
+      </div>
+
+      <!-- SEARCH -->
+      <div class="row q-col-gutter-md q-mb-lg">
+        <div class="col">
+          <q-input
+            filled
+            v-model="Pretrazivanje"
+            placeholder="Pretraži aukcije..."
+            dense
+          >
+            <template v-slot:prepend>
+              <q-icon name="search" />
+            </template>
+          </q-input>
+        </div>
+
+        <div class="col-3">
+          <q-select
+            filled
+            dense
+            v-model="selectedsortianje"
+            :options="sortiranje"
+            label="Sortiraj po"
+            emit-value
+            map-options
+            @update:model-value="sortiranjeOpcija"
+          />
+        </div>
+      </div>
+
+      <div class="row q-col-gutter-md">
+        <div
+          v-for="item in filteredItems"
+          :key="item.id_predmeta"
+          class="col-12 col-sm-6 col-md-4"
+        >
+          <q-card class="auction-card" @click="navigateToItem(item.id_predmeta)">
+
+            <q-img :src="item.slika || defaultImg" style="height: 220px">
+              <div class="time-badge">
+                {{ item.preostalo_vrijeme }}h
+              </div>
+            </q-img>
+
+            <q-card-section>
+              <div class="text-subtitle1 text-weight-bold">
+                {{ item.naziv_predmeta }}
+              </div>
+
+              <div class="q-mt-sm">
+                <div class="row justify-between text-caption">
+                  <span>Početna:</span>
+                  <span>{{ item.pocetna_cijena }}€</span>
+                </div>
+
+                <div class="row justify-between text-weight-bold text-primary">
+                  <span>Trenutna:</span>
+                  <span>{{ item.trenutna_cijena }}€</span>
+                </div>
+              </div>
+
+              <div class="row justify-between items-center q-mt-sm">
+                <div class="text-caption">
+                  {{ item.bids || 0 }} ponuda
+                </div>
+
+                <q-badge color="green">Aktivna</q-badge>
+              </div>
+
+              <q-btn
+                flat
+                class="full-width q-mt-md"
+                label="Pogledaj aukciju"
+                color="primary"
+              />
+            </q-card-section>
+          </q-card>
+        </div>
+      </div>
+
+    </div>
 
   </q-page>
 </template>
@@ -186,7 +163,16 @@ export default {
       .then(res => this.kategorija = res.data);
   },
 
-  
+  computed: {
+    filteredItems() {
+      if (!this.Pretrazivanje) return this.items;
+
+      return this.items.filter(item =>
+        item.naziv_predmeta.toLowerCase()
+          .includes(this.Pretrazivanje.toLowerCase())
+      );
+    }
+  },
 
   methods: {
     navigateToItem(id) {
@@ -195,25 +181,32 @@ export default {
 
     navigateToItem1(id) {
       this.$router.push({ path: "kategorija", query: { id_kategorije: id } });
+    },
+
+    sortiranjeOpcija(val) {
+      switch (val) {
+        case "price-asc":
+          this.items.sort((a,b)=>a.pocetna_cijena-b.pocetna_cijena);
+          break;
+        case "price-desc":
+          this.items.sort((a,b)=>b.pocetna_cijena-a.pocetna_cijena);
+          break;
+        case "name-asc":
+          this.items.sort((a,b)=>a.naziv_predmeta.localeCompare(b.naziv_predmeta));
+          break;
+        case "name-desc":
+          this.items.sort((a,b)=>b.naziv_predmeta.localeCompare(a.naziv_predmeta));
+          break;
+        case "expiration":
+          this.items.sort((a,b)=>new Date(a.vrijeme_zavrsetka)-new Date(b.vrijeme_zavrsetka));
+          break;
+      }
     }
-
-
   }
 };
 </script>
 
 <style scoped>
-.logo {
-  width: 40px;
-  height: 40px;
-  background: #1976d2;
-  border-radius: 50%;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  color:white;
-  font-weight:bold;
-}
 
 .category-card {
   overflow: hidden;

@@ -1,37 +1,60 @@
 <template>
   <q-layout view="lHh Lpr lFf">
-    <q-header elevated>
+    <q-header elevated class="bg-white text-dark">
       <q-toolbar>
-        <q-btn flat dense round icon="menu" aria-label="Menu" @click="toggleLeftDrawer" />
-        <q-toolbar-title>
-          <router-link to="/" class="link-style">
-            <q-avatar>
-              <img src="~assets\aukcije_logo.jpg" alt="Logo" />
-            </q-avatar>
-          </router-link>
-        </q-toolbar-title>
-        <q-space></q-space>
-        <q-space /><q-space /><q-space /><q-space /><q-space /><q-space /><q-space /><q-space />
-        <template v-if="isAuthenticated()">
-          <div class="q-pa-md">
-            <q-btn-dropdown  ripple="false" stretch flat text-color="white" color="primary" :label="`${userIme} ${userPrezime}`" >
-              <q-list>
-                <router-link to="/Moj_profil" class="link-style" @click="toggleLeftDrawerClose">
-                  <q-item clickable v-close-popup @click="onItemClick">
-                    <q-item-section>
-                      <q-item-label>Moj profil</q-item-label>
-                    </q-item-section>
-                  </q-item>
-                </router-link>
-                <q-item clickable v-close-popup @click="confirmLogout">
+        <!--
+        <q-btn
+          flat
+          dense
+          round
+          icon="menu"
+          aria-label="Menu"
+          @click="toggleLeftDrawer"
+        />
+        -->
+
+        <router-link to="/" class="link-style row items-center">
+          <q-avatar size="50px">
+            <img src="~assets/aukcije_logo.jpg" alt="Logo" />
+          </q-avatar>
+        </router-link>
+
+        <div class="absolute-center text-weight-bold">
+          Aukcijska Platforma
+        </div>
+
+        <q-space />
+
+        <template v-if="!isAuthenticated()">
+          <q-btn flat label="Moj profil" class="q-ml-sm" to="/Moj_profil" />
+          <q-btn flat label="Registracija" to="/registracija" />
+          <q-btn color="primary" label="Prijava" class="q-ml-sm" to="/prijava" />
+        </template>
+
+        <template v-else>
+          <q-btn-dropdown
+            flat
+            color="primary"
+            :label="`${userIme} ${userPrezime}`"
+          >
+            <q-list>
+              <router-link to="/Moj_profil" class="link-style">
+                <q-item clickable v-close-popup>
                   <q-item-section>
-                    <q-item-label>Odjava</q-item-label>
+                    <q-item-label>Moj profil</q-item-label>
                   </q-item-section>
                 </q-item>
-              </q-list>
-            </q-btn-dropdown>
-          </div>
+              </router-link>
+
+              <q-item clickable v-close-popup @click="confirmLogout">
+                <q-item-section>
+                  <q-item-label>Odjava</q-item-label>
+                </q-item-section>
+              </q-item>
+            </q-list>
+          </q-btn-dropdown>
         </template>
+
       </q-toolbar>
     </q-header>
 
@@ -83,6 +106,10 @@
 
     <q-page-container>
       <router-view />
+
+      <div class="app-footer bg-white text-grey-8 text-center q-pa-md shadow-2">
+        © 2026 Aukcijska Platforma
+      </div>
     </q-page-container>
 
     <!-- Logout Confirmation Dialog -->
