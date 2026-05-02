@@ -6,8 +6,8 @@ const routes = [
     component: () => import("layouts/MainLayout.vue"),
     children: [
       { path: "/", component: () => import("pages/Pocetna.vue") },
-      { path: "pocetna", component: () => import("pages/Pocetna.vue") },
-      { path: "postavi", component: () => import("pages/PostaviAukciju.vue") },
+      { path: "pocetna", name: "pocetna", component: () => import("pages/Pocetna.vue") },
+      { path: "postavi", name: "postavi", component: () => import("pages/PostaviAukciju.vue") },
       { path: "prikaz", component: () => import("pages/PrikazAukcije.vue") },
       { path: "kategorija", component: () => import("pages/PrikazPredmetaKategorije.vue") },
       { path: "konverter", component: () => import("pages/konverter.vue") },

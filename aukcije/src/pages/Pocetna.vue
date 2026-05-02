@@ -6,7 +6,7 @@
         filled
         :placeholder="t('homePage.searchPlaceholder')"
         dense
-        class="q-input--width "
+        class="q-input--width"
       />
 
       <div style="width: 227px">
@@ -30,15 +30,20 @@
     <q-separator class="separator" />
 
     <q-item class="q-pa-sm text-bold text-blue-7" style="font-size: 30px">
-      {{ t('homePage.categories') }}
+      {{ t("homePage.categories") }}
     </q-item>
 
     <div class="q-pa-sm row flex flex-center">
-      <div v-for="item in kategorija" :key="item.id_kategorije" class="q-pa-md" style="width: 400px">
+      <div
+        v-for="item in kategorija"
+        :key="item.id_kategorije"
+        class="q-pa-md"
+        style="width: 400px"
+      >
         <q-card @click="navigateToItem1(item.id_kategorije)">
           <q-item-section>
             <q-item class="q-pa-sm text-bold text-blue-7">
-              {{ item.naziv_kategorije }}
+              {{ categoryName(item) }}
             </q-item>
           </q-item-section>
         </q-card>
@@ -46,20 +51,46 @@
     </div>
 
     <q-item class="q-pa-sm text-bold text-blue-7" style="font-size: 30px">
-      {{ t('homePage.latestAuctions') }}
+      {{ t("homePage.latestAuctions") }}
     </q-item>
 
     <div class="q-pa-sm row flex flex-center">
-      <div v-for="item in filteredItems" :key="item.id_predmeta" class="q-pa-md" style="width: 400px;">
+      <div
+        v-for="item in filteredItems"
+        :key="item.id_predmeta"
+        class="q-pa-md"
+        style="width: 400px"
+      >
         <q-card @click="navigateToItem(item.id_predmeta)">
           <q-img v-if="item.slika" :src="item.slika" no-native-menu />
+
           <q-item-section>
-            <q-item class="q-pa-sm text-bold text-blue-7">{{ item.naziv_predmeta }}</q-item>
-            <q-item>{{ t('homePage.startingPrice') }}: {{ item.pocetna_cijena }}$</q-item>
-            <q-item>{{ t('homePage.startTime') }}: {{ formattedDate(item.vrijeme_pocetka) }}</q-item>
-            <q-item>{{ t('homePage.endTime') }}: {{ formattedDate(item.vrijeme_zavrsetka) }}</q-item>
-            <q-item>{{ t('homePage.timeRemaining') }}: {{ item.preostalo_vrijeme }} h</q-item>
-            <q-item>{{ t('homePage.currentPrice') }}: {{ item.trenutna_cijena }}$</q-item>
+            <q-item class="q-pa-sm text-bold text-blue-7">
+              {{ itemName(item) }}
+            </q-item>
+
+            <q-item>
+              {{ t("homePage.startingPrice") }}: {{ item.pocetna_cijena }}$
+            </q-item>
+
+            <q-item>
+              {{ t("homePage.startTime") }}:
+              {{ formattedDate(item.vrijeme_pocetka) }}
+            </q-item>
+
+            <q-item>
+              {{ t("homePage.endTime") }}:
+              {{ formattedDate(item.vrijeme_zavrsetka) }}
+            </q-item>
+
+            <q-item>
+              {{ t("homePage.timeRemaining") }}:
+              {{ item.preostalo_vrijeme }} h
+            </q-item>
+
+            <q-item>
+              {{ t("homePage.currentPrice") }}: {{ item.trenutna_cijena }}$
+            </q-item>
           </q-item-section>
         </q-card>
       </div>
@@ -75,8 +106,8 @@ const baseUrl = "http://localhost:3000/api/";
 
 export default {
   setup() {
-    const { t } = useI18n();
-    return { t };
+    const { t, locale } = useI18n();
+    return { t, locale };
   },
 
   data() {
@@ -89,60 +120,88 @@ export default {
   },
 
   mounted() {
-    const token = localStorage.getItem("token");
-    const headers = { Authorization: `Bearer ${token}` };
-
-    axios
-      .get(baseUrl + "all-predmet", { headers })
-      .then((response) => {
-        this.items = response.data;
-      })
-      .catch((error) => {
-        console.error("Error fetching all-predmet:", error);
-      });
-
-    axios
-      .get(baseUrl + "all-kategorija", { headers })
-      .then((response) => {
-        this.kategorija = response.data;
-      })
-      .catch((error) => {
-        console.error("Error fetching all-kategorija:", error);
-      });
+    this.fetchHomeData();
   },
 
   computed: {
-  sortiranje() {
-    return [
-      { label: this.t("homePage.sortPriceAsc"), value: "price-asc" },
-      { label: this.t("homePage.sortPriceDesc"), value: "price-desc" },
-      { label: this.t("homePage.sortNameAsc"), value: "name-asc" },
-      { label: this.t("homePage.sortNameDesc"), value: "name-desc" },
-      { label: this.t("homePage.sortExpiration"), value: "expiration" },
-    ];
+    sortiranje() {
+      return [
+        { label: this.t("homePage.sortPriceAsc"), value: "price-asc" },
+        { label: this.t("homePage.sortPriceDesc"), value: "price-desc" },
+        { label: this.t("homePage.sortNameAsc"), value: "name-asc" },
+        { label: this.t("homePage.sortNameDesc"), value: "name-desc" },
+        { label: this.t("homePage.sortExpiration"), value: "expiration" },
+      ];
+    },
+
+    filteredItems() {
+      if (!this.Pretrazivanje) return this.items;
+
+      const searchLower = this.Pretrazivanje.toLowerCase();
+      const uniqueItemsMap = new Map();
+
+      this.items.forEach((item) => {
+        const name = this.itemName(item).toLowerCase();
+
+        if (!uniqueItemsMap.has(item.id_predmeta) && name.includes(searchLower)) {
+          uniqueItemsMap.set(item.id_predmeta, item);
+        }
+      });
+
+      return Array.from(uniqueItemsMap.values());
+    },
   },
-
-  filteredItems() {
-    if (!this.Pretrazivanje) return this.items;
-
-    const uniqueItemsMap = new Map();
-
-    this.items.forEach((item) => {
-      if (
-        !uniqueItemsMap.has(item.id_predmeta) &&
-        item.naziv_predmeta.toLowerCase().includes(this.Pretrazivanje.toLowerCase())
-      ) {
-        uniqueItemsMap.set(item.id_predmeta, item);
-      }
-    });
-
-    return Array.from(uniqueItemsMap.values());
-  },
-},
 
   methods: {
+    // FIX ZA LOCALE
+    isEnglish() {
+      return String(this.locale?.value || this.locale || "hr").startsWith("en");
+    },
+
+    // FIX ZA EN NAZIV
+    itemName(item) {
+      const enName = String(item.naziv_predmeta_en || "").trim();
+
+      if (this.isEnglish() && enName) {
+        return enName;
+      }
+
+      return item.naziv_predmeta;
+    },
+
+    categoryName(item) {
+      return this.isEnglish()
+        ? item.naziv_kategorije_en || item.naziv_kategorije
+        : item.naziv_kategorije;
+    },
+
+    fetchHomeData() {
+      const token = localStorage.getItem("token");
+      const headers = { Authorization: `Bearer ${token}` };
+
+      axios
+        .get(baseUrl + "all-predmet", { headers })
+        .then((response) => {
+          console.log("DEBUG item:", response.data[0]); // provjera
+          this.items = response.data;
+        })
+        .catch((error) => {
+          console.error("Error fetching all-predmet:", error);
+        });
+
+      axios
+        .get(baseUrl + "all-kategorija", { headers })
+        .then((response) => {
+          this.kategorija = response.data;
+        })
+        .catch((error) => {
+          console.error("Error fetching all-kategorija:", error);
+        });
+    },
+
     formattedDate(dateString) {
-      return new Date(dateString).toLocaleString("hr-HR").replace(",", "");
+      const currentLocale = this.isEnglish() ? "en-US" : "hr-HR";
+      return new Date(dateString).toLocaleString(currentLocale).replace(",", "");
     },
 
     navigateToItem(id_predmeta) {
@@ -162,13 +221,21 @@ export default {
           this.items.sort((a, b) => b.pocetna_cijena - a.pocetna_cijena);
           break;
         case "name-asc":
-          this.items.sort((a, b) => a.naziv_predmeta.localeCompare(b.naziv_predmeta));
+          this.items.sort((a, b) =>
+            this.itemName(a).localeCompare(this.itemName(b))
+          );
           break;
         case "name-desc":
-          this.items.sort((a, b) => b.naziv_predmeta.localeCompare(a.naziv_predmeta));
+          this.items.sort((a, b) =>
+            this.itemName(b).localeCompare(this.itemName(a))
+          );
           break;
         case "expiration":
-          this.items.sort((a, b) => new Date(a.vrijeme_zavrsetka) - new Date(b.vrijeme_zavrsetka));
+          this.items.sort(
+            (a, b) =>
+              new Date(a.vrijeme_zavrsetka) -
+              new Date(b.vrijeme_zavrsetka)
+          );
           break;
       }
     },

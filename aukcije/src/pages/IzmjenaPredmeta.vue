@@ -2,7 +2,7 @@
   <q-page style="margin-left: 2%; margin-right: 2%" window-height window-width>
     <div class="row">
       <h5 class="text-h3 text-blue q-my-md">
-        {{ t('editAuctionPage.item') }} {{ item.naziv_predmeta }}
+        {{ t("editAuctionPage.item") }} {{ itemName }}
       </h5>
     </div>
 
@@ -14,25 +14,29 @@
         dense
         type="text"
       />
-      <p>{{ t('editAuctionPage.currentName') }}: {{ item.naziv_predmeta }}</p>
+      <p>{{ t("editAuctionPage.currentName") }}: {{ itemName }}</p>
 
       <q-select
         v-model="predmet_novo.id_kategorije"
-        :options="kategorije"
+        :options="categoryOptions"
+        option-label="label"
+        option-value="key"
+        emit-value
+        map-options
         :label="t('editAuctionPage.category')"
         outlined
         dense
       />
-      <p>{{ t('editAuctionPage.currentCategory') }}: {{ currentCategoryLabel }}</p>
+      <p>{{ t("editAuctionPage.currentCategory") }}: {{ currentCategoryLabel }}</p>
 
       <q-input
-        v-model="predmet_novo.opis_predmeta"
+        v-model="predmet_novo.opis"
         :label="t('editAuctionPage.description')"
         outlined
         dense
         type="text"
       />
-      <p>{{ t('editAuctionPage.currentDescription') }}: {{ item.opis_predmeta }}</p>
+      <p>{{ t("editAuctionPage.currentDescription") }}: {{ itemDescription }}</p>
 
       <q-input
         v-model="predmet_novo.pocetna_cijena"
@@ -41,7 +45,7 @@
         dense
         type="text"
       />
-      <p>{{ t('editAuctionPage.currentStartPrice') }}: {{ item.pocetna_cijena }}</p>
+      <p>{{ t("editAuctionPage.currentStartPrice") }}: {{ item.pocetna_cijena }}</p>
 
       <div class="q-ml-sm flex flex-start q-gutter-sm">
         <div style="width: 300px">
@@ -110,8 +114,8 @@
       </div>
 
       <div style="height: 25px"></div>
-      <p>{{ t('editAuctionPage.currentStartDate') }}: {{ formattedDate(item.vrijeme_pocetka) }}</p>
-      <p>{{ t('editAuctionPage.currentEndDate') }}: {{ formattedDate(item.vrijeme_zavrsetka) }}</p>
+      <p>{{ t("editAuctionPage.currentStartDate") }}: {{ formattedDate(item.vrijeme_pocetka) }}</p>
+      <p>{{ t("editAuctionPage.currentEndDate") }}: {{ formattedDate(item.vrijeme_zavrsetka) }}</p>
 
       <q-btn
         type="submit"
@@ -124,7 +128,9 @@
     <div style="height: 25px"></div>
     <q-separator />
 
-    <h5 class="text-h5 text-blue q-my-md">{{ t('editAuctionPage.imageManagement') }}</h5>
+    <h5 class="text-h5 text-blue q-my-md">
+      {{ t("editAuctionPage.imageManagement") }}
+    </h5>
 
     <div style="width: 600px">
       <q-card-section class="q-pt-none">
@@ -153,24 +159,32 @@
         </template>
 
         <template v-else>
-          <q-img v-if="showSingleImage" :src="item.slike ? item.slike[0] : item.slika" />
+          <q-img
+            v-if="showSingleImage"
+            :src="item.slike ? item.slike[0] : item.slika"
+          />
         </template>
       </q-card-section>
     </div>
 
     <q-btn
-      type="submit"
       :label="t('editAuctionPage.deleteImage')"
       color="primary"
       class="q-my-md"
       @click="obrisiTrenutnuSliku()"
     />
-    <p>{{ t('editAuctionPage.deleteImageHint') }}</p>
+    <p>{{ t("editAuctionPage.deleteImageHint") }}</p>
 
     <div>
-      <input type="file" name="files" accept="image/*" @change="onFileChange" multiple />
+      <input
+        type="file"
+        name="files"
+        accept="image/*"
+        @change="onFileChange"
+        multiple
+      />
+
       <q-btn
-        type="submit"
         :label="t('editAuctionPage.addImages')"
         color="primary"
         class="q-my-md"
@@ -196,26 +210,53 @@ export default {
       return 2;
     },
 
+    isEnglish() {
+      return String(this.$i18n.locale).startsWith("en");
+    },
+
+    itemName() {
+      return this.isEnglish
+        ? this.item.naziv_predmeta_en || this.item.naziv_predmeta || ""
+        : this.item.naziv_predmeta || "";
+    },
+
+    itemDescription() {
+      return this.isEnglish
+        ? this.item.opis_en || this.item.opis || ""
+        : this.item.opis || "";
+    },
+
+    categoryOptions() {
+      return this.kategorije.map((kategorija) => ({
+        label: this.isEnglish
+          ? kategorija.naziv_kategorije_en || kategorija.naziv_kategorije
+          : kategorija.naziv_kategorije,
+        key: kategorija.id_kategorije,
+      }));
+    },
+
     currentCategoryLabel() {
       const found = this.kategorije.find(
-        (kategorija) => kategorija.key === this.item.id_kategorije
+        (kategorija) =>
+          Number(kategorija.id_kategorije) === Number(this.item.id_kategorije)
       );
-      return found ? found.label : "";
+
+      if (!found) return "";
+
+      return this.isEnglish
+        ? found.naziv_kategorije_en || found.naziv_kategorije
+        : found.naziv_kategorije;
     },
   },
 
   data() {
     return {
-      item: [],
-      showDialog: false,
-      odabranaCijena: null,
-      prices: [],
-      potvrdjenaCijena: null,
+      item: {},
       showSingleImage: false,
       index: 1,
       predmet_novo: {
         naziv_predmeta: "",
-        opis_predmeta: "",
+        opis: "",
         pocetna_cijena: "",
         vrijeme_pocetka: "",
         vrijeme_zavrsetka: "",
@@ -223,10 +264,7 @@ export default {
       },
       kategorije: [],
       files: [],
-      file: null,
       base64Images: [],
-      vrijemePocetka: "",
-      vrijemeZavrsetka: "",
     };
   },
 
@@ -239,18 +277,20 @@ export default {
     async dohvatiKategorije() {
       try {
         const response = await axios.get("http://localhost:3000/api/all-kategorija/");
-        this.kategorije = response.data.map((kategorija) => ({
-          label: kategorija.naziv_kategorije,
-          key: kategorija.id_kategorije,
-        }));
+        this.kategorije = response.data;
       } catch (error) {
         console.error("Greška pri dohvatu kategorija", error);
       }
     },
 
     async dohvatiPredmet() {
-      await axios.get("http://localhost:3000/api/get-predmet2/" + this.id_predmeta, {}).then((response) => {
-        this.item = response.data[0];
+      try {
+        const response = await axios.get(
+          "http://localhost:3000/api/get-predmet2/" + this.id_predmeta
+        );
+
+        this.item = response.data[0] || {};
+
         if (this.item.slike && this.item.slike.length > 0) {
           if (this.item.slike.length === 1) {
             this.showSingleImage = true;
@@ -259,17 +299,22 @@ export default {
             this.showSingleImage = false;
           }
         }
-      });
+      } catch (error) {
+        console.error("Greška pri dohvatu predmeta", error);
+      }
     },
 
     formattedDate(dateString) {
-      return new Date(dateString).toLocaleString(this.$i18n.locale).replace(",", "");
+      if (!dateString) return "";
+      return new Date(dateString)
+        .toLocaleString(this.$i18n.locale)
+        .replace(",", "");
     },
 
     provjeraPolja() {
       if (
         this.predmet_novo.naziv_predmeta == "" &&
-        this.predmet_novo.opis_predmeta == "" &&
+        this.predmet_novo.opis == "" &&
         this.predmet_novo.pocetna_cijena == "" &&
         this.predmet_novo.vrijeme_pocetka == "" &&
         this.predmet_novo.vrijeme_zavrsetka == "" &&
@@ -288,7 +333,7 @@ export default {
 
     ocistiPolja() {
       this.predmet_novo.naziv_predmeta = "";
-      this.predmet_novo.opis_predmeta = "";
+      this.predmet_novo.opis = "";
       this.predmet_novo.pocetna_cijena = "";
       this.predmet_novo.vrijeme_pocetka = "";
       this.predmet_novo.vrijeme_zavrsetka = "";
@@ -296,24 +341,39 @@ export default {
     },
 
     async izmjenaPredmeta() {
-      if (this.predmet_novo.naziv_predmeta == "") this.predmet_novo.naziv_predmeta = this.item.naziv_predmeta;
-      if (this.predmet_novo.opis_predmeta == "") this.predmet_novo.opis_predmeta = this.item.opis_predmeta;
-      if (this.predmet_novo.pocetna_cijena == "") this.predmet_novo.pocetna_cijena = this.item.pocetna_cijena;
+      if (this.predmet_novo.naziv_predmeta == "") {
+        this.predmet_novo.naziv_predmeta = this.item.naziv_predmeta;
+      }
+
+      if (this.predmet_novo.opis == "") {
+        this.predmet_novo.opis = this.item.opis;
+      }
+
+      if (this.predmet_novo.pocetna_cijena == "") {
+        this.predmet_novo.pocetna_cijena = this.item.pocetna_cijena;
+      }
+
       if (this.predmet_novo.vrijeme_pocetka == "") {
         this.predmet_novo.vrijeme_pocetka = this.item.vrijeme_pocetka;
       } else {
-        this.predmet_novo.vrijeme_pocetka = new Date(this.predmet_novo.vrijeme_pocetka).setHours(
-          new Date(this.predmet_novo.vrijeme_pocetka).getHours() + 2
-        );
+        this.predmet_novo.vrijeme_pocetka = new Date(
+          this.predmet_novo.vrijeme_pocetka
+        ).setHours(new Date(this.predmet_novo.vrijeme_pocetka).getHours() + 2);
       }
+
       if (this.predmet_novo.vrijeme_zavrsetka == "") {
         this.predmet_novo.vrijeme_zavrsetka = this.item.vrijeme_zavrsetka;
       } else {
-        this.predmet_novo.vrijeme_zavrsetka = new Date(this.predmet_novo.vrijeme_zavrsetka).setHours(
+        this.predmet_novo.vrijeme_zavrsetka = new Date(
+          this.predmet_novo.vrijeme_zavrsetka
+        ).setHours(
           new Date(this.predmet_novo.vrijeme_zavrsetka).getHours() + 2
         );
       }
-      if (this.predmet_novo.id_kategorije == "") this.predmet_novo.id_kategorije = this.item.id_kategorije;
+
+      if (this.predmet_novo.id_kategorije == "") {
+        this.predmet_novo.id_kategorije = this.item.id_kategorije;
+      }
 
       try {
         const token = localStorage.getItem("token");
@@ -349,7 +409,10 @@ export default {
       const headers = { Authorization: `Bearer ${token}` };
 
       try {
-        await axios.delete("http://localhost:3000/api/brisanjeSlike/" + idSlikeZaBrisanje, { headers });
+        await axios.delete(
+          "http://localhost:3000/api/brisanjeSlike/" + idSlikeZaBrisanje,
+          { headers }
+        );
 
         this.$q.notify({
           color: "positive",
@@ -370,9 +433,11 @@ export default {
 
     async dodajNoveSlike() {
       const formData = new FormData();
+
       this.base64Images.forEach((base64String, index) => {
         formData.append(`file${index}`, base64String);
       });
+
       formData.append("id_predmeta", this.id_predmeta);
 
       const token = localStorage.getItem("token");
@@ -417,21 +482,20 @@ export default {
 
       try {
         this.base64Images = [];
+
         for (const file of this.files) {
           const compressedFile = await imageCompression(file, options);
           const reader = new FileReader();
 
           const promise = new Promise((resolve, reject) => {
-            reader.onload = () => {
-              resolve(reader.result);
-            };
+            reader.onload = () => resolve(reader.result);
             reader.onerror = (error) => reject(error);
           });
 
           reader.readAsDataURL(compressedFile);
+
           const base64String = await promise;
           this.base64Images.push(base64String);
-          this.slika = base64String;
         }
       } catch (error) {
         console.error(error);

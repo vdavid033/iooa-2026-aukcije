@@ -10,19 +10,12 @@
 
     <div class="q-ml-sm flex flex-start q-gutter-sm">
       <div style="width: 500px">
-        <q-input
-          filled
-          type="text"
-          :label="t('createAuction.productName')"
-          v-model="naziv_predmeta"
-          :rules="[(val) => (val !== null && val !== '') || t('createAuction.enterName')]"
-        />
+        <q-input filled type="text" :label="t('createAuction.productName')" v-model="naziv_predmeta" />
       </div>
 
       <div style="width: 500px">
         <q-select
           filled
-          lazy-rules
           emit-value
           v-model="selectedKategorija"
           :label="t('createAuction.category')"
@@ -30,45 +23,21 @@
           option-label="label"
           option-value="value"
           map-options
-          :rules="[(val) => (val !== null && val !== '') || t('createAuction.selectCategory')]"
         />
       </div>
 
       <div style="width: 500px">
-        <q-input
-          filled
-          type="number"
-          :label="t('createAuction.startPrice')"
-          v-model="pocetna_cijena"
-          lazy-rules
-          :rules="[
-            (val) => (val !== null && val !== '') || t('createAuction.enterPrice'),
-            (val) => val >= 0 || t('createAuction.priceNotNegative')
-          ]"
-        />
+        <q-input filled type="number" :label="t('createAuction.startPrice')" v-model="pocetna_cijena" />
       </div>
     </div>
 
     <div class="q-ml-sm flex flex-start q-gutter-sm">
       <div style="width: 500px">
-        <q-input
-          filled
-          v-model="vrijemePocetka"
-          :label="t('createAuction.startDate')"
-        >
+        <q-input filled :model-value="formattedDate(vrijemePocetka)" :label="t('createAuction.startDate')" readonly>
           <template v-slot:prepend>
             <q-icon name="event" class="cursor-pointer">
               <q-popup-proxy cover>
-                <q-date v-model="vrijemePocetka" mask="YYYY-MM-DD HH:mm">
-                  <div class="row items-center justify-end">
-                    <q-btn
-                      v-close-popup
-                      :label="t('createAuction.close')"
-                      color="primary"
-                      flat
-                    />
-                  </div>
-                </q-date>
+                <q-date v-model="vrijemePocetka" mask="YYYY-MM-DD HH:mm" />
               </q-popup-proxy>
             </q-icon>
           </template>
@@ -76,16 +45,7 @@
           <template v-slot:append>
             <q-icon name="access_time" class="cursor-pointer">
               <q-popup-proxy cover>
-                <q-time v-model="vrijemePocetka" mask="YYYY-MM-DD HH:mm" format24h>
-                  <div class="row items-center justify-end">
-                    <q-btn
-                      v-close-popup
-                      :label="t('createAuction.close')"
-                      color="primary"
-                      flat
-                    />
-                  </div>
-                </q-time>
+                <q-time v-model="vrijemePocetka" mask="YYYY-MM-DD HH:mm" :format24h="!isEnglish()" />
               </q-popup-proxy>
             </q-icon>
           </template>
@@ -93,24 +53,11 @@
       </div>
 
       <div style="width: 500px">
-        <q-input
-          filled
-          v-model="vrijemeZavrsetka"
-          :label="t('createAuction.endDate')"
-        >
+        <q-input filled :model-value="formattedDate(vrijemeZavrsetka)" :label="t('createAuction.endDate')" readonly>
           <template v-slot:prepend>
             <q-icon name="event" class="cursor-pointer">
               <q-popup-proxy cover>
-                <q-date v-model="vrijemeZavrsetka" mask="YYYY-MM-DD HH:mm">
-                  <div class="row items-center justify-end">
-                    <q-btn
-                      v-close-popup
-                      :label="t('createAuction.close')"
-                      color="primary"
-                      flat
-                    />
-                  </div>
-                </q-date>
+                <q-date v-model="vrijemeZavrsetka" mask="YYYY-MM-DD HH:mm" />
               </q-popup-proxy>
             </q-icon>
           </template>
@@ -118,16 +65,7 @@
           <template v-slot:append>
             <q-icon name="access_time" class="cursor-pointer">
               <q-popup-proxy cover>
-                <q-time v-model="vrijemeZavrsetka" mask="YYYY-MM-DD HH:mm" format24h>
-                  <div class="row items-center justify-end">
-                    <q-btn
-                      v-close-popup
-                      :label="t('createAuction.close')"
-                      color="primary"
-                      flat
-                    />
-                  </div>
-                </q-time>
+                <q-time v-model="vrijemeZavrsetka" mask="YYYY-MM-DD HH:mm" :format24h="!isEnglish()" />
               </q-popup-proxy>
             </q-icon>
           </template>
@@ -135,34 +73,20 @@
       </div>
 
       <div style="width: 500px">
-        <q-input
-          filled
-          type="text"
-          :label="t('createAuction.description')"
-          v-model="opis_predmeta"
-          :rules="[(val) => (val !== null && val !== '') || t('createAuction.enterDescription')]"
-        />
+        <q-input filled type="text" :label="t('createAuction.description')" v-model="opis_predmeta" />
       </div>
     </div>
 
     <div>
       <br />
       <p class="q-pl-md">{{ t('createAuction.uploadImage') }}</p>
-      <br />
 
-      <input
-        class="q-pl-md"
-        type="file"
-        accept="image/*"
-        @change="onFileChange"
-        multiple
-      />
+      <input class="q-pl-md" type="file" accept="image/*" @change="onFileChange" multiple />
 
       <q-separator />
 
       <div v-if="base64Image">
         <img :src="base64Image" />
-        <q-separator />
       </div>
     </div>
 
@@ -170,26 +94,9 @@
       <q-btn :label="t('createAuction.submit')" @click="submitForm" color="green" />
       <q-btn :label="t('createAuction.cancel')" @click="otkazi_gumb" color="red" />
     </div>
-
-    <q-dialog v-model="showDialog">
-      <q-card>
-        <q-card-section>
-          {{ t('createAuction.success') }}
-        </q-card-section>
-
-        <q-card-actions align="right">
-          <q-btn
-            flat
-            :label="t('createAuction.close')"
-            color="primary"
-            v-close-popup
-            @click="closeAndReload"
-          />
-        </q-card-actions>
-      </q-card>
-    </q-dialog>
   </q-card>
 </template>
+
 <script>
 import imageCompression from "browser-image-compression";
 import axios from "axios";
@@ -197,8 +104,8 @@ import { useI18n } from "vue-i18n";
 
 export default {
   setup() {
-    const { t } = useI18n();
-    return { t };
+    const { t, locale } = useI18n();
+    return { t, locale };
   },
 
   data() {
@@ -207,19 +114,16 @@ export default {
       naziv_predmeta: "",
       opis_predmeta: "",
       selectedKategorija: null,
-      selectedKorisnik: null,
       pocetna_cijena: "",
       slika: null,
       file: null,
       base64Image: null,
-      base64Text: null,
-      imageUrl: "",
-      showDialog: false,
       vrijemePocetka: null,
       vrijemeZavrsetka: null,
       decoded: null,
       insertedPredmetId_dohvat: null,
 
+      kategorijeRaw: [],
       kategorije: [],
       korisnik: [],
       files: [],
@@ -227,23 +131,49 @@ export default {
     };
   },
 
+  watch: {
+    locale() {
+      this.setKategorijeOptions();
+    },
+  },
+
   methods: {
-    async checkUserRole() {
-      if (!this.decoded || !(this.decoded.uloga === "admin" || this.decoded.uloga === "user")) {
-        this.$q.notify({
-          color: "negative",
-          position: "top",
-          message: this.t("createAuction.notLoggedIn"),
-          icon: "warning",
-        });
-        this.$router.push('pocetna');
-        }
+    isEnglish() {
+      return String(this.locale || "hr").startsWith("en");
+    },
+
+    formattedDate(dateString) {
+      if (!dateString) return "";
+
+      const locale = this.isEnglish() ? "en-US" : "hr-HR";
+
+      return new Date(dateString).toLocaleString(locale, {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: this.isEnglish(),
+      });
+    },
+
+    categoryName(kategorija) {
+      return this.isEnglish()
+        ? kategorija.naziv_kategorije_en || kategorija.naziv_kategorije
+        : kategorija.naziv_kategorije;
+    },
+
+    setKategorijeOptions() {
+      this.kategorije = this.kategorijeRaw.map((kategorija) => ({
+        label: this.categoryName(kategorija),
+        value: kategorija.id_kategorije,
+      }));
     },
 
     async onFileChange(e) {
       this.files = Array.from(e.target.files);
-      
-      const allImages = this.files.every(file => file.type.startsWith('image/'));
+
+      const allImages = this.files.every((file) => file.type.startsWith("image/"));
       if (!allImages) {
         this.$q.notify({
           color: "negative",
@@ -268,22 +198,22 @@ export default {
 
       try {
         this.base64Images = [];
+
         for (const file of this.files) {
           const compressedFile = await imageCompression(file, options);
           const reader = new FileReader();
 
           const promise = new Promise((resolve, reject) => {
-            reader.onload = () => {
-              resolve(reader.result);
-            };
+            reader.onload = () => resolve(reader.result);
             reader.onerror = (error) => reject(error);
           });
 
           reader.readAsDataURL(compressedFile);
           const base64String = await promise;
-          this.base64Images.push(base64String);
 
+          this.base64Images.push(base64String);
           this.slika = base64String;
+          this.base64Image = base64String;
         }
       } catch (error) {
         console.error(error);
@@ -291,29 +221,19 @@ export default {
       }
     },
 
-    closeAndReload() {
-      this.showDialog = false;
-      this.$router.push({ path: "prikaz", query: { id_predmeta: this.insertedPredmetId_dohvat } });
-    },
-
-    otkazi_gumb(){
+    otkazi_gumb() {
       this.$router.push("/Pocetna").then(() => {
-            // Refresh the page
-            window.location.reload();
+        window.location.reload();
       });
     },
 
     async submitForm() {
-      const requiredFields = [
-        this.naziv_predmeta,
-        this.opis_predmeta,
-        this.pocetna_cijena,
-        this.selectedKategorija
-      ];
-
-      const hasEmptyFields = requiredFields.some(field => !field);
-
-      if (hasEmptyFields) {
+      if (
+        !this.naziv_predmeta ||
+        !this.opis_predmeta ||
+        !this.pocetna_cijena ||
+        !this.selectedKategorija
+      ) {
         this.$q.notify({
           color: "negative",
           position: "top",
@@ -321,7 +241,9 @@ export default {
           icon: "warning",
         });
         return;
-      } else if (!this.files.length) {
+      }
+
+      if (!this.files.length) {
         this.$q.notify({
           color: "negative",
           position: "top",
@@ -329,7 +251,9 @@ export default {
           icon: "warning",
         });
         return;
-      }else if (this.vrijemePocetka > this.vrijemeZavrsetka) {
+      }
+
+      if (this.vrijemePocetka > this.vrijemeZavrsetka) {
         this.$q.notify({
           color: "negative",
           position: "top",
@@ -337,17 +261,10 @@ export default {
           icon: "warning",
         });
         return;
-      }else if (this.pocetna_cijena < 0) {
-        this.$q.notify({
-          color: "negative",
-          position: "top",
-          message: this.t("createAuction.priceNotNegative"),
-          icon: "error",
-        });
-        return;
       }
 
       const formData = new FormData();
+
       this.base64Images.forEach((base64String, index) => {
         formData.append(`file${index}`, base64String);
       });
@@ -362,26 +279,33 @@ export default {
       formData.append("id_kategorije", this.selectedKategorija);
 
       try {
-        // Get the JWT token from local storage
         const token = localStorage.getItem("token");
-
-        // Set up the request headers to include the JWT token
         const headers = { Authorization: `Bearer ${token}` };
+
         const response = await axios.post("http://localhost:3000/unosPredmeta", formData, {
           headers: {
             "Content-Type": "multipart/form-data",
-            ...headers, // Include the JWT token in the headers
+            ...headers,
           },
         });
-        // Save the insertedPredmetId from the response
-        if (response.data && response.data.insertedPredmetId) {
-          const insertedPredmetId = response.data.insertedPredmetId;
-          console.log("Inserted Predmet ID:", insertedPredmetId);
-          this.insertedPredmetId_dohvat = insertedPredmetId;
-          // You can now use insertedPredmetId for further operations or store it
+
+        const insertedId =
+          response.data.insertedPredmetId ||
+          response.data.insertId ||
+          response.data.id_predmeta ||
+          response.data.data?.insertId;
+
+        if (!insertedId) {
+          console.error("Backend nije vratio ID predmeta:", response.data);
+          return;
         }
 
-        this.showDialog = true;
+        console.log("Inserted ID:", insertedId);
+
+        this.$router.push({
+          path: "/prikaz",
+          query: { id_predmeta: insertedId },
+        });
       } catch (error) {
         console.error(error);
       }
@@ -390,47 +314,41 @@ export default {
 
   mounted() {
     function parseJwt(token) {
-      var base64Url = token.split('.')[1];
-      var base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-      var jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
-          return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-      }).join(''));
+      const base64Url = token.split(".")[1];
+      const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+      const jsonPayload = decodeURIComponent(
+        atob(base64)
+          .split("")
+          .map(function (c) {
+            return "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2);
+          })
+          .join("")
+      );
 
       return JSON.parse(jsonPayload);
     }
-    // Get the JWT token from local storage
-    const token = localStorage.getItem("token");
-    if (token) {
-          // Set up the request headers to include the JWT token
-      const headers = { Authorization: `Bearer ${token}` };
 
+    const token = localStorage.getItem("token");
+
+    if (token) {
+      const headers = { Authorization: `Bearer ${token}` };
       this.decoded = parseJwt(token);
 
       axios
-      .get("http://localhost:3000/getUnosPredmeta", { headers })
-      .then((response) => {
-        this.kategorije = response.data.kategorije.map((kategorija) => ({
-          label: kategorija.naziv_kategorije,
-          value: kategorija.id_kategorije,
-        }));
-        this.korisnik = response.data.korisnici.map((korisnici) => ({
-          label: korisnici.ime_korisnika,
-          value: korisnici.id_korisnika,
-        }));
-      })
-      .catch((error) => {
-        console.error("Error fetching data:", error);
-      });
+        .get("http://localhost:3000/getUnosPredmeta", { headers })
+        .then((response) => {
+          this.kategorijeRaw = response.data.kategorije;
+          this.setKategorijeOptions();
+        })
+        .catch((error) => {
+          console.error("Error fetching data:", error);
+        });
     }
-
-
-    this.checkUserRole();
 
     const now = new Date();
     now.setHours(now.getHours() + 2);
-    this.vrijemePocetka = now.toISOString().slice(0, 16).replace('T', ' ');
+    this.vrijemePocetka = now.toISOString().slice(0, 16).replace("T", " ");
     this.vrijemeZavrsetka = this.vrijemePocetka;
-
   },
 };
 </script>

@@ -154,35 +154,86 @@ export default {
     try {
       const token = localStorage.getItem("token");
       const userId = this.getUserIdFromToken(token);
-      const userData = await this.fetchUserData(userId);
       const headers = { Authorization: `Bearer ${token}` };
 
+      const userData = await this.fetchUserData(userId);
       this.korisnik_trenutno = userData;
 
       await this.dohvatPredmeta(userId, headers);
       await this.dohvatPonude(userId, headers);
     } catch (error) {
-      console.error("Greška kod dohvaćanja vlastitih predmeta:", error);
+      console.error("Greška:", error);
+    }
+  },
+
+  watch: {
+    "$i18n.locale"() {
+      const token = localStorage.getItem("token");
+      const userId = this.getUserIdFromToken(token);
+      const headers = { Authorization: `Bearer ${token}` };
+
+      this.dohvatPredmeta(userId, headers);
+      this.dohvatPonude(userId, headers);
     }
   },
 
   methods: {
+    isEnglish() {
+      return String(this.$i18n.locale || "hr").startsWith("en");
+    },
+
     async dohvatPredmeta(userId, headers) {
       await axios
         .get("http://localhost:3000/api/vlastiti-predmeti/" + userId, { headers })
         .then((response) => {
+
           if (response.data.length === 0) {
             this.noItemsMessage = this.t("profilePage.noAuctionItems");
             this.vlastitiPredmeti = [];
           } else {
             this.noItemsMessage = "";
-            this.vlastitiPredmeti = response.data;
+
+            this.vlastitiPredmeti = response.data.map((item) => ({
+              ...item,
+              naziv_predmeta: this.isEnglish()
+                ? item.naziv_predmeta_en || item.naziv_predmeta
+                : item.naziv_predmeta
+            }));
           }
         });
     },
 
+    async dohvatPonude(userId, headers) {
+      await axios
+        .get("http://localhost:3000/api/vlastita-ponuda-korisnik/" + userId, { headers })
+        .then((response) => {
+
+          if (response.data.length === 0) {
+            this.noBidsMessage = this.t("profilePage.noBids");
+            this.vlastitePonude = [];
+          } else {
+            this.noBidsMessage = "";
+
+            this.vlastitePonude = response.data.map((item) => ({
+              ...item,
+              naziv_predmeta: this.isEnglish()
+                ? item.naziv_predmeta_en || item.naziv_predmeta
+                : item.naziv_predmeta,
+              opis_predmeta: this.isEnglish()
+                ? item.opis_en || item.opis_predmeta
+                : item.opis_predmeta
+            }));
+          }
+        })
+        .catch((error) => {
+          console.error("API Error:", error);
+        });
+    },
+
     formattedDate(dateString) {
-      return new Date(dateString).toLocaleString(this.$i18n.locale).replace(",", "");
+      return new Date(dateString)
+        .toLocaleString(this.$i18n.locale)
+        .replace(",", "");
     },
 
     pregledPredmeta(id_predmeta) {
@@ -200,7 +251,10 @@ export default {
 
       if (window.confirm(this.t("profilePage.confirmDelete"))) {
         try {
-          await axios.delete("http://localhost:3000/api/brisanjePredmeta/" + id_predmeta, { headers });
+          await axios.delete(
+            "http://localhost:3000/api/brisanjePredmeta/" + id_predmeta,
+            { headers }
+          );
 
           this.$q.notify({
             color: "positive",
@@ -210,30 +264,10 @@ export default {
 
           await this.dohvatPredmeta(userId, headers);
         } catch (error) {
-          console.log("Greška pri brisanju predmeta: " + error);
+          console.log("Greška pri brisanju: " + error);
         }
       }
     },
-
-    async dohvatPonude(userId, headers) {
-      await axios
-        .get("http://localhost:3000/api/vlastita-ponuda-korisnik/" + userId, { headers })
-        .then((response) => {
-          if (response.data.length === 0) {
-            this.noBidsMessage = this.t("profilePage.noBids");
-            this.vlastitePonude = [];
-          } else {
-            this.noBidsMessage = "";
-            this.vlastitePonude = response.data;
-          }
-        })
-        .catch((error) => {
-          console.error("API Error:", error);
-        });
-    },
-
-    editBid(bid) {},
-    deleteBid(bid) {},
 
     getUserIdFromToken(token) {
       const base64Url = token.split('.')[1];
@@ -250,21 +284,15 @@ export default {
     },
 
     async fetchUserData(userId) {
-      try {
-        const response = await axios.get(`http://localhost:3000/api/korisnikinfo1/${userId}`);
-        return response.data[0];
-      } catch (error) {
-        console.error("Error fetching user data:", error);
-        throw error;
-      }
+      const response = await axios.get(
+        `http://localhost:3000/api/korisnikinfo1/${userId}`
+      );
+      return response.data[0];
     },
 
     provjeriDatum(predmet) {
       const vrijemePocetka = new Date(predmet.vrijeme_pocetka);
-      if (vrijemePocetka < new Date()) {
-        return false;
-      }
-      return true;
+      return vrijemePocetka >= new Date();
     }
   }
 };

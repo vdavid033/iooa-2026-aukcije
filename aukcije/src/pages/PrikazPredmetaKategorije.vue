@@ -42,19 +42,32 @@
           <q-item class="q-pa-sm text-bold text-blue-7">
             {{ item.naziv_predmeta }}
           </q-item>
+
           <q-item>
             {{ t("categoryPage.startingPrice") }}: {{ item.pocetna_cijena }}$
           </q-item>
+
           <q-item>
-            {{ t("categoryPage.startTime") }}: {{ formatDate(item.vrijeme_pocetka) }}
+            {{ t("categoryPage.startTime") }}:
+            {{ formatDate(item.vrijeme_pocetka) }}
           </q-item>
+
           <q-item>
-            {{ t("categoryPage.endTime") }}: {{ formatDate(item.vrijeme_zavrsetka) }}
+            {{ t("categoryPage.endTime") }}:
+            {{ formatDate(item.vrijeme_zavrsetka) }}
           </q-item>
+
           <q-item>
             {{ t("categoryPage.remainingTime") }}:
-            {{ t("categoryPage.remainingHours", { hours: item.preostalo_vrijeme }) }}
+            {{
+              item.preostalo_vrijeme
+                ? item.preostalo_vrijeme
+                  .replace(" dana", " " + t("days"))
+                  .replace(" dan", " " + t("day"))
+                : ""
+          }}
           </q-item>
+
           <q-item>
             {{ t("categoryPage.currentPrice") }}: {{ item.trenutna_cijena }}$
           </q-item>
@@ -117,7 +130,9 @@ export default {
       this.items.forEach((item) => {
         if (
           !uniqueItemsMap.has(item.id_predmeta) &&
-          item.naziv_predmeta.toLowerCase().includes(this.search.toLowerCase())
+          item.naziv_predmeta
+            .toLowerCase()
+            .includes(this.search.toLowerCase())
         ) {
           uniqueItemsMap.set(item.id_predmeta, item);
         }
@@ -127,25 +142,45 @@ export default {
     },
   },
 
+  watch: {
+    locale() {
+      this.fetchItems();
+    },
+  },
+
   mounted() {
-    axios
-      .get(baseUrl + "get-kategorija-predmet/" + this.categoryId)
-      .then((response) => {
-        this.items = response.data;
-      })
-      .catch((error) => {
-        console.error("Error fetching category items:", error);
-      });
+    this.fetchItems();
   },
 
   methods: {
+    fetchItems() {
+      const lang = String(this.locale || "hr").startsWith("en") ? "en" : "hr";
+
+      console.log("TRENUTNI JEZIK:", this.locale);
+      console.log("ŠALJEM LANG:", lang);
+      console.log("URL:", baseUrl + "get-kategorija-predmet-lang/" + this.categoryId);
+
+      axios
+        .get(baseUrl + "get-kategorija-predmet-lang/" + this.categoryId, {
+          params: { lang },
+        })
+        .then((response) => {
+          this.items = response.data;
+        })
+        .catch((error) => {
+          console.error("Error fetching category items:", error);
+        });
+    },
+
     formatDate(dateString) {
       const localeMap = {
         hr: "hr-HR",
+        "hr-HR": "hr-HR",
         en: "en-US",
+        "en-US": "en-US",
       };
 
-      const currentLocale = localeMap[this.locale] || this.locale || "en-US";
+      const currentLocale = localeMap[this.locale] || "en-US";
       return new Date(dateString).toLocaleString(currentLocale).replace(",", "");
     },
 
