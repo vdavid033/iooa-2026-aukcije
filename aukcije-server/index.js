@@ -36,6 +36,7 @@ app.use(express.urlencoded({ extended: true }));
 
 connection.connect();
 
+
 app.get("/api/korisnici", authJwt.verifyTokenAdmin, (req, res) => {
   connection.query("SELECT id_korisnika, ime_korisnika, prezime_korisnika, email_korisnika, adresa_korisnika FROM korisnik WHERE ime_korisnika != 'obrisani' AND prezime_korisnika != 'korisnik'", (error, results) => {
     if (error) throw error;
@@ -87,12 +88,52 @@ app.post("/unosPredmeta", upload.none(), authJwt.verifyTokenUser, function (requ
   });
 });
 
+
+
+app.get("/api/get-predmet/:id", function (req, res) {
+  const id = req.params.id;
+
+  connection.query(
+    `
+    SELECT 
+      p.id_predmeta,
+      p.naziv_predmeta,
+      p.naziv_predmeta_en,
+      p.opis_predmeta,
+      p.opis_en,
+      p.vrijeme_pocetka,
+      p.vrijeme_zavrsetka,
+      p.pocetna_cijena,
+      p.id_korisnika,
+      p.id_kategorije,
+      GROUP_CONCAT(s.slika SEPARATOR '|||') AS slike,
+      COALESCE(MAX(po.vrijednost_ponude), p.pocetna_cijena) AS trenutna_cijena
+    FROM predmet p
+    LEFT JOIN slika s ON p.id_predmeta = s.id_predmeta
+    LEFT JOIN ponuda po ON p.id_predmeta = po.id_predmeta
+    WHERE p.id_predmeta = ?
+    GROUP BY p.id_predmeta
+    `,
+    [id],
+    function (error, results) {
+      if (error) {
+        console.error(error);
+        return res.status(500).json({ error: true, message: "Greška u bazi" });
+      }
+
+      res.json(results);
+    }
+  );
+});
+
+
 app.get("/api/all-predmet", (req, res) => {
   const query = `
     SELECT
         p.id_predmeta,
         p.opis_predmeta,
         p.naziv_predmeta,
+        p.naziv_predmeta_en,
         p.pocetna_cijena,
         p.vrijeme_pocetka,
         p.vrijeme_zavrsetka,
@@ -109,37 +150,25 @@ app.get("/api/all-predmet", (req, res) => {
     FROM predmet p
     LEFT JOIN ponuda po ON p.id_predmeta = po.id_predmeta
     WHERE p.vrijeme_zavrsetka > NOW()
-    GROUP BY p.id_predmeta
-    ORDER BY preostalo_vrijeme DESC;
+    GROUP BY
+        p.id_predmeta,
+        p.opis_predmeta,
+        p.naziv_predmeta,
+        p.naziv_predmeta_en,
+        p.pocetna_cijena,
+        p.vrijeme_pocetka,
+        p.vrijeme_zavrsetka
+    ORDER BY p.vrijeme_zavrsetka DESC;
   `;
 
   connection.query(query, (error, results) => {
     if (error) {
-      throw error;
+      console.error(error);
+      return res.status(500).send(error);
     }
+
     res.send(results);
   });
-});
-
-app.get("/api/get-predmet/:id", (req, res) => {
-  const { id } = req.params;
-
-  connection.query(
-    `SELECT p.naziv_predmeta, p.id_predmeta, p.pocetna_cijena, p.vrijeme_pocetka, p.vrijeme_zavrsetka, TIME_FORMAT( SEC_TO_TIME(TIMESTAMPDIFF(SECOND, p.vrijeme_pocetka, p.vrijeme_zavrsetka)), '%H:%i:%s' ) AS preostalo_vrijeme, p.opis_predmeta, COALESCE(MAX(po.vrijednost_ponude), p.pocetna_cijena) AS vrijednost_ponude, GROUP_CONCAT(DISTINCT s.slika SEPARATOR '|||') AS slike
-    FROM predmet p 
-    LEFT JOIN ponuda po ON p.id_predmeta = po.id_predmeta 
-    LEFT JOIN slika s ON p.id_predmeta = s.id_predmeta 
-    WHERE p.id_predmeta = ? 
-    GROUP BY p.id_predmeta`,
-    [id],
-    (error, results) => {
-      if (error) throw error;
-      if (results.length > 0 && results[0].slike) {
-        results[0].slike = results[0].slike.split("|||");
-      }
-      res.send(results);
-    }
-  );
 });
 
 app.get("/api/get-kategorija-predmet/:id", (req, res) => {
@@ -186,6 +215,8 @@ app.get("/api/all-kategorija", (req, res) => {
   });
 });
 
+
+
 /* app.get("/api/get-predmet/:id", (req, res) => {
   const { id } = req.params;
 
@@ -217,12 +248,22 @@ app.get("/api/vlastita-ponuda-korisnik/:id", (req, res) => {
   const { id } = req.params;
 
   connection.query(
-    `SELECT p.*, pr.*, s.*
+    `SELECT 
+      p.*,
+      pr.id_predmeta,
+      pr.naziv_predmeta,
+      pr.naziv_predmeta_en,
+      pr.opis_predmeta,
+      pr.opis_en,
+      pr.pocetna_cijena,
+      pr.vrijeme_pocetka,
+      pr.vrijeme_zavrsetka,
+      s.slika
     FROM ponuda p
     JOIN predmet pr ON p.id_predmeta = pr.id_predmeta
     LEFT JOIN slika s ON pr.id_predmeta = s.id_predmeta
     WHERE p.id_korisnika = ?
-    GROUP BY p.id_ponude, pr.id_predmeta, s.id_slike
+    GROUP BY p.id_ponude
     ORDER BY p.vrijeme_ponude DESC;`,
     [id],
     (error, results) => {
@@ -274,9 +315,7 @@ app.get("/api/get-predmet-trenutna-cijena/:id", (req, res) => {
   });
 });
 
-app.listen(port, () => {
-  console.log("Server running at port: " + port);
-});
+
 app.post("/regaKorisnika", function (request, response) {
   const data = request.body;
   const saltRounds = 10;
@@ -466,27 +505,28 @@ app.delete("/api/deleteKategoriju/:id", authJwt.verifyTokenAdmin, (req, res) => 
 app.get("/api/vlastiti-predmeti/:id", authJwt.verifyTokenUser, (req, res) => {
   connection.query(
     `SELECT
-    p.id_predmeta,
-    p.opis_predmeta,
-    p.naziv_predmeta,
-    p.pocetna_cijena,
-    p.vrijeme_pocetka,
-    p.vrijeme_zavrsetka,
-    CONCAT(
+      p.id_predmeta,
+      p.opis_predmeta,
+      p.naziv_predmeta,
+      p.naziv_predmeta_en,
+      p.pocetna_cijena,
+      p.vrijeme_pocetka,
+      p.vrijeme_zavrsetka,
+      CONCAT(
         FLOOR(TIMESTAMPDIFF(SECOND, NOW(), p.vrijeme_zavrsetka) / (24 * 3600)),
         ' dana, ',
         TIME_FORMAT(
-            SEC_TO_TIME(TIMESTAMPDIFF(SECOND, NOW(), p.vrijeme_zavrsetka) % (24 * 3600)),
-            '%H:%i:%s'
+          SEC_TO_TIME(TIMESTAMPDIFF(SECOND, NOW(), p.vrijeme_zavrsetka) % (24 * 3600)),
+          '%H:%i:%s'
         )
-    ) AS preostalo_vrijeme,
-    (SELECT slika FROM slika WHERE id_predmeta = p.id_predmeta LIMIT 1) AS slika,
-    COALESCE(MAX(po.vrijednost_ponude), p.pocetna_cijena) AS trenutna_cijena
-FROM predmet p
-LEFT JOIN ponuda po ON p.id_predmeta = po.id_predmeta
-WHERE p.id_korisnika = ?
-GROUP BY p.id_predmeta
-ORDER BY preostalo_vrijeme DESC;`,
+      ) AS preostalo_vrijeme,
+      (SELECT slika FROM slika WHERE id_predmeta = p.id_predmeta LIMIT 1) AS slika,
+      COALESCE(MAX(po.vrijednost_ponude), p.pocetna_cijena) AS trenutna_cijena
+    FROM predmet p
+    LEFT JOIN ponuda po ON p.id_predmeta = po.id_predmeta
+    WHERE p.id_korisnika = ?
+    GROUP BY p.id_predmeta
+    ORDER BY preostalo_vrijeme DESC;`,
     [req.params.id],
     (error, results) => {
       if (error) throw error;
@@ -494,7 +534,6 @@ ORDER BY preostalo_vrijeme DESC;`,
     }
   );
 });
-
 app.delete("/api/brisanjePredmeta/:id", authJwt.verifyTokenUser, (req, res) => {
   connection.query("DELETE FROM predmet WHERE id_predmeta = ?", [req.params.id], (error, results) => {
     if (error) {
@@ -522,23 +561,47 @@ app.put("/api/izmjenaPredmeta/:id", authJwt.verifyTokenUser, (req, res) => {
 });
 
 app.get("/api/get-predmet2/:id", (req, res) => {
-  //razlika izmedu ovog i obicnog get-predmet je što ovaj lovi i id kategorije i id slika.
   const { id } = req.params;
 
   connection.query(
-    `SELECT p.naziv_predmeta, p.id_predmeta, p.id_kategorije, p.pocetna_cijena, p.vrijeme_pocetka, p.vrijeme_zavrsetka, p.opis_predmeta, COALESCE(MAX(po.vrijednost_ponude), p.pocetna_cijena) AS vrijednost_ponude, GROUP_CONCAT(DISTINCT s.id_slike SEPARATOR '|||') AS id_slika, GROUP_CONCAT(DISTINCT s.slika SEPARATOR '|||') AS slike
-    FROM predmet p 
-    LEFT JOIN ponuda po ON p.id_predmeta = po.id_predmeta 
-    LEFT JOIN slika s ON p.id_predmeta = s.id_predmeta 
-    WHERE p.id_predmeta = ? 
-    GROUP BY p.id_predmeta`,
+    `SELECT 
+      p.id_predmeta,
+      p.id_kategorije,
+      p.naziv_predmeta,
+      p.naziv_predmeta_en,
+      p.opis_predmeta,
+      p.opis_en,
+      p.pocetna_cijena,
+      p.vrijeme_pocetka,
+      p.vrijeme_zavrsetka,
+      COALESCE(MAX(po.vrijednost_ponude), p.pocetna_cijena) AS vrijednost_ponude,
+      GROUP_CONCAT(DISTINCT s.id_slike SEPARATOR '|||') AS id_slika,
+      GROUP_CONCAT(DISTINCT s.slika SEPARATOR '|||') AS slike
+    FROM predmet p
+    LEFT JOIN ponuda po ON p.id_predmeta = po.id_predmeta
+    LEFT JOIN slika s ON p.id_predmeta = s.id_predmeta
+    WHERE p.id_predmeta = ?
+    GROUP BY 
+      p.id_predmeta,
+      p.id_kategorije,
+      p.naziv_predmeta,
+      p.naziv_predmeta_en,
+      p.opis_predmeta,
+      p.opis_en,
+      p.pocetna_cijena,
+      p.vrijeme_pocetka,
+      p.vrijeme_zavrsetka`,
     [id],
     (error, results) => {
       if (error) throw error;
+
       if (results.length > 0 && results[0].slike) {
         results[0].slike = results[0].slike.split("|||");
-        results[0].id_slika = results[0].id_slika.split("|||");
+        results[0].id_slika = results[0].id_slika
+          ? results[0].id_slika.split("|||")
+          : [];
       }
+
       res.send(results);
     }
   );
@@ -566,4 +629,137 @@ app.post("/api/dodavanjeSlika", upload.none(), authJwt.verifyTokenUser, function
     }
   });
   return response.send({ error: false, message: "Slike su uspješno dodane." });
+});
+
+app.get("/api/all-kategorija", (req, res) => {
+  const lang = req.query.lang === "en" ? "en" : "hr";
+
+  const sql = `
+    SELECT 
+      id_kategorije,
+      CASE
+        WHEN ? = 'en' THEN naziv_kategorije_en
+        ELSE naziv_kategorije
+      END AS naziv_kategorije
+    FROM kategorija
+  `;
+
+  db.query(sql, [lang], (err, result) => {
+    if (err) {
+      console.error("Greška pri dohvatu kategorija:", err);
+      return res.status(500).json({ error: "Greška pri dohvatu kategorija" });
+    }
+
+    res.json(result);
+  });
+});
+
+app.get("/api/kategorijainfo/:id", (req, res) => {
+  const id = req.params.id;
+
+  const sql = `
+    SELECT 
+      id_kategorije,
+      naziv_kategorije,
+      naziv_kategorije_en
+    FROM kategorija
+    WHERE id_kategorije = ?
+  `;
+
+  db.query(sql, [id], (err, result) => {
+    if (err) {
+      console.error("Greška pri dohvatu kategorije:", err);
+      return res.status(500).json({ error: "Greška pri dohvatu kategorije" });
+    }
+
+    res.json(result);
+  });
+});
+
+app.get("/api/get-kategorija-predmet-lang/:id_kategorije", (req, res) => {
+  const { id_kategorije } = req.params;
+  const lang = String(req.query.lang || "hr").startsWith("en") ? "en" : "hr";
+
+  const sql = `
+    SELECT 
+      p.id_predmeta,
+      p.naziv_predmeta AS naziv_hr_debug,
+      p.naziv_predmeta_en AS naziv_en_debug,
+
+      IF(
+        ? = 'en'
+        AND p.naziv_predmeta_en IS NOT NULL
+        AND p.naziv_predmeta_en != '',
+        p.naziv_predmeta_en,
+        p.naziv_predmeta
+      ) AS naziv_predmeta,
+
+      p.pocetna_cijena,
+      p.vrijeme_pocetka,
+      p.vrijeme_zavrsetka,
+
+      CONCAT(
+        FLOOR(TIMESTAMPDIFF(SECOND, NOW(), p.vrijeme_zavrsetka) / 86400),
+        ' dana, ',
+        TIME_FORMAT(
+          SEC_TO_TIME(TIMESTAMPDIFF(SECOND, NOW(), p.vrijeme_zavrsetka) % 86400),
+          '%H:%i:%s'
+        )
+      ) AS preostalo_vrijeme,
+
+      COALESCE(MAX(po.vrijednost_ponude), p.pocetna_cijena) AS trenutna_cijena,
+
+      MIN(s.slika) AS slika
+
+    FROM predmet p
+    LEFT JOIN ponuda po ON p.id_predmeta = po.id_predmeta
+    LEFT JOIN slika s ON p.id_predmeta = s.id_predmeta
+
+    WHERE p.id_kategorije = ?
+
+    GROUP BY 
+      p.id_predmeta,
+      p.naziv_predmeta,
+      p.naziv_predmeta_en,
+      p.pocetna_cijena,
+      p.vrijeme_pocetka,
+      p.vrijeme_zavrsetka
+  `;
+
+  connection.query(sql, [lang, id_kategorije], (error, results) => {
+    if (error) {
+      console.error("Greška pri dohvatu predmeta kategorije:", error);
+      return res.status(500).json({ error: error.sqlMessage });
+    }
+
+    res.json(results);
+  });
+});
+
+app.get("/api/get-predmet-lang/:id", authJwt.verifyTokenUser, (req, res) => {
+  const id = req.params.id;
+
+  connection.query(
+    `
+    SELECT 
+      p.*,
+      COALESCE(MAX(po.vrijednost_ponude), p.pocetna_cijena) AS trenutna_cijena,
+      GROUP_CONCAT(s.slika SEPARATOR '|||') AS slike,
+      (SELECT slika FROM slika WHERE id_predmeta = p.id_predmeta LIMIT 1) AS slika
+    FROM predmet p
+    LEFT JOIN ponuda po ON p.id_predmeta = po.id_predmeta
+    LEFT JOIN slika s ON p.id_predmeta = s.id_predmeta
+    WHERE p.id_predmeta = ?
+    GROUP BY p.id_predmeta
+    `,
+    [id],
+    (error, results) => {
+      if (error) throw error;
+      res.json(results);
+    }
+  );
+});
+
+app.listen(port, () => {
+  console.log("Server running at port: " + port);
 });
