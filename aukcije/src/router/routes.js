@@ -19,7 +19,8 @@ const routes = [
       { path: "admindash", component: () => import("pages/AdminDashboard.vue") },
       //admin layout -- spojen novi layout sa stranicom
       { path: "pregledkorisnika", component: () => import("pages/PregledKorisnika.vue") },
-      { path: "izmjena_predmeta", component: () => import("pages/IzmjenaPredmeta.vue") }
+      { path: "izmjena_predmeta", component: () => import("pages/IzmjenaPredmeta.vue") },
+      { path: "lista-pracenja", component: () => import("pages/ListaPracenja.vue") }
     ],
   },
   {

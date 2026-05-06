@@ -927,3 +927,78 @@ app.post(
     });
   },
 );
+
+// ── FZ-3.2: Watchlist endpointi ─────────────────────────────────────────────
+
+// GET /api/watchlist/:korisnikId  — dohvati listu praćenja korisnika
+app.get("/api/watchlist/:korisnikId", authJwt.verifyTokenUser, (req, res) => {
+  const { korisnikId } = req.params;
+
+  const query = `
+    SELECT
+      lp.id_lista,
+      lp.datum_dodavanja,
+      p.id_predmeta,
+      p.naziv_predmeta,
+      p.opis_predmeta,
+      p.pocetna_cijena,
+      p.vrijeme_pocetka,
+      p.vrijeme_zavrsetka,
+      COALESCE(MAX(po.vrijednost_ponude), p.pocetna_cijena) AS trenutna_cijena,
+      (SELECT slika FROM slika WHERE id_predmeta = p.id_predmeta LIMIT 1) AS slika
+    FROM lista_pracenja lp
+    JOIN predmet p ON lp.id_predmeta = p.id_predmeta
+    LEFT JOIN ponuda po ON p.id_predmeta = po.id_predmeta
+    WHERE lp.id_korisnika = ?
+    GROUP BY lp.id_lista, p.id_predmeta
+    ORDER BY lp.datum_dodavanja DESC
+  `;
+
+  connection.query(query, [korisnikId], (error, results) => {
+    if (error) return res.status(500).json({ error: true, message: "Greška pri dohvatu liste praćenja." });
+    res.json(results);
+  });
+});
+
+// POST /api/watchlist  — dodaj aukciju na listu praćenja
+// Body: { id_predmeta }
+app.post("/api/watchlist", authJwt.verifyTokenUser, (req, res) => {
+  const { id_predmeta } = req.body;
+  const id_korisnika = req.userId;
+
+  if (!id_predmeta) {
+    return res.status(400).json({ error: true, message: "id_predmeta je obavezan." });
+  }
+
+  connection.query(
+    "INSERT INTO lista_pracenja (id_korisnika, id_predmeta) VALUES (?, ?)",
+    [id_korisnika, id_predmeta],
+    (error) => {
+      if (error) {
+        if (error.code === "ER_DUP_ENTRY") {
+          return res.status(409).json({ error: true, message: "Aukcija je već na listi praćenja." });
+        }
+        return res.status(500).json({ error: true, message: "Greška pri dodavanju na listu praćenja." });
+      }
+      res.status(201).json({ error: false, message: "Aukcija dodana na listu praćenja." });
+    }
+  );
+});
+
+// DELETE /api/watchlist/:predmetId  — ukloni aukciju s liste praćenja
+app.delete("/api/watchlist/:predmetId", authJwt.verifyTokenUser, (req, res) => {
+  const id_predmeta = req.params.predmetId;
+  const id_korisnika = req.userId;
+
+  connection.query(
+    "DELETE FROM lista_pracenja WHERE id_korisnika = ? AND id_predmeta = ?",
+    [id_korisnika, id_predmeta],
+    (error, results) => {
+      if (error) return res.status(500).json({ error: true, message: "Greška pri uklanjanju s liste praćenja." });
+      if (results.affectedRows === 0) {
+        return res.status(404).json({ error: true, message: "Aukcija nije pronađena na listi praćenja." });
+      }
+      res.json({ error: false, message: "Aukcija uklonjena s liste praćenja." });
+    }
+  );
+});

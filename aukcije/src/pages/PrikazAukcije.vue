@@ -86,8 +86,15 @@
       </div>
     </div>
   </q-card>
-  <div class="q-pa-md flex flex-center">
+  <div class="q-pa-md flex flex-center q-gutter-sm">
     <q-btn label="Ponuda" color="primary" @click="showDialog = true" />
+    <q-btn
+      v-if="isAuthenticated"
+      :label="pratim ? 'Prekini praćenje' : 'Prati'"
+      :color="pratim ? 'grey-7' : 'green'"
+      :icon="pratim ? 'visibility_off' : 'visibility'"
+      @click="togglePracenje"
+    />
     <q-dialog v-model="showDialog">
       <q-card style="width: 300px">
         <q-card-section>
@@ -140,6 +147,8 @@ export default {
       showDialog: false,
       odabranaCijena: "",
       prices: [],
+      pratim: false,
+      isAuthenticated: !!localStorage.getItem("token"),
       predmet: {
         id_ponude: null,
         vrijednost_ponude: null,
@@ -159,6 +168,8 @@ export default {
     };
   },
   mounted() {
+    this.provjeriWatchlist();
+
     axios.get(baseUrl + "get-predmet/" + this.id_predmeta, {}).then((response) => {
       this.item = response.data[0];
       this.item.trenutna_cijena = this.item.pocetna_cijena;
@@ -214,6 +225,39 @@ export default {
   methods: {
     formattedDate(dateString) {
       return new Date(dateString).toLocaleString("hr-HR").replace(",", "");
+    },
+
+    provjeriWatchlist() {
+      const token = localStorage.getItem("token");
+      if (!token) return;
+      const decodedToken = jwtDecode(token);
+      const headers = { Authorization: `Bearer ${token}` };
+      axios
+        .get(`http://localhost:3000/api/watchlist/${decodedToken.id}`, { headers })
+        .then((response) => {
+          this.pratim = response.data.some((item) => item.id_predmeta == this.id_predmeta);
+        })
+        .catch(() => {});
+    },
+
+    togglePracenje() {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        this.$router.push("/prijava");
+        return;
+      }
+      const headers = { Authorization: `Bearer ${token}` };
+      if (this.pratim) {
+        axios
+          .delete(`http://localhost:3000/api/watchlist/${this.id_predmeta}`, { headers })
+          .then(() => { this.pratim = false; })
+          .catch(() => {});
+      } else {
+        axios
+          .post("http://localhost:3000/api/watchlist", { id_predmeta: this.id_predmeta }, { headers })
+          .then(() => { this.pratim = true; })
+          .catch(() => {});
+      }
     },
     potvrdiPonudu() {
       // Get the JWT token from local storage

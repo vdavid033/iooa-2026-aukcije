@@ -69,6 +69,11 @@
                 <q-btn class="flex flex-center" style="width: 280px"> Moj profil </q-btn>
               </router-link>
             </div>
+            <div class="q-pa-sm col">
+              <router-link to="/lista-pracenja" class="link-style" @click="toggleLeftDrawerClose">
+                <q-btn class="flex flex-center" style="width: 280px" icon="visibility"> Lista praćenja </q-btn>
+              </router-link>
+            </div>
           </template>
           <template v-if="isAdmin()">
             <div class="q-pa-sm col">
