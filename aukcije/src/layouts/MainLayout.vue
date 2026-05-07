@@ -1,43 +1,59 @@
 <template>
   <q-layout view="lHh Lpr lFf">
+
+    <!-- HEADER -->
     <q-header elevated class="bg-white text-dark">
       <q-toolbar>
-        <!--
-        <q-btn
-          flat
-          dense
-          round
-          icon="menu"
-          aria-label="Menu"
-          @click="toggleLeftDrawer"
-        />
-        -->
 
+        <!-- LOGO -->
         <router-link to="/" class="link-style row items-center">
           <q-avatar size="50px">
             <img src="~assets/aukcije_logo.jpg" alt="Logo" />
           </q-avatar>
         </router-link>
 
-        <div class="absolute-center text-weight-bold">
+        <!-- NASLOV -->
+        <div class="q-ml-md text-weight-bold text-h6">
           Aukcijska Platforma
         </div>
 
         <q-space />
 
-        <template v-if="!isAuthenticated()">
-          <q-btn flat label="Moj profil" class="q-ml-sm" to="/Moj_profil" />
-          <q-btn flat label="Registracija" to="/registracija" />
-          <q-btn color="primary" label="Prijava" class="q-ml-sm" to="/prijava" />
-        </template>
+        <!-- DESNA STRANA -->
+        <div class="row items-center q-gutter-sm">
 
-        <template v-else>
+          <!-- GUEST -->
+          <template v-if="!isAuthenticated()">
+            <q-btn flat label="Registracija" to="/registracija" />
+            <q-btn color="primary" unelevated label="Prijava" to="/prijava" />
+          </template>
+
+          <!-- DROPDOWN -->
           <q-btn-dropdown
             flat
             color="primary"
-            :label="`${userIme} ${userPrezime}`"
+            icon="menu"
+            no-caret
+            class="q-ml-sm"
           >
-            <q-list>
+            <q-list style="min-width: 200px">
+
+              <router-link to="/" class="link-style">
+                <q-item clickable v-close-popup>
+                  <q-item-section>
+                    <q-item-label>Početna</q-item-label>
+                  </q-item-section>
+                </q-item>
+              </router-link>
+
+              <router-link to="/postavi" class="link-style">
+                <q-item clickable v-close-popup>
+                  <q-item-section>
+                    <q-item-label>Dodaj aukciju</q-item-label>
+                  </q-item-section>
+                </q-item>
+              </router-link>
+
               <router-link to="/Moj_profil" class="link-style">
                 <q-item clickable v-close-popup>
                   <q-item-section>
@@ -46,64 +62,41 @@
                 </q-item>
               </router-link>
 
-              <q-item clickable v-close-popup @click="confirmLogout">
-                <q-item-section>
-                  <q-item-label>Odjava</q-item-label>
-                </q-item-section>
-              </q-item>
+              <!-- LOGGED USER -->
+              <template v-if="isAuthenticated()">
+                <q-separator />
+
+                <q-item clickable v-close-popup @click="confirmLogout">
+                  <q-item-section>
+                    <q-item-label class="text-negative">
+                      Odjava
+                    </q-item-label>
+                  </q-item-section>
+                </q-item>
+              </template>
+
+              <!-- ADMIN -->
+              <template v-if="isAdmin()">
+                <q-separator />
+                <router-link to="/admin/" class="link-style">
+                  <q-item clickable v-close-popup>
+                    <q-item-section>
+                      <q-item-label class="text-primary">
+                        Admin Dashboard
+                      </q-item-label>
+                    </q-item-section>
+                  </q-item>
+                </router-link>
+              </template>
+
             </q-list>
           </q-btn-dropdown>
-        </template>
 
+        </div>
       </q-toolbar>
     </q-header>
 
-    <q-drawer v-model="leftDrawerOpen" bordered>
-      <q-list>
-        <q-item-label header class="text-bold text-black"> Mogućnosti </q-item-label>
-
-        <div class="q-pa-sm col">
-          <!--        Za navigaciju bez otvaranja novog tab-a-->
-          <template v-if="!isAuthenticated()">
-            <div class="q-pa-sm col">
-              <router-link to="/prijava" class="link-style" @click="toggleLeftDrawerClose">
-                <q-btn class="flex flex-center" style="width: 280px"> Prijava </q-btn>
-              </router-link>
-            </div>
-            <div class="q-pa-sm col">
-              <router-link to="/registracija" class="link-style" @click="toggleLeftDrawerClose">
-                <q-btn class="flex flex-center" style="width: 280px"> Registracija </q-btn>
-              </router-link>
-            </div>
-          </template>
-          <div class="q-pa-sm col">
-            <router-link to="/" class="link-style" @click="toggleLeftDrawerClose">
-              <q-btn class="flex flex-center" style="width: 280px"> Početna stranica </q-btn>
-            </router-link>
-          </div>
-          <div class="q-pa-sm col">
-            <router-link to="postavi" class="link-style" @click="toggleLeftDrawerClose">
-              <q-btn class="flex flex-center" style="width: 280px"> Dodaj aukciju </q-btn>
-            </router-link>
-          </div>
-          <template v-if="isAuthenticated()">
-            <div class="q-pa-sm col">
-              <router-link to="/Moj_profil" class="link-style" @click="toggleLeftDrawerClose">
-                <q-btn class="flex flex-center" style="width: 280px"> Moj profil </q-btn>
-              </router-link>
-            </div>
-          </template>
-          <template v-if="isAdmin()">
-            <div class="q-pa-sm col">
-              <router-link to="/admin/" class="link-style" @click="toggleLeftDrawer">
-                <q-btn class="flex flex-center" color="primary" style="width: 280px">Admin Dashboard</q-btn>
-              </router-link>
-            </div>
-          </template>
-        </div>
-      </q-list>
-    </q-drawer>
-
+    <!-- PAGE -->
     <q-page-container>
       <router-view />
 
@@ -112,12 +105,14 @@
       </div>
     </q-page-container>
 
-    <!-- Logout Confirmation Dialog -->
+    <!-- LOGOUT DIALOG -->
     <q-dialog v-model="confirmLogoutDialog" persistent>
       <q-card>
         <q-card-section class="row items-center">
           <q-avatar icon="warning" color="negative" text-color="white" />
-          <span class="q-ml-sm">Jeste li sigurni da želite se odjaviti?</span>
+          <span class="q-ml-sm">
+            Jeste li sigurni da želite se odjaviti?
+          </span>
         </q-card-section>
 
         <q-card-actions align="right">
@@ -126,6 +121,7 @@
         </q-card-actions>
       </q-card>
     </q-dialog>
+
   </q-layout>
 </template>
 
@@ -137,57 +133,36 @@ export default defineComponent({
   name: "MainLayout",
 
   setup() {
-    const leftDrawerOpen = ref(false);
     const confirmLogoutDialog = ref(false);
-
     const token = ref(localStorage.getItem("token"));
 
-    // Decode the JWT token and extract the user's name and surname
     const userIme = computed(() => {
-      if (token.value) {
-        try {
-          const decodedToken = jwtDecode(token.value);
-          return decodedToken.ime; // Return user's name from token
-        } catch (error) {
-          console.error("Error decoding token:", error);
-          return "";
-        }
+      try {
+        return token.value ? jwtDecode(token.value).ime : "";
+      } catch {
+        return "";
       }
-      return "";
     });
 
     const userPrezime = computed(() => {
-      if (token.value) {
-        try {
-          const decodedToken = jwtDecode(token.value);
-          return decodedToken.prezime; // Return user's surname from token
-        } catch (error) {
-          console.error("Error decoding token:", error);
-          return "";
-        }
+      try {
+        return token.value ? jwtDecode(token.value).prezime : "";
+      } catch {
+        return "";
       }
-      return "";
     });
 
-    const isAdmin = () => {
-      if (isAuthenticated() && token.value) {
-        const decodedToken = jwtDecode(token.value);
-        return decodedToken.uloga === "admin";
-      }
-      return false;
-    };
-
     const isAuthenticated = () => {
-      const token = localStorage.getItem("token");
-      return !!token;
+      return !!localStorage.getItem("token");
     };
 
-    const toggleLeftDrawer = () => {
-      leftDrawerOpen.value = !leftDrawerOpen.value;
-    };
-
-    const toggleLeftDrawerClose = () => {
-      leftDrawerOpen.value = false;
+    const isAdmin = () => {
+      if (!isAuthenticated()) return false;
+      try {
+        return jwtDecode(token.value).uloga === "admin";
+      } catch {
+        return false;
+      }
     };
 
     const confirmLogout = () => {
@@ -195,24 +170,26 @@ export default defineComponent({
     };
 
     const logoutAndReload = () => {
-      // Clear JWT token from local storage
       localStorage.removeItem("token");
-      // Reload the page
       window.location.reload();
     };
 
     return {
-      leftDrawerOpen,
       confirmLogoutDialog,
       isAuthenticated,
       isAdmin,
-      toggleLeftDrawer,
-      toggleLeftDrawerClose,
       confirmLogout,
       logoutAndReload,
-      userPrezime,
       userIme,
+      userPrezime,
     };
   },
 });
 </script>
+
+<style>
+.link-style {
+  text-decoration: none;
+  color: inherit;
+}
+</style>
