@@ -175,14 +175,24 @@
     />
     <p>{{ t("editAuctionPage.deleteImageHint") }}</p>
 
-    <div>
-      <input
-        type="file"
-        name="files"
-        accept="image/*"
-        @change="onFileChange"
+    <div class="q-mt-md">
+      <q-file
+        v-model="files"
         multiple
-      />
+        accept="image/*"
+        outlined
+        clearable
+        use-chips
+        color="primary"
+        style="max-width: 450px"
+        :label="t('common.selectFile')"
+        :hint="files.length ? '' : t('common.noFileSelected')"
+        @update:model-value="onFileChange"
+      >
+        <template v-slot:prepend>
+          <q-icon name="cloud_upload" />
+        </template>
+      </q-file>
 
       <q-btn
         :label="t('editAuctionPage.addImages')"
@@ -468,8 +478,24 @@ export default {
       await this.dohvatiPredmet();
     },
 
-    async onFileChange(e) {
-      this.files = Array.from(e.target.files);
+    async onFileChange(files) {
+      this.files = files || [];
+
+      const allImages = this.files.every((file) => file.type.startsWith("image/"));
+
+      if (!allImages) {
+        this.$q.notify({
+          color: "negative",
+          position: "top",
+          message: this.t("createAuction.onlyImages"),
+          icon: "warning",
+        });
+
+        this.files = [];
+        this.base64Images = [];
+        return;
+      }
+
       await this.convertImage();
     },
 
@@ -499,7 +525,12 @@ export default {
         }
       } catch (error) {
         console.error(error);
-        alert(this.t("editAuctionPage.imageCompressionError"));
+        this.$q.notify({
+          color: "negative",
+          position: "top",
+          message: this.t("editAuctionPage.imageCompressionError"),
+          icon: "warning",
+        });
       }
     },
   },

@@ -91,6 +91,8 @@ export default {
     description: 'Product description',
     enterDescription: 'Enter description',
     uploadImage: 'Upload image',
+    chooseFiles: 'Choose files',
+    noFileSelected: 'No file selected',
     submit: 'Submit',
     cancel: 'Cancel',
     close: 'Close',
@@ -100,6 +102,7 @@ export default {
     requiredFields: 'You did not fill all fields',
     selectImage: 'Please select at least one image.',
     invalidDateRange: 'Start date cannot be later than end date',
+    invalidAuctionDates: 'The auction start date and time cannot be later than the auction end date and time.',
     imageCompressionError: 'An error occurred while compressing images.'
   },
 
@@ -256,5 +259,5 @@ export default {
     addImagesSuccess: "Images were added successfully.",
     addImagesFailed: "Error while adding images.",
     imageCompressionError: "An error occurred while compressing the image."
-    }
+  }
 }

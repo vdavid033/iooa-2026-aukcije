@@ -19,6 +19,7 @@ export default {
     logoutConfirm: 'Jeste li sigurni da se želite odjaviti?',
     admin: 'Admin Dashboard'
   },
+
   day: "dan",
   days: "dana",
 
@@ -90,6 +91,10 @@ export default {
     description: 'Opis proizvoda',
     enterDescription: 'Unesite opis',
     uploadImage: 'Unesite sliku',
+
+    chooseFiles: 'Odaberi datoteke',
+    noFileSelected: 'Nije odabrana niti jedna datoteka',
+
     submit: 'Postavi',
     cancel: 'Otkaži',
     close: 'Zatvori',
@@ -99,7 +104,12 @@ export default {
     requiredFields: 'Niste ispunili sva polja',
     selectImage: 'Molimo odaberite barem jednu sliku.',
     invalidDateRange: 'Datum početka ne može biti kasnije od datuma završetka',
-    imageCompressionError: 'Došlo je do pogreške prilikom kompresije slika.'
+
+    invalidAuctionDates:
+      'Datum i vrijeme početka aukcije ne može biti kasnije od datuma i vremena završetka aukcije.',
+
+    imageCompressionError:
+      'Došlo je do pogreške prilikom kompresije slika.'
   },
 
   profilePage: {
@@ -255,5 +265,5 @@ export default {
     addImagesSuccess: "Slike su uspješno dodane.",
     addImagesFailed: "Greška pri dodavanju slika.",
     imageCompressionError: "Došlo je do pogreške prilikom kompresije slike."
-    }
+  }
 };

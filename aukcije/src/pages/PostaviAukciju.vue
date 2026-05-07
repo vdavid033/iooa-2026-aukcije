@@ -2,7 +2,7 @@
   <q-card class="q-pa-sm q-gutter-sm" flat bordered>
     <q-card-section>
       <div class="text-h3 text-bold text-center text-blue-7 q-ml-sm">
-        {{ t('createAuction.title') }}
+        {{ t("createAuction.title") }}
       </div>
     </q-card-section>
 
@@ -10,7 +10,12 @@
 
     <div class="q-ml-sm flex flex-start q-gutter-sm">
       <div style="width: 500px">
-        <q-input filled type="text" :label="t('createAuction.productName')" v-model="naziv_predmeta" />
+        <q-input
+          filled
+          type="text"
+          :label="t('createAuction.productName')"
+          v-model="naziv_predmeta"
+        />
       </div>
 
       <div style="width: 500px">
@@ -27,17 +32,30 @@
       </div>
 
       <div style="width: 500px">
-        <q-input filled type="number" :label="t('createAuction.startPrice')" v-model="pocetna_cijena" />
+        <q-input
+          filled
+          type="number"
+          :label="t('createAuction.startPrice')"
+          v-model="pocetna_cijena"
+        />
       </div>
     </div>
 
     <div class="q-ml-sm flex flex-start q-gutter-sm">
       <div style="width: 500px">
-        <q-input filled :model-value="formattedDate(vrijemePocetka)" :label="t('createAuction.startDate')" readonly>
+        <q-input
+          filled
+          :model-value="formattedDate(vrijemePocetka)"
+          :label="t('createAuction.startDate')"
+          readonly
+        >
           <template v-slot:prepend>
             <q-icon name="event" class="cursor-pointer">
               <q-popup-proxy cover>
-                <q-date v-model="vrijemePocetka" mask="YYYY-MM-DD HH:mm" />
+                <q-date
+                  v-model="vrijemePocetka"
+                  mask="YYYY-MM-DD HH:mm"
+                />
               </q-popup-proxy>
             </q-icon>
           </template>
@@ -45,7 +63,11 @@
           <template v-slot:append>
             <q-icon name="access_time" class="cursor-pointer">
               <q-popup-proxy cover>
-                <q-time v-model="vrijemePocetka" mask="YYYY-MM-DD HH:mm" :format24h="!isEnglish()" />
+                <q-time
+                  v-model="vrijemePocetka"
+                  mask="YYYY-MM-DD HH:mm"
+                  :format24h="!isEnglish()"
+                />
               </q-popup-proxy>
             </q-icon>
           </template>
@@ -53,11 +75,19 @@
       </div>
 
       <div style="width: 500px">
-        <q-input filled :model-value="formattedDate(vrijemeZavrsetka)" :label="t('createAuction.endDate')" readonly>
+        <q-input
+          filled
+          :model-value="formattedDate(vrijemeZavrsetka)"
+          :label="t('createAuction.endDate')"
+          readonly
+        >
           <template v-slot:prepend>
             <q-icon name="event" class="cursor-pointer">
               <q-popup-proxy cover>
-                <q-date v-model="vrijemeZavrsetka" mask="YYYY-MM-DD HH:mm" />
+                <q-date
+                  v-model="vrijemeZavrsetka"
+                  mask="YYYY-MM-DD HH:mm"
+                />
               </q-popup-proxy>
             </q-icon>
           </template>
@@ -65,7 +95,11 @@
           <template v-slot:append>
             <q-icon name="access_time" class="cursor-pointer">
               <q-popup-proxy cover>
-                <q-time v-model="vrijemeZavrsetka" mask="YYYY-MM-DD HH:mm" :format24h="!isEnglish()" />
+                <q-time
+                  v-model="vrijemeZavrsetka"
+                  mask="YYYY-MM-DD HH:mm"
+                  :format24h="!isEnglish()"
+                />
               </q-popup-proxy>
             </q-icon>
           </template>
@@ -73,26 +107,71 @@
       </div>
 
       <div style="width: 500px">
-        <q-input filled type="text" :label="t('createAuction.description')" v-model="opis_predmeta" />
+        <q-input
+          filled
+          type="text"
+          :label="t('createAuction.description')"
+          v-model="opis_predmeta"
+        />
       </div>
     </div>
 
     <div>
       <br />
-      <p class="q-pl-md">{{ t('createAuction.uploadImage') }}</p>
 
-      <input class="q-pl-md" type="file" accept="image/*" @change="onFileChange" multiple />
+      <p class="q-pl-md">
+        {{ t("createAuction.uploadImage") }}
+      </p>
 
-      <q-separator />
+      <div class="q-pl-md q-mt-md">
+        <q-file
+          v-model="files"
+          multiple
+          accept="image/*"
+          outlined
+          clearable
+          use-chips
+          color="primary"
+          style="max-width: 450px"
+          :label="t('common.selectFile')"
+          :hint="files.length ? '' : t('createAuction.noFileSelected')"
+          @update:model-value="onFileChange"
+        >
+          <template v-slot:prepend>
+            <q-icon name="cloud_upload" />
+          </template>
+        </q-file>
+      </div>
 
-      <div v-if="base64Image">
-        <img :src="base64Image" />
+      <q-separator class="q-mt-md" />
+
+      <div
+        v-if="base64Image"
+        class="q-pa-md"
+      >
+        <img
+          :src="base64Image"
+          style="
+            max-width: 300px;
+            border-radius: 10px;
+            border: 1px solid #ddd;
+          "
+        />
       </div>
     </div>
 
     <div class="q-ml-sm flex justify-center q-gutter-sm">
-      <q-btn :label="t('createAuction.submit')" @click="submitForm" color="green" />
-      <q-btn :label="t('createAuction.cancel')" @click="otkazi_gumb" color="red" />
+      <q-btn
+        :label="t('createAuction.submit')"
+        @click="submitForm"
+        color="green"
+      />
+
+      <q-btn
+        :label="t('createAuction.cancel')"
+        @click="otkazi_gumb"
+        color="red"
+      />
     </div>
   </q-card>
 </template>
@@ -170,10 +249,11 @@ export default {
       }));
     },
 
-    async onFileChange(e) {
-      this.files = Array.from(e.target.files);
+    async onFileChange(files) {
+      this.files = files || [];
 
       const allImages = this.files.every((file) => file.type.startsWith("image/"));
+
       if (!allImages) {
         this.$q.notify({
           color: "negative",
@@ -181,8 +261,11 @@ export default {
           message: this.t("createAuction.onlyImages"),
           icon: "warning",
         });
+
         this.files = [];
-        e.target.value = null;
+        this.base64Images = [];
+        this.base64Image = null;
+        this.slika = null;
         return;
       }
 
@@ -198,6 +281,8 @@ export default {
 
       try {
         this.base64Images = [];
+        this.base64Image = null;
+        this.slika = null;
 
         for (const file of this.files) {
           const compressedFile = await imageCompression(file, options);
@@ -217,7 +302,12 @@ export default {
         }
       } catch (error) {
         console.error(error);
-        alert("Došlo je do pogreške prilikom kompresije slika.");
+        this.$q.notify({
+          color: "negative",
+          position: "top",
+          message: this.t("createAuction.imageCompressionError"),
+          icon: "warning",
+        });
       }
     },
 
@@ -257,7 +347,7 @@ export default {
         this.$q.notify({
           color: "negative",
           position: "top",
-          message: "Datum i vrijeme početka aukcije ne može biti kasnije od datuma i vrijeme završetka aukcije.",
+          message: this.t("createAuction.invalidAuctionDates"),
           icon: "warning",
         });
         return;
@@ -299,8 +389,6 @@ export default {
           console.error("Backend nije vratio ID predmeta:", response.data);
           return;
         }
-
-        console.log("Inserted ID:", insertedId);
 
         this.$router.push({
           path: "/prikaz",
