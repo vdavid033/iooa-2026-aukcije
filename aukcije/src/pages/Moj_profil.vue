@@ -206,6 +206,49 @@
       </div>
     </div>
 
+    <!-- OSVOJENI PREDMETI -->
+    <div class="section-head q-mb-md q-mt-xl">
+      <h5>Vaši osvojeni predmeti</h5>
+    </div>
+
+    <p v-if="vlastitiOsvojeniPredmeti.length === 0" class="text-grey">
+      Niste još osvojili niti jedan predmet!
+    </p>
+
+    <div class="row q-col-gutter-md">
+      <div
+        v-for="osvojeniPredmet in vlastitiOsvojeniPredmeti"
+        :key="osvojeniPredmet.id_predmeta"
+        class="col-12 col-sm-6 col-md-4"
+      >
+        <q-card class="won-item-card">
+
+          <q-img
+            v-if="osvojeniPredmet.slika"
+            :src="osvojeniPredmet.slika"
+            style="height:200px"
+          />
+
+          <q-card-section>
+            <div class="text-h6 text-primary">
+              {{ osvojeniPredmet.naziv_predmeta }}
+            </div>
+
+            <div class="q-mt-sm text-body2">
+              {{ osvojeniPredmet.opis_predmeta }}
+            </div>
+
+            <q-separator class="q-my-md" />
+
+            <div class="text-body2 text-weight-bold text-positive">
+              Konačna cijena: {{ osvojeniPredmet.konacna_cijena }}$
+            </div>
+          </q-card-section>
+
+        </q-card>
+      </div>
+    </div>
+
   </div>
 </template>
 
@@ -229,14 +272,17 @@
 }
 
 .auction-card,
-.bid-card {
+.bid-card,
+.won-item-card {
   border-radius: 16px;
   transition: 0.25s;
 }
 
 .auction-card:hover,
-.bid-card:hover {
+.bid-card:hover,
+.won-item-card:hover {
   transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
 }
 </style>
 
@@ -254,6 +300,7 @@ export default {
       },
       vlastitiPredmeti: [],
       vlastitePonude: [],
+      vlastitiOsvojeniPredmeti: [],
     }
   },
 
@@ -268,6 +315,7 @@ export default {
 
       this.dohvatPredmeta(userId, headers);
       this.dohvatPonude(userId, headers);
+      this.dohvatOsvojeniPredmeti(userId, headers);
 
     } catch (error) {
       console.error(error);
@@ -283,6 +331,20 @@ export default {
     async dohvatPonude(userId, headers) {
       const res = await axios.get("http://localhost:3000/api/vlastita-ponuda-korisnik/" + userId, { headers });
       this.vlastitePonude = res.data;
+    },
+
+    async dohvatOsvojeniPredmeti(userId, headers) {
+      const res = await axios.get("http://localhost:3000/api/osvojeni-predmeti/" + userId, { headers });
+      console.log("Puni osvojeni predmeti:", JSON.stringify(res.data, null, 2));
+      res.data.forEach((p, i) => {
+        console.log(`Predmet ${i}:`, {
+          id_predmeta: p.id_predmeta,
+          naziv_predmeta: p.naziv_predmeta,
+          slika_length: p.slika ? p.slika.length : "NULL",
+          slika_start: p.slika ? p.slika.substring(0, 50) : "NULL"
+        });
+      });
+      this.vlastitiOsvojeniPredmeti = res.data;
     },
 
     formattedDate(date) {

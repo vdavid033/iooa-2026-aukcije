@@ -495,6 +495,28 @@ ORDER BY preostalo_vrijeme DESC;`,
   );
 });
 
+app.get("/api/osvojeni-predmeti/:id", authJwt.verifyTokenUser, (req, res) => {
+  connection.query(
+    `SELECT
+    op.id_predmeta,
+    op.naziv_predmeta,
+    p.opis_predmeta,
+    (SELECT slika FROM slika WHERE id_predmeta = p.id_predmeta LIMIT 1) AS slika,
+    COALESCE(MAX(po.vrijednost_ponude), p.pocetna_cijena) AS konacna_cijena
+FROM osvojeni_predmeti op
+JOIN predmet p ON op.id_predmeta = p.id_predmeta
+LEFT JOIN ponuda po ON p.id_predmeta = po.id_predmeta
+WHERE op.id_korisnika = ?
+GROUP BY op.id_predmeta
+ORDER BY op.id_predmeta DESC;`,
+    [req.params.id],
+    (error, results) => {
+      if (error) throw error;
+      res.send(results);
+    }
+  );
+});
+
 app.delete("/api/brisanjePredmeta/:id", authJwt.verifyTokenUser, (req, res) => {
   connection.query("DELETE FROM predmet WHERE id_predmeta = ?", [req.params.id], (error, results) => {
     if (error) {
