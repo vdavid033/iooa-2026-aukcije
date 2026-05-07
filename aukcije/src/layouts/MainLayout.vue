@@ -29,7 +29,7 @@
                   :key="n.id_notifikacija"
                   clickable
                   :class="n.procitano ? '' : 'bg-blue-1'"
-                  @click="otvoriAukciju(n.id_predmeta)"
+                  @click="klikNaObavijest(n)"
                   v-close-popup
                 >
                   <q-item-section avatar>
@@ -120,6 +120,38 @@
       <router-view />
     </q-page-container>
 
+    <!-- Pobjednik Dialog -->
+    <q-dialog v-model="pobjednikDialog">
+      <q-card style="min-width: 400px">
+        <q-card-section class="bg-primary text-white">
+          <div class="text-h6">Pobjednik aukcije</div>
+          <div class="text-caption">{{ pobjednikInfo.naziv_predmeta }}</div>
+        </q-card-section>
+        <q-card-section class="q-gutter-sm q-pt-md">
+          <div class="row items-center">
+            <q-icon name="person" color="primary" size="sm" class="q-mr-sm" />
+            <span>{{ pobjednikInfo.ime_korisnika }} {{ pobjednikInfo.prezime_korisnika }}</span>
+          </div>
+          <div class="row items-center">
+            <q-icon name="email" color="primary" size="sm" class="q-mr-sm" />
+            <span>{{ pobjednikInfo.email_korisnika }}</span>
+          </div>
+          <div v-if="pobjednikInfo.adresa_korisnika" class="row items-center">
+            <q-icon name="home" color="primary" size="sm" class="q-mr-sm" />
+            <span>{{ pobjednikInfo.adresa_korisnika }}</span>
+          </div>
+          <div class="row items-center">
+            <q-icon name="gavel" color="green" size="sm" class="q-mr-sm" />
+            <span>Pobjednička ponuda: <strong>{{ pobjednikInfo.vrijednost_ponude }}$</strong></span>
+          </div>
+        </q-card-section>
+        <q-card-actions align="right">
+          <q-btn flat label="Zatvori" v-close-popup />
+          <q-btn color="primary" icon="email" label="Pošalji email" @click="otvoriMail" v-close-popup />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
+
     <!-- Logout Confirmation Dialog -->
     <q-dialog v-model="confirmLogoutDialog" persistent>
       <q-card>
@@ -151,6 +183,8 @@ export default defineComponent({
     const leftDrawerOpen = ref(false);
     const confirmLogoutDialog = ref(false);
     const notifikacije = ref([]);
+    const pobjednikDialog = ref(false);
+    const pobjednikInfo = ref({});
     const neprocitanoCount = computed(() => notifikacije.value.filter((n) => !n.procitano).length);
     const router = useRouter();
 
@@ -243,6 +277,44 @@ export default defineComponent({
       router.push({ path: "/prikaz", query: { id_predmeta } });
     };
 
+    const klikNaObavijest = (n) => {
+      n.procitano = 1;
+      if (n.poruka && n.poruka.includes("Pobjednik:")) {
+        const t = localStorage.getItem("token");
+        axios
+          .get(`http://localhost:3000/api/pobjednik/${n.id_predmeta}`, {
+            headers: { Authorization: `Bearer ${t}` },
+          })
+          .then((res) => {
+            pobjednikInfo.value = res.data;
+            pobjednikDialog.value = true;
+          })
+          .catch(() => {
+            router.push({ path: "/prikaz", query: { id_predmeta: n.id_predmeta } });
+          });
+      } else {
+        router.push({ path: "/prikaz", query: { id_predmeta: n.id_predmeta } });
+      }
+    };
+
+    const mailtoLink = computed(() => {
+      const p = pobjednikInfo.value;
+      if (!p.email_korisnika) return "#";
+      const subject = encodeURIComponent(`Aukcija "${p.naziv_predmeta}" - preuzimanje predmeta`);
+      const body = encodeURIComponent(
+        `Poštovani ${p.ime_korisnika} ${p.prezime_korisnika},\n\n` +
+        `čestitam na pobjedi na aukciji "${p.naziv_predmeta}"!\n` +
+        `Vaša pobjednička ponuda: ${p.vrijednost_ponude}$\n\n` +
+        `Molim Vas da mi se javite kako bismo dogovorili detalje preuzimanja predmeta.\n\n` +
+        `S poštovanjem`
+      );
+      return `mailto:${p.email_korisnika}?subject=${subject}&body=${body}`;
+    });
+
+    const otvoriMail = () => {
+      window.location.href = mailtoLink.value;
+    };
+
     const formatirajDatum = (d) => new Date(d).toLocaleString("hr-HR").replace(",", "");
 
     onMounted(() => {
@@ -273,6 +345,8 @@ export default defineComponent({
       confirmLogoutDialog,
       notifikacije,
       neprocitanoCount,
+      pobjednikDialog,
+      pobjednikInfo,
       isAuthenticated,
       isAdmin,
       toggleLeftDrawer,
@@ -282,6 +356,9 @@ export default defineComponent({
       ucitajNotifikacije,
       oznacilSveKaoProcitano,
       otvoriAukciju,
+      klikNaObavijest,
+      mailtoLink,
+      otvoriMail,
       formatirajDatum,
       userPrezime,
       userIme,

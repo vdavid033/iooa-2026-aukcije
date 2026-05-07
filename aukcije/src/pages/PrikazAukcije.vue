@@ -269,7 +269,7 @@ export default {
       console.log(this.odabranaCijena.value);
       if (this.odabranaCijena) {
         // Increase the current price based on the selected value
-        const selectedPrice = parseInt(this.odabranaCijena.value);
+        const selectedPrice = parseFloat(this.odabranaCijena.value);
 
         if (selectedPrice > this.item.trenutna_cijena) {
           const currentDate = new Date();

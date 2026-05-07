@@ -180,6 +180,12 @@ app.post(
         if (error) throw error;
         const insertedPredmetId = results.insertId;
 
+        connection.query(
+          "INSERT IGNORE INTO lista_pracenja (id_korisnika, id_predmeta) VALUES (?, ?)",
+          [data.id_korisnika, insertedPredmetId],
+          () => {}
+        );
+
         const keys = Object.keys(data).filter((key) => key.startsWith("file"));
         let completed = 0;
 
@@ -364,6 +370,13 @@ app.post(
           id_predmeta: data.id_predmeta,
           nova_cijena: data.vrijednost_ponude,
         });
+
+        // Auto-dodaj biddera na listu praćenja ako već nije
+        connection.query(
+          "INSERT IGNORE INTO lista_pracenja (id_korisnika, id_predmeta) VALUES (?, ?)",
+          [data.id_korisnika, data.id_predmeta],
+          () => {}
+        );
 
         // Kreiraj notifikacije za korisnike koji prate ovu aukciju (osim ponuđača)
         connection.query(
@@ -1073,3 +1086,172 @@ app.put("/api/notifikacije/procitaj-sve/:korisnikId", authJwt.verifyTokenUser, (
     }
   );
 });
+
+// GET /api/pobjednik/:id_predmeta — info o pobjedniku za prodavača
+app.get("/api/pobjednik/:id_predmeta", authJwt.verifyTokenUser, (req, res) => {
+  connection.query(
+    `SELECT k.ime_korisnika, k.prezime_korisnika, k.email_korisnika, k.adresa_korisnika,
+            po.vrijednost_ponude, p.naziv_predmeta
+     FROM ponuda po
+     JOIN korisnik k ON k.id_korisnika = po.id_korisnika
+     JOIN predmet p ON p.id_predmeta = po.id_predmeta
+     WHERE po.id_predmeta = ?
+     ORDER BY po.vrijednost_ponude DESC
+     LIMIT 1`,
+    [req.params.id_predmeta],
+    (error, results) => {
+      if (error) return res.status(500).json({ error: true });
+      if (!results.length) return res.status(404).json({ error: true, message: "Nema ponuda." });
+      res.json(results[0]);
+    }
+  );
+});
+
+// ── FZ-2: Notifikacije o završetku aukcije ────────────────────────────────────
+
+const obradeneAukcije = new Set();
+
+function posaljiNotifikacije(notifikacije) {
+  if (!notifikacije.length) return;
+  connection.query(
+    "INSERT INTO notifikacija (id_korisnika, id_predmeta, poruka) VALUES ?",
+    [notifikacije],
+    (err) => {
+      if (err) return;
+      notifikacije.forEach(([id_k, id_p, poruka]) => {
+        io.to(`korisnik_${id_k}`).emit("nova_notifikacija", {
+          poruka,
+          id_predmeta: id_p,
+          datum_kreiranja: new Date(),
+        });
+      });
+    }
+  );
+}
+
+function obradiZavrsenuAukciju(aukcija) {
+  // Dohvati pobjednika (najveća ponuda)
+  connection.query(
+    `SELECT po.id_korisnika, po.vrijednost_ponude,
+            k.ime_korisnika, k.prezime_korisnika, k.email_korisnika
+     FROM ponuda po
+     JOIN korisnik k ON k.id_korisnika = po.id_korisnika
+     WHERE po.id_predmeta = ?
+     ORDER BY po.vrijednost_ponude DESC
+     LIMIT 1`,
+    [aukcija.id_predmeta],
+    (errP, pobjednici) => {
+      if (errP) return;
+
+      const notifikacije = [];
+      const notifiedUsers = new Set();
+
+      if (pobjednici.length === 0) {
+        // Nema ponuda — obavijesti prodavača i pratitelje
+        notifikacije.push([
+          aukcija.id_prodavaca,
+          aukcija.id_predmeta,
+          `Aukcija "${aukcija.naziv_predmeta}" je završila bez ponuda.`,
+        ]);
+        notifiedUsers.add(aukcija.id_prodavaca);
+
+        connection.query(
+          "SELECT id_korisnika FROM lista_pracenja WHERE id_predmeta = ?",
+          [aukcija.id_predmeta],
+          (errW, pratitelji) => {
+            (pratitelji || []).forEach((w) => {
+              if (!notifiedUsers.has(w.id_korisnika)) {
+                notifikacije.push([
+                  w.id_korisnika,
+                  aukcija.id_predmeta,
+                  `Aukcija "${aukcija.naziv_predmeta}" je završila bez ponuda.`,
+                ]);
+              }
+            });
+            posaljiNotifikacije(notifikacije);
+          }
+        );
+        return;
+      }
+
+      const pobjednik = pobjednici[0];
+
+      // Pobjedniku: čestitke
+      notifikacije.push([
+        pobjednik.id_korisnika,
+        aukcija.id_predmeta,
+        `Čestitamo! Pobijedili ste na aukciji "${aukcija.naziv_predmeta}" s ponudom ${pobjednik.vrijednost_ponude}$. Kontaktirajte prodavača za preuzimanje.`,
+      ]);
+      notifiedUsers.add(pobjednik.id_korisnika);
+
+      // Prodavaču: info o pobjedniku
+      if (!notifiedUsers.has(aukcija.id_prodavaca)) {
+        notifikacije.push([
+          aukcija.id_prodavaca,
+          aukcija.id_predmeta,
+          `Aukcija "${aukcija.naziv_predmeta}" je završila. Pobjednik: ${pobjednik.ime_korisnika} ${pobjednik.prezime_korisnika} (${pobjednik.email_korisnika}) s ponudom ${pobjednik.vrijednost_ponude}$.`,
+        ]);
+        notifiedUsers.add(aukcija.id_prodavaca);
+      }
+
+      // Ostalim bidderima: aukcija završila
+      connection.query(
+        "SELECT DISTINCT id_korisnika FROM ponuda WHERE id_predmeta = ? AND id_korisnika != ?",
+        [aukcija.id_predmeta, pobjednik.id_korisnika],
+        (errB, ostali) => {
+          (ostali || []).forEach((b) => {
+            if (!notifiedUsers.has(b.id_korisnika)) {
+              notifikacije.push([
+                b.id_korisnika,
+                aukcija.id_predmeta,
+                `Aukcija "${aukcija.naziv_predmeta}" je završila. Pobijedio je drugi sudionik s ponudom ${pobjednik.vrijednost_ponude}$.`,
+              ]);
+              notifiedUsers.add(b.id_korisnika);
+            }
+          });
+
+          // Pratiteljima koji nisu licitirali: aukcija završila
+          connection.query(
+            "SELECT id_korisnika FROM lista_pracenja WHERE id_predmeta = ?",
+            [aukcija.id_predmeta],
+            (errW, pratitelji) => {
+              (pratitelji || []).forEach((w) => {
+                if (!notifiedUsers.has(w.id_korisnika)) {
+                  notifikacije.push([
+                    w.id_korisnika,
+                    aukcija.id_predmeta,
+                    `Aukcija "${aukcija.naziv_predmeta}" je završila.`,
+                  ]);
+                }
+              });
+              posaljiNotifikacije(notifikacije);
+            }
+          );
+        }
+      );
+    }
+  );
+}
+
+// Svakih 60 sekundi provjeri ima li završenih aukcija koje još nisu obrađene
+setInterval(() => {
+  connection.query(
+    `SELECT p.id_predmeta, p.naziv_predmeta, p.id_korisnika AS id_prodavaca
+     FROM predmet p
+     WHERE p.vrijeme_zavrsetka <= NOW()
+     AND NOT EXISTS (
+       SELECT 1 FROM notifikacija n
+       WHERE n.id_predmeta = p.id_predmeta
+       AND n.poruka LIKE '%zavr%ila%'
+     )`,
+    (err, aukcije) => {
+      if (err || !aukcije.length) return;
+      aukcije
+        .filter((a) => !obradeneAukcije.has(a.id_predmeta))
+        .forEach((a) => {
+          obradeneAukcije.add(a.id_predmeta);
+          obradiZavrsenuAukciju(a);
+        });
+    }
+  );
+}, 60 * 1000);
