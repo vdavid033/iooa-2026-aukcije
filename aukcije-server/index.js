@@ -71,6 +71,11 @@ io.on("connection", (socket) => {
     console.log(`Socket ${socket.id} ušao u sobu predmet_${id_predmeta}`);
   });
 
+  socket.on("pridruzi_se_korisniku", (id_korisnika) => {
+    socket.join(`korisnik_${id_korisnika}`);
+    console.log(`Socket ${socket.id} ušao u sobu korisnik_${id_korisnika}`);
+  });
+
   socket.on("disconnect", () => {
     console.log("Korisnik odspojio:", socket.id);
   });
@@ -354,11 +359,45 @@ app.post(
       function (error, results) {
         if (error) throw error;
 
-        // ✅ NOVO: emitira svim korisnicima u sobi tog predmeta
+        // Emitira svim korisnicima u sobi tog predmeta (live update cijene)
         io.to(`predmet_${data.id_predmeta}`).emit("cijena_azurirana", {
           id_predmeta: data.id_predmeta,
           nova_cijena: data.vrijednost_ponude,
         });
+
+        // Kreiraj notifikacije za korisnike koji prate ovu aukciju (osim ponuđača)
+        connection.query(
+          "SELECT id_korisnika FROM lista_pracenja WHERE id_predmeta = ? AND id_korisnika != ?",
+          [data.id_predmeta, data.id_korisnika],
+          (errW, watchers) => {
+            if (errW || !watchers.length) return;
+
+            connection.query(
+              "SELECT naziv_predmeta FROM predmet WHERE id_predmeta = ?",
+              [data.id_predmeta],
+              (errP, predmetResult) => {
+                if (errP) return;
+                const naziv = predmetResult[0]?.naziv_predmeta || "aukcija";
+                const poruka = `Nova ponuda ${data.vrijednost_ponude}$ na aukciji "${naziv}"`;
+                const rows = watchers.map((w) => [w.id_korisnika, data.id_predmeta, poruka]);
+
+                connection.query(
+                  "INSERT INTO notifikacija (id_korisnika, id_predmeta, poruka) VALUES ?",
+                  [rows],
+                  () => {
+                    watchers.forEach((w) => {
+                      io.to(`korisnik_${w.id_korisnika}`).emit("nova_notifikacija", {
+                        poruka,
+                        id_predmeta: data.id_predmeta,
+                        datum_kreiranja: new Date(),
+                      });
+                    });
+                  }
+                );
+              }
+            );
+          }
+        );
 
         return response.send({
           error: false,
@@ -999,6 +1038,38 @@ app.delete("/api/watchlist/:predmetId", authJwt.verifyTokenUser, (req, res) => {
         return res.status(404).json({ error: true, message: "Aukcija nije pronađena na listi praćenja." });
       }
       res.json({ error: false, message: "Aukcija uklonjena s liste praćenja." });
+    }
+  );
+});
+
+// ── Notifikacije ─────────────────────────────────────────────────────────────
+
+// GET /api/notifikacije/:korisnikId — dohvati notifikacije korisnika
+app.get("/api/notifikacije/:korisnikId", authJwt.verifyTokenUser, (req, res) => {
+  connection.query(
+    `SELECT n.id_notifikacija, n.poruka, n.procitano, n.datum_kreiranja, n.id_predmeta,
+            p.naziv_predmeta
+     FROM notifikacija n
+     JOIN predmet p ON n.id_predmeta = p.id_predmeta
+     WHERE n.id_korisnika = ?
+     ORDER BY n.datum_kreiranja DESC
+     LIMIT 50`,
+    [req.params.korisnikId],
+    (error, results) => {
+      if (error) return res.status(500).json({ error: true, message: "Greška pri dohvatu notifikacija." });
+      res.json(results);
+    }
+  );
+});
+
+// PUT /api/notifikacije/procitaj-sve/:korisnikId — označi sve kao pročitano
+app.put("/api/notifikacije/procitaj-sve/:korisnikId", authJwt.verifyTokenUser, (req, res) => {
+  connection.query(
+    "UPDATE notifikacija SET procitano = 1 WHERE id_korisnika = ?",
+    [req.params.korisnikId],
+    (error) => {
+      if (error) return res.status(500).json({ error: true, message: "Greška pri označavanju notifikacija." });
+      res.json({ error: false, message: "Sve notifikacije označene kao pročitane." });
     }
   );
 });
