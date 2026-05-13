@@ -174,11 +174,11 @@ describe("statusLabel computed", () => {
     expect(wrapper.vm.statusLabel).toBe("Aktivan");
   });
 
-  it('shows "Onemogućen" when disabled', () => {
+  it('shows "Ugašen" when disabled', () => {
     const wrapper = createWrapper({
       autoBidStatus: { maksimalni_iznos: 150, aktivan: 0, limit_dosegnut: 0 },
     });
-    expect(wrapper.vm.statusLabel).toBe("Onemogućen");
+    expect(wrapper.vm.statusLabel).toBe("Ugašen");
   });
 
   it('shows "Limit dosegnut" when limit is reached', () => {
@@ -386,5 +386,170 @@ describe("API error handling", () => {
     await flushPromises();
 
     expect(wrapper.vm.autoBidError).toBe("Neovlašteno.");
+  });
+});
+
+// ── 9. Loading skeleton for status fetch ─────────────────────────────────────
+
+describe("auto-bid status loading skeleton", () => {
+  it("shows skeleton element when autoBidStatusLoading is true", async () => {
+    const wrapper = createWrapper();
+    await flushPromises();
+    wrapper.vm.autoBidStatusLoading = true;
+    await wrapper.vm.$nextTick();
+    expect(wrapper.find('[data-testid="auto-bid-status-loading"]').exists()).toBe(true);
+  });
+
+  it("hides skeleton and shows content when loading is complete", async () => {
+    const wrapper = createWrapper();
+    await flushPromises();
+    expect(wrapper.find('[data-testid="auto-bid-status-loading"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="auto-bid-input"]').exists()).toBe(true);
+  });
+});
+
+// ── 10. Auto-bid limit display ────────────────────────────────────────────────
+
+describe("auto-bid limit display", () => {
+  it("shows limit element when auto-bid is active", () => {
+    const wrapper = createWrapper({
+      autoBidStatus: { maksimalni_iznos: 250, aktivan: 1, limit_dosegnut: 0 },
+    });
+    const el = wrapper.find('[data-testid="auto-bid-limit"]');
+    expect(el.exists()).toBe(true);
+    expect(el.text()).toContain("250.00");
+  });
+
+  it("does not show limit when no auto-bid is configured", () => {
+    const wrapper = createWrapper({ autoBidStatus: null });
+    expect(wrapper.find('[data-testid="auto-bid-limit"]').exists()).toBe(false);
+  });
+
+  it("formats a decimal string amount correctly (e.g. '150.5' → '150.50')", () => {
+    const wrapper = createWrapper({
+      autoBidStatus: { maksimalni_iznos: "150.5", aktivan: 1, limit_dosegnut: 0 },
+    });
+    const el = wrapper.find('[data-testid="auto-bid-limit"]');
+    expect(el.text()).toContain("150.50");
+  });
+
+  it("shows limit when limit is reached (allows user to increase it)", () => {
+    const wrapper = createWrapper({
+      autoBidStatus: { maksimalni_iznos: 300, aktivan: 1, limit_dosegnut: 1 },
+    });
+    expect(wrapper.find('[data-testid="auto-bid-limit"]').exists()).toBe(true);
+  });
+});
+
+// ── 11. Status message banners ────────────────────────────────────────────────
+
+describe("status message banners", () => {
+  it('shows "nije postavljen" banner when no auto-bid exists', () => {
+    const wrapper = createWrapper({ autoBidStatus: null });
+    const msg = wrapper.find('[data-testid="status-message"]');
+    expect(msg.exists()).toBe(true);
+    expect(msg.text()).toContain("nije postavljen");
+  });
+
+  it('shows "aktivan" banner when auto-bid is active and limit not reached', () => {
+    const wrapper = createWrapper({
+      autoBidStatus: { maksimalni_iznos: 150, aktivan: 1, limit_dosegnut: 0 },
+    });
+    const msg = wrapper.find('[data-testid="status-message"]');
+    expect(msg.exists()).toBe(true);
+    expect(msg.text()).toContain("aktivan");
+  });
+
+  it('shows "ugašen" banner when auto-bid is disabled', () => {
+    const wrapper = createWrapper({
+      autoBidStatus: { maksimalni_iznos: 150, aktivan: 0, limit_dosegnut: 0 },
+    });
+    const msg = wrapper.find('[data-testid="status-message"]');
+    expect(msg.exists()).toBe(true);
+    expect(msg.text()).toContain("ugašen");
+  });
+
+  it("shows limit-reached banner (not status-message) when limit is reached", () => {
+    const wrapper = createWrapper({
+      autoBidStatus: { maksimalni_iznos: 150, aktivan: 1, limit_dosegnut: 1 },
+    });
+    expect(wrapper.find('[data-testid="limit-banner"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="status-message"]').exists()).toBe(false);
+  });
+});
+
+// ── 12. Status refresh after create / update / disable ───────────────────────
+
+describe("dohvatiAutoBid refresh after operations", () => {
+  it("calls dohvatiAutoBid after successful create", async () => {
+    axios.post.mockResolvedValue({ data: { error: false, created: true } });
+    axios.get.mockResolvedValue({
+      data: { maksimalni_iznos: 200, aktivan: 1, limit_dosegnut: 0 },
+    });
+
+    const wrapper = createWrapper({
+      autoBidStatus: null,
+      autoBidForm: { maksimalni_iznos: 200 },
+      item: { ...ITEM_STUB, trenutna_cijena: 100 },
+    });
+    await flushPromises();
+
+    const spy = vi.spyOn(wrapper.vm, "dohvatiAutoBid");
+    await wrapper.vm.spremiAutoBid();
+    await flushPromises();
+
+    expect(spy).toHaveBeenCalled();
+  });
+
+  it("calls dohvatiAutoBid after successful update", async () => {
+    axios.put.mockResolvedValue({ data: { error: false } });
+    axios.get.mockResolvedValue({
+      data: { maksimalni_iznos: 300, aktivan: 1, limit_dosegnut: 0 },
+    });
+
+    const wrapper = createWrapper({
+      autoBidStatus: { maksimalni_iznos: 200, aktivan: 1, limit_dosegnut: 0 },
+      autoBidForm: { maksimalni_iznos: 300 },
+      item: { ...ITEM_STUB, trenutna_cijena: 100 },
+    });
+    await flushPromises();
+
+    const spy = vi.spyOn(wrapper.vm, "dohvatiAutoBid");
+    await wrapper.vm.spremiAutoBid();
+    await flushPromises();
+
+    expect(spy).toHaveBeenCalled();
+  });
+
+  it("calls dohvatiAutoBid after successful disable", async () => {
+    axios.put.mockResolvedValue({ data: { error: false } });
+    axios.get.mockResolvedValue({ data: null });
+
+    const wrapper = createWrapper({
+      autoBidStatus: { maksimalni_iznos: 150, aktivan: 1, limit_dosegnut: 0 },
+    });
+    await flushPromises();
+
+    const spy = vi.spyOn(wrapper.vm, "dohvatiAutoBid");
+    await wrapper.vm.onemoguciAutoBid();
+    await flushPromises();
+
+    expect(spy).toHaveBeenCalled();
+  });
+});
+
+// ── 13. Own-user-only limit exposure ─────────────────────────────────────────
+
+describe("limit visibility — own user only", () => {
+  it("shows limit display only when autoBidStatus is non-null (API returns only own data)", () => {
+    // autoBidStatus comes from GET /api/auto-bid/:id which is JWT-scoped;
+    // null means no auto-bid for this user → no limit shown
+    const withStatus = createWrapper({
+      autoBidStatus: { maksimalni_iznos: 500, aktivan: 1, limit_dosegnut: 0 },
+    });
+    expect(withStatus.find('[data-testid="auto-bid-limit"]').exists()).toBe(true);
+
+    const noStatus = createWrapper({ autoBidStatus: null });
+    expect(noStatus.find('[data-testid="auto-bid-limit"]').exists()).toBe(false);
   });
 });

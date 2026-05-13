@@ -173,20 +173,74 @@
 
       <q-separator />
 
-      <q-card-section>
-        <!-- Limit reached notice -->
+      <!-- Loading skeleton while fetching auto-bid status -->
+      <q-card-section v-if="autoBidStatusLoading" data-testid="auto-bid-status-loading">
+        <q-skeleton type="rect" height="48px" class="q-mb-sm" />
+        <q-skeleton type="rect" height="56px" />
+      </q-card-section>
+
+      <q-card-section v-else>
+        <!-- Not configured notice -->
         <q-banner
-          v-if="autoBidStatus && autoBidStatus.limit_dosegnut"
-          class="bg-orange-1 q-mb-md"
+          v-if="!autoBidStatus"
+          class="bg-grey-2 q-mb-md"
           rounded
-          data-testid="limit-banner"
+          data-testid="status-message"
         >
           <template v-slot:avatar>
-            <q-icon name="warning" color="orange-7" />
+            <q-icon name="info" color="grey-6" />
           </template>
-          Vaš Auto-bid limit je dosegnut. Postavite novi, viši iznos i kliknite
-          "Spremi Auto-bid".
+          Auto-bid još nije postavljen za ovu aukciju.
         </q-banner>
+
+        <template v-else>
+          <!-- Limit reached notice -->
+          <q-banner
+            v-if="autoBidStatus.limit_dosegnut"
+            class="bg-orange-1 q-mb-md"
+            rounded
+            data-testid="limit-banner"
+          >
+            <template v-slot:avatar>
+              <q-icon name="warning" color="orange-7" />
+            </template>
+            Auto-bid limit je dosegnut. Postavite novi, viši iznos kako bi
+            sustav nastavio licitirati u vaše ime.
+          </q-banner>
+
+          <!-- Active status message -->
+          <q-banner
+            v-else-if="autoBidStatus.aktivan"
+            class="bg-green-1 q-mb-md"
+            rounded
+            data-testid="status-message"
+          >
+            <template v-slot:avatar>
+              <q-icon name="check_circle" color="positive" />
+            </template>
+            Auto-bid je aktivan.
+          </q-banner>
+
+          <!-- Disabled status message -->
+          <q-banner
+            v-else
+            class="bg-grey-2 q-mb-md"
+            rounded
+            data-testid="status-message"
+          >
+            <template v-slot:avatar>
+              <q-icon name="pause_circle" color="grey-7" />
+            </template>
+            Auto-bid je ugašen. Unesite novi iznos kako biste ga aktivirali.
+          </q-banner>
+
+          <!-- Current configured amount (own data only — never shows other users' amounts) -->
+          <div class="q-mb-sm text-body2 text-grey-8" data-testid="auto-bid-limit">
+            <q-icon name="info" size="xs" color="grey-6" />
+            Vaš aktivni Auto-bid limit:
+            <strong>{{ Number(autoBidStatus.maksimalni_iznos).toFixed(2) }} €</strong>
+          </div>
+        </template>
 
         <div class="row q-col-gutter-md items-start">
           <!-- Amount input -->
@@ -202,7 +256,7 @@
               :error="!!autoBidError"
               :error-message="autoBidError"
               :disable="autoBidLoading"
-              prefix="$"
+              prefix="€"
               data-testid="auto-bid-input"
             />
           </div>
@@ -234,15 +288,6 @@
               />
             </div>
           </div>
-        </div>
-
-        <!-- Current configured amount (own data only — never shows other users' amounts) -->
-        <div v-if="autoBidStatus" class="q-mt-sm text-body2 text-grey-8">
-          <q-icon name="info" size="xs" color="grey-6" />
-          Vaš trenutni maksimalni iznos:
-          <strong
-            >{{ Number(autoBidStatus.maksimalni_iznos).toFixed(2) }} $</strong
-          >
         </div>
       </q-card-section>
     </q-card>
@@ -332,7 +377,7 @@ export default {
     statusLabel() {
       if (!this.autoBidStatus) return "Nije postavljen";
       if (this.autoBidStatus.limit_dosegnut) return "Limit dosegnut";
-      return this.autoBidStatus.aktivan ? "Aktivan" : "Onemogućen";
+      return this.autoBidStatus.aktivan ? "Aktivan" : "Ugašen";
     },
     statusBoja() {
       if (!this.autoBidStatus) return "grey";
@@ -352,6 +397,7 @@ export default {
       odabranaCijena: "",
       prices: [],
       autoBidStatus: null,
+      autoBidStatusLoading: false,
       autoBidForm: { maksimalni_iznos: null },
       autoBidError: null,
       autoBidLoading: false,
@@ -521,6 +567,7 @@ export default {
     // ── Auto-bid ──────────────────────────────────────────────────
 
     async dohvatiAutoBid() {
+      this.autoBidStatusLoading = true;
       try {
         const { data } = await axios.get(
           `${API_URL}/auto-bid/${this.id_predmeta}`,
@@ -540,6 +587,8 @@ export default {
           console.error("Greška pri dohvaćanju auto-bida:", err);
         }
         this.autoBidStatus = null;
+      } finally {
+        this.autoBidStatusLoading = false;
       }
     },
 
