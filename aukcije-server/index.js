@@ -771,6 +771,7 @@ app.get("/api/get-ponuda/:id", (req, res) => {
 app.post(
   "/unostrenutnaponuda",
   authJwt.verifyTokenUser,
+
   async function (request, response) {
     const data = request.body;
     const id_predmeta = data.id_predmeta;
