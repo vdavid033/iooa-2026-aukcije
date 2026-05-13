@@ -86,9 +86,15 @@
       </div>
     </div>
   </q-card>
-
   <div class="q-pa-md flex flex-center">
     <q-btn label="Ponuda" color="primary" @click="showDialog = true" />
+    <q-btn
+      v-if="isAuthenticated"
+      :label="pratim ? 'Prekini praćenje' : 'Prati'"
+      :color="pratim ? 'grey-7' : 'green'"
+      :icon="pratim ? 'visibility_off' : 'visibility'"
+      @click="togglePracenje"
+    />
     <q-dialog v-model="showDialog">
       <q-card style="width: 300px">
         <q-card-section>
@@ -189,10 +195,12 @@ export default {
       showDialog: false,
       odabranaCijena: "",
       prices: [],
-      socket: null,
-      isAuthenticated: false,
-      autoBidForm: {
-        maksimalni_iznos: null,
+      predmet: {
+        id_ponude: null,
+        vrijednost_ponude: null,
+        vrijeme_ponude: null,
+        id_korisnika: null,
+        id_predmeta: null,
       },
       autoBidStatus: null,
       showSingleImage: false,
@@ -204,49 +212,10 @@ export default {
       ],
     };
   },
-  async mounted() {
-    const token = localStorage.getItem("token");
-    this.isAuthenticated = Boolean(token);
-
-    await this.dohvatiPredmet();
-    await this.dohvatiPonude();
-    await this.dohvatiTrenutnuCijenu();
-
-    if (this.isAuthenticated) {
-      await this.dohvatiAutoBid();
-    }
-
-    this.socket = io("http://localhost:3000");
-    this.socket.emit("pridruzi_se_predmetu", this.id_predmeta);
-    this.socket.on("cijena_azurirana", async (data) => {
-      if (Number(data.id_predmeta) !== Number(this.id_predmeta)) {
-        return;
-      }
-
-      this.item.trenutna_cijena = data.nova_cijena;
-      this.generirajCijene();
-      await this.dohvatiPonude();
-
-      if (this.isAuthenticated) {
-        await this.dohvatiAutoBid();
-      }
-    });
-  },
-  beforeUnmount() {
-    if (this.socket) {
-      this.socket.disconnect();
-      this.socket = null;
-    }
-  },
-  methods: {
-    formattedDate(dateString) {
-      return new Date(dateString).toLocaleString("hr-HR").replace(",", "");
-    },
-    async dohvatiPredmet() {
-      const response = await axios.get(baseUrl + "get-predmet/" + this.id_predmeta, {});
-      this.item = response.data[0] || {};
-      this.item.trenutna_cijena = this.item.vrijednost_ponude || this.item.pocetna_cijena || 0;
-
+  mounted() {
+    axios.get(baseUrl + "get-predmet/" + this.id_predmeta, {}).then((response) => {
+      this.item = response.data[0];
+      this.item.trenutna_cijena = this.item.pocetna_cijena;
       if (this.item.slike && this.item.slike.length > 0) {
         if (this.item.slike.length === 1) {
           this.showSingleImage = true;
@@ -294,56 +263,28 @@ export default {
           value: (this.item.trenutna_cijena * 2).toFixed(2),
         },
       ];
+    });
+  },
+
+  methods: {
+    formattedDate(dateString) {
+      return new Date(dateString).toLocaleString("hr-HR").replace(",", "");
     },
-    async dohvatiAutoBid() {
+    potvrdiPonudu() {
+      // Get the JWT token from local storage
       const token = localStorage.getItem("token");
       if (!token) {
         return;
       }
 
       const headers = { Authorization: `Bearer ${token}` };
-      const response = await axios.get(baseUrl + "auto-bid/" + this.id_predmeta, { headers });
-      this.autoBidStatus = response.data;
 
-      if (this.autoBidStatus) {
-        this.autoBidForm.maksimalni_iznos = this.autoBidStatus.maksimalni_iznos;
-      }
-    },
-    async spremiAutoBid() {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        return;
-      }
+      const decodedToken = jwtDecode(token);
 
-      const headers = { Authorization: `Bearer ${token}` };
-      await axios.post(
-        baseUrl + "auto-bid",
-        {
-          id_predmeta: this.id_predmeta,
-          maksimalni_iznos: this.autoBidForm.maksimalni_iznos,
-        },
-        { headers },
-      );
-      await this.dohvatiAutoBid();
-    },
-    async onemoguciAutoBid() {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        return;
-      }
-
-      const headers = { Authorization: `Bearer ${token}` };
-      await axios.delete(baseUrl + "auto-bid/" + this.id_predmeta, { headers });
-      await this.dohvatiAutoBid();
-    },
-    async potvrdiPonudu() {
-      const token = localStorage.getItem("token");
-      if (!token || !this.odabranaCijena) {
-        return;
-      }
-
-      const headers = { Authorization: `Bearer ${token}` };
-      const selectedPrice = Number(this.odabranaCijena.value);
+      console.log(this.odabranaCijena.value);
+      if (this.odabranaCijena) {
+        // Increase the current price based on the selected value
+        const selectedPrice = parseInt(this.odabranaCijena.value);
 
       if (selectedPrice <= this.item.trenutna_cijena) {
         return;
