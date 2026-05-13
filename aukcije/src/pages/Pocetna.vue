@@ -1,6 +1,5 @@
 <template>
   <q-page class="bg-grey-2">
-
     <div class="q-pa-md">
 
       <!-- KATEGORIJE -->
@@ -8,7 +7,7 @@
 
       <div class="row q-col-gutter-md">
         <div
-          v-for="cat in kategorija"
+          v-for="cat in prikazaneKategorije"
           :key="cat.id_kategorije"
           class="col-6 col-sm-4 col-md-3"
         >
@@ -16,8 +15,8 @@
             class="category-card"
             @click="navigateToItem1(cat.id_kategorije)"
           >
-            <q-img :src="cat.slika || defaultImg" style="height: 220px">
-              <div class="absolute-bottom text-white q-pa-sm">
+            <q-img :src="cat.slika || defaultImg" class="category-img">
+              <div class="category-overlay">
                 <div class="text-subtitle1 text-weight-bold">
                   {{ cat.naziv_kategorije }}
                 </div>
@@ -28,6 +27,18 @@
             </q-img>
           </q-card>
         </div>
+      </div>
+
+      <div
+        v-if="brojPrikazanihKategorija < kategorija.length"
+        class="row justify-center q-mt-md"
+      >
+        <q-btn
+          color="primary"
+          outline
+          label="Prikaži više"
+          @click="prikaziViseKategorija"
+        />
       </div>
 
       <!-- AUKCIJE -->
@@ -41,7 +52,7 @@
           </div>
         </div>
 
-        <q-btn color="primary" label="Vidi sve" />
+        <q-btn color="primary" label="Vidi sve" to="/sve-aukcije" />
       </div>
 
       <!-- SEARCH -->
@@ -80,7 +91,6 @@
           class="col-12 col-sm-6 col-md-4"
         >
           <q-card class="auction-card" @click="navigateToItem(item.id_predmeta)">
-
             <q-img :src="item.slika || defaultImg" style="height: 220px">
               <div class="time-badge">
                 {{ item.preostalo_vrijeme }}h
@@ -124,7 +134,6 @@
       </div>
 
     </div>
-
   </q-page>
 </template>
 
@@ -139,6 +148,7 @@ export default {
       Pretrazivanje: "",
       items: [],
       kategorija: [],
+      brojPrikazanihKategorija: 8,
       selectedsortianje: "",
       defaultImg: "https://via.placeholder.com/400",
 
@@ -164,6 +174,10 @@ export default {
   },
 
   computed: {
+    prikazaneKategorije() {
+      return this.kategorija.slice(0, this.brojPrikazanihKategorija);
+    },
+
     filteredItems() {
       if (!this.Pretrazivanje) return this.items;
 
@@ -183,22 +197,32 @@ export default {
       this.$router.push({ path: "kategorija", query: { id_kategorije: id } });
     },
 
+    prikaziViseKategorija() {
+      this.brojPrikazanihKategorija += 8;
+    },
+
     sortiranjeOpcija(val) {
       switch (val) {
         case "price-asc":
-          this.items.sort((a,b)=>a.pocetna_cijena-b.pocetna_cijena);
+          this.items.sort((a, b) => a.pocetna_cijena - b.pocetna_cijena);
           break;
         case "price-desc":
-          this.items.sort((a,b)=>b.pocetna_cijena-a.pocetna_cijena);
+          this.items.sort((a, b) => b.pocetna_cijena - a.pocetna_cijena);
           break;
         case "name-asc":
-          this.items.sort((a,b)=>a.naziv_predmeta.localeCompare(b.naziv_predmeta));
+          this.items.sort((a, b) =>
+            a.naziv_predmeta.localeCompare(b.naziv_predmeta)
+          );
           break;
         case "name-desc":
-          this.items.sort((a,b)=>b.naziv_predmeta.localeCompare(a.naziv_predmeta));
+          this.items.sort((a, b) =>
+            b.naziv_predmeta.localeCompare(a.naziv_predmeta)
+          );
           break;
         case "expiration":
-          this.items.sort((a,b)=>new Date(a.vrijeme_zavrsetka)-new Date(b.vrijeme_zavrsetka));
+          this.items.sort((a, b) =>
+            new Date(a.vrijeme_zavrsetka) - new Date(b.vrijeme_zavrsetka)
+          );
           break;
       }
     }
@@ -207,20 +231,38 @@ export default {
 </script>
 
 <style scoped>
-
 .category-card {
   overflow: hidden;
   border-radius: 12px;
   transition: 0.3s;
+  cursor: pointer;
 }
+
 .category-card:hover {
   transform: translateY(-5px);
+}
+
+.category-img {
+  height: 220px;
+}
+
+.category-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.38);
+  color: white;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
 }
 
 .auction-card {
   border-radius: 12px;
   transition: 0.3s;
 }
+
 .auction-card:hover {
   transform: translateY(-5px);
 }
