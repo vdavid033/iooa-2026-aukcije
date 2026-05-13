@@ -11,6 +11,11 @@ const upload = multer();
 const jwt = require("jsonwebtoken");
 const config = require("../aukcije-server/auth.config.js");
 const authJwt = require("../aukcije-server/authJwt.js");
+const {
+  calculateAutoBidWinner,
+  normalizeMoney,
+  BID_INCREMENT,
+} = require("./autoBidCalculator");
 const nodemailer = require("nodemailer");
 // Email transporter (koristi Gmail ili drugi SMTP)
 const transporter = nodemailer.createTransport({
@@ -103,8 +108,6 @@ app.use(express.urlencoded({ extended: true }));
 
 connection.connect();
 
-const BID_INCREMENT = 1;
-
 function queryAsync(sql, params = []) {
   return new Promise((resolve, reject) => {
     connection.query(sql, params, (error, results) => {
@@ -148,10 +151,6 @@ function rollbackAsync() {
   return new Promise((resolve) => {
     connection.rollback(() => resolve());
   });
-}
-
-function normalizeMoney(value) {
-  return Number(Number(value).toFixed(2));
 }
 
 async function getCurrentPrice(id_predmeta) {
@@ -240,74 +239,103 @@ async function validateAutoBidInput(
   };
 }
 
-async function processAutoBid(id_predmeta, manualBidAmount, manualBidUserId) {
-  const normalizedManualBid = normalizeMoney(manualBidAmount);
-
-  const autoBidRows = await queryAsync(
+// Returns all active, non-limit-reached auto-bids for an item, excluding the user
+// who triggered the current bid cycle.
+async function getActiveAutoBidsForItem(id_predmeta, excludedUserId) {
+  return queryAsync(
     `SELECT id_auto_bid, id_korisnika, id_predmeta, maksimalni_iznos, aktivan, limit_dosegnut, vrijeme_postavljanja
      FROM auto_bid
      WHERE id_predmeta = ?
        AND id_korisnika <> ?
        AND aktivan = 1
        AND COALESCE(limit_dosegnut, 0) = 0
-       AND maksimalni_iznos > ?
-     ORDER BY maksimalni_iznos DESC, vrijeme_postavljanja ASC, id_auto_bid ASC
-     LIMIT 1`,
-    [id_predmeta, manualBidUserId, normalizedManualBid],
+     ORDER BY maksimalni_iznos DESC, vrijeme_postavljanja ASC`,
+    [id_predmeta, excludedUserId],
+  );
+}
+
+// Marks a single auto-bid as limit-reached, persists a notification, and emits
+// a real-time socket event so the user sees the notification immediately.
+async function markAutoBidLimitReached(id_auto_bid, id_korisnika) {
+  await queryAsync(
+    `UPDATE auto_bid SET limit_dosegnut = 1 WHERE id_auto_bid = ?`,
+    [id_auto_bid],
   );
 
-  if (autoBidRows.length === 0) {
-    return {
-      triggered: false,
-      autoBid: null,
-    };
+  await createNotification(
+    id_korisnika,
+    "Vaš Auto-bid limit za aukciju je dosegnut.",
+  );
+
+  io.to(`korisnik_${id_korisnika}`).emit("nova_notifikacija", {
+    poruka: "Vaš Auto-bid limit za aukciju je dosegnut.",
+  });
+}
+
+// Handles the full multi-user auto-bid cycle after a manual (or auto) bid is placed.
+//
+// Algorithm (proxy-bidding):
+//   1. Fetch all active auto-bids for the item, excluding the triggering user.
+//   2. Any whose max <= currentBidAmount are already beaten — mark them immediately.
+//   3. From the remaining competitive bids, pick a winner using calculateAutoBidWinner:
+//        winner  = highest maksimalni_iznos (tie-break: earliest vrijeme_postavljanja)
+//        winning bid = min(secondBest.max + increment, winner.max)
+//   4. Insert the winning bid into ponuda.
+//   5. Mark all non-winning auto-bids whose max <= winning bid as limit reached.
+//   6. If the winning bid equals the winner's max, mark the winner as limit reached too.
+async function processMultipleAutoBids(id_predmeta, currentBidAmount, triggeringUserId) {
+  const normalizedCurrent = normalizeMoney(currentBidAmount);
+  const allActiveBids = await getActiveAutoBidsForItem(id_predmeta, triggeringUserId);
+
+  // Split: auto-bids already surpassed by the current bid vs still competitive.
+  const beaten = allActiveBids.filter(
+    (ab) => normalizeMoney(ab.maksimalni_iznos) <= normalizedCurrent,
+  );
+  const competitive = allActiveBids.filter(
+    (ab) => normalizeMoney(ab.maksimalni_iznos) > normalizedCurrent,
+  );
+
+  for (const ab of beaten) {
+    await markAutoBidLimitReached(ab.id_auto_bid, ab.id_korisnika);
   }
 
-  const winningAutoBid = autoBidRows[0];
-  const nextBidAmount = Math.min(
-    normalizeMoney(normalizedManualBid + BID_INCREMENT),
-    normalizeMoney(winningAutoBid.maksimalni_iznos),
+  if (competitive.length === 0) {
+    return { triggered: false, autoBid: null };
+  }
+
+  const { winner, winningBid, losers } = calculateAutoBidWinner(
+    competitive,
+    normalizedCurrent,
   );
 
-  if (nextBidAmount <= normalizedManualBid) {
-    return {
-      triggered: false,
-      autoBid: null,
-    };
+  if (!winner || winningBid === null) {
+    return { triggered: false, autoBid: null };
   }
 
   const insertResult = await queryAsync(
     `INSERT INTO ponuda (vrijednost_ponude, vrijeme_ponude, id_korisnika, id_predmeta)
      VALUES (?, NOW(), ?, ?)`,
-    [nextBidAmount, winningAutoBid.id_korisnika, id_predmeta],
+    [winningBid, winner.id_korisnika, id_predmeta],
   );
 
-  let limitReached = false;
+  for (const loser of losers) {
+    await markAutoBidLimitReached(loser.id_auto_bid, loser.id_korisnika);
+  }
 
-  if (nextBidAmount >= normalizeMoney(winningAutoBid.maksimalni_iznos)) {
-    limitReached = true;
-
-    await queryAsync(
-      `UPDATE auto_bid
-       SET limit_dosegnut = 1
-       WHERE id_auto_bid = ?`,
-      [winningAutoBid.id_auto_bid],
-    );
-
-    await createNotification(
-      winningAutoBid.id_korisnika,
-      "Vaš Auto-bid limit za aukciju je dosegnut.",
-    );
+  let winnerLimitReached = false;
+  if (winningBid >= normalizeMoney(winner.maksimalni_iznos)) {
+    winnerLimitReached = true;
+    await markAutoBidLimitReached(winner.id_auto_bid, winner.id_korisnika);
   }
 
   return {
     triggered: true,
     autoBid: {
       id_ponude: insertResult.insertId,
-      id_korisnika: winningAutoBid.id_korisnika,
+      id_korisnika: winner.id_korisnika,
       id_predmeta,
-      vrijednost_ponude: normalizeMoney(nextBidAmount),
-      limit_dosegnut: limitReached,
+      vrijednost_ponude: winningBid,
+      limit_dosegnut: winnerLimitReached,
     },
   };
 }
@@ -800,7 +828,7 @@ app.post(
         [normalizedBidAmount, request.userId, id_predmeta],
       );
 
-      const autoBidResult = await processAutoBid(
+      const autoBidResult = await processMultipleAutoBids(
         id_predmeta,
         normalizedBidAmount,
         request.userId,
