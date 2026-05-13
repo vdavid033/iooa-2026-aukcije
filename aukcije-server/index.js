@@ -1,4 +1,4 @@
-const express = require("express");
+﻿const express = require("express");
 const session = require("express-session");
 const bcrypt = require("bcrypt");
 const cors = require("cors");
@@ -17,7 +17,7 @@ const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
     user: "aukcijeaplikacija@gmail.com", // zamijeni svojim emailom
-    pass: "uqqodzjrlejpobet", // Gmail App Password (ne obična lozinka!)
+    pass: "uqqodzjrlejpobet", // Gmail App Password (ne obiÄŤna lozinka!)
   },
 });
 
@@ -53,22 +53,22 @@ const { Server } = require("socket.io");
 // Kreiraj HTTP server oko Express app-a
 const server = http.createServer(app);
 
-// Inicijaliziraj Socket.io s CORS podešavanjem
+// Inicijaliziraj Socket.io s CORS podeĹˇavanjem
 const io = new Server(server, {
   cors: {
-    origin: "*", // isto kao i tvoj postojeći CORS
+    origin: "*", // isto kao i tvoj postojeÄ‡i CORS
     methods: ["GET", "POST"],
   },
 });
 
-// WebSocket događaji
+// WebSocket dogaÄ‘aji
 io.on("connection", (socket) => {
   console.log("Korisnik spojen:", socket.id);
 
-  // Korisnik se pridružuje sobi specifičnoj za jedan predmet
+  // Korisnik se pridruĹľuje sobi specifiÄŤnoj za jedan predmet
   socket.on("pridruzi_se_predmetu", (id_predmeta) => {
     socket.join(`predmet_${id_predmeta}`);
-    console.log(`Socket ${socket.id} ušao u sobu predmet_${id_predmeta}`);
+    console.log(`Socket ${socket.id} uĹˇao u sobu predmet_${id_predmeta}`);
   });
 
   socket.on("disconnect", () => {
@@ -82,7 +82,7 @@ app.use(bodyParser.json());
 // Parser za podatke iz formi
 app.use(bodyParser.urlencoded({ extended: true }));
 
-// Postavke direktorija za statičke datoteke
+// Postavke direktorija za statiÄŤke datoteke
 app.use(cors(corsOptions));
 app.options("*", cors(corsOptions));
 app.use(express.static(path.join(__dirname, "public")));
@@ -97,6 +97,224 @@ const connection = mysql.createConnection({
 app.use(express.urlencoded({ extended: true }));
 
 connection.connect();
+
+const BID_INCREMENT = 1;
+
+function queryAsync(sql, params = []) {
+  return new Promise((resolve, reject) => {
+    connection.query(sql, params, (error, results) => {
+      if (error) {
+        reject(error);
+        return;
+      }
+
+      resolve(results);
+    });
+  });
+}
+
+function beginTransactionAsync() {
+  return new Promise((resolve, reject) => {
+    connection.beginTransaction((error) => {
+      if (error) {
+        reject(error);
+        return;
+      }
+
+      resolve();
+    });
+  });
+}
+
+function commitAsync() {
+  return new Promise((resolve, reject) => {
+    connection.commit((error) => {
+      if (error) {
+        reject(error);
+        return;
+      }
+
+      resolve();
+    });
+  });
+}
+
+function rollbackAsync() {
+  return new Promise((resolve) => {
+    connection.rollback(() => resolve());
+  });
+}
+
+function normalizeMoney(value) {
+  return Number(Number(value).toFixed(2));
+}
+
+async function getCurrentPrice(id_predmeta) {
+  const rows = await queryAsync(
+    `SELECT
+       p.pocetna_cijena,
+       COALESCE(MAX(po.vrijednost_ponude), p.pocetna_cijena) AS trenutna_cijena
+     FROM predmet p
+     LEFT JOIN ponuda po ON po.id_predmeta = p.id_predmeta
+     WHERE p.id_predmeta = ?
+     GROUP BY p.id_predmeta, p.pocetna_cijena`,
+    [id_predmeta],
+  );
+
+  if (rows.length === 0) {
+    return null;
+  }
+
+  return normalizeMoney(rows[0].trenutna_cijena);
+}
+
+async function createNotification(id_korisnika, message) {
+  await queryAsync(
+    `INSERT INTO obavijest (id_korisnika, poruka, procitano, vrijeme_obavijesti)
+     VALUES (?, ?, 0, NOW())`,
+    [id_korisnika, message],
+  );
+}
+
+async function validateAutoBidInput(
+  id_korisnika,
+  id_predmeta,
+  maksimalni_iznos,
+) {
+  const normalizedMaxAmount = normalizeMoney(maksimalni_iznos);
+
+  if (Number.isNaN(normalizedMaxAmount) || normalizedMaxAmount <= 0) {
+    const invalidAmountError = new Error(
+      "Maksimalni iznos auto-bida nije ispravan.",
+    );
+    invalidAmountError.status = 400;
+    throw invalidAmountError;
+  }
+
+  const predmetRows = await queryAsync(
+    `SELECT id_predmeta, id_korisnika, pocetna_cijena
+     FROM predmet
+     WHERE id_predmeta = ?`,
+    [id_predmeta],
+  );
+
+  if (predmetRows.length === 0) {
+    const notFoundError = new Error("Predmet nije pronađen.");
+    notFoundError.status = 404;
+    throw notFoundError;
+  }
+
+  if (Number(predmetRows[0].id_korisnika) === Number(id_korisnika)) {
+    const ownerError = new Error(
+      "Vlasnik predmeta ne može postaviti auto-bid na vlastitu aukciju.",
+    );
+    ownerError.status = 400;
+    throw ownerError;
+  }
+
+  const currentPrice = await getCurrentPrice(id_predmeta);
+
+  if (currentPrice === null) {
+    const priceError = new Error("Trenutna cijena nije dostupna.");
+    priceError.status = 400;
+    throw priceError;
+  }
+
+  if (normalizedMaxAmount <= currentPrice) {
+    const validationError = new Error(
+      `Maksimalni auto-bid mora biti veći od trenutne cijene (${currentPrice}$).`,
+    );
+    validationError.status = 400;
+    throw validationError;
+  }
+
+  return {
+    predmet: predmetRows[0],
+    currentPrice,
+    normalizedMaxAmount,
+  };
+}
+
+async function processAutoBid(id_predmeta, manualBidAmount, manualBidUserId) {
+  const normalizedManualBid = normalizeMoney(manualBidAmount);
+
+  const autoBidRows = await queryAsync(
+    `SELECT id_auto_bid, id_korisnika, id_predmeta, maksimalni_iznos, aktivan, limit_dosegnut, vrijeme_postavljanja
+     FROM auto_bid
+     WHERE id_predmeta = ?
+       AND id_korisnika <> ?
+       AND aktivan = 1
+       AND COALESCE(limit_dosegnut, 0) = 0
+       AND maksimalni_iznos > ?
+     ORDER BY maksimalni_iznos DESC, vrijeme_postavljanja ASC, id_auto_bid ASC
+     LIMIT 1`,
+    [id_predmeta, manualBidUserId, normalizedManualBid],
+  );
+
+  if (autoBidRows.length === 0) {
+    return {
+      triggered: false,
+      autoBid: null,
+    };
+  }
+
+  const winningAutoBid = autoBidRows[0];
+  const nextBidAmount = Math.min(
+    normalizeMoney(normalizedManualBid + BID_INCREMENT),
+    normalizeMoney(winningAutoBid.maksimalni_iznos),
+  );
+
+  if (nextBidAmount <= normalizedManualBid) {
+    return {
+      triggered: false,
+      autoBid: null,
+    };
+  }
+
+  const insertResult = await queryAsync(
+    `INSERT INTO ponuda (vrijednost_ponude, vrijeme_ponude, id_korisnika, id_predmeta)
+     VALUES (?, NOW(), ?, ?)`,
+    [nextBidAmount, winningAutoBid.id_korisnika, id_predmeta],
+  );
+
+  let limitReached = false;
+
+  if (nextBidAmount >= normalizeMoney(winningAutoBid.maksimalni_iznos)) {
+    limitReached = true;
+
+    await queryAsync(
+      `UPDATE auto_bid
+       SET limit_dosegnut = 1
+       WHERE id_auto_bid = ?`,
+      [winningAutoBid.id_auto_bid],
+    );
+
+    await createNotification(
+      winningAutoBid.id_korisnika,
+      "Vaš Auto-bid limit za aukciju je dosegnut.",
+    );
+  }
+
+  return {
+    triggered: true,
+    autoBid: {
+      id_ponude: insertResult.insertId,
+      id_korisnika: winningAutoBid.id_korisnika,
+      id_predmeta,
+      vrijednost_ponude: normalizeMoney(nextBidAmount),
+      limit_dosegnut: limitReached,
+    },
+  };
+}
+
+async function disableAutoBidForUser(id_predmeta, id_korisnika) {
+  return queryAsync(
+    `UPDATE auto_bid
+     SET aktivan = 0
+     WHERE id_predmeta = ? AND id_korisnika = ?`,
+    [id_predmeta, id_korisnika],
+  );
+}
 
 app.get("/api/korisnici", authJwt.verifyTokenAdmin, (req, res) => {
   connection.query(
@@ -243,26 +461,231 @@ app.get("/api/all-predmet", (req, res) => {
   });
 });
 
-app.get("/api/get-predmet/:id", (req, res) => {
+app.get("/api/get-predmet/:id", async (req, res) => {
   const { id } = req.params;
 
-  connection.query(
-    `SELECT p.naziv_predmeta, p.id_predmeta, p.pocetna_cijena, p.vrijeme_pocetka, p.vrijeme_zavrsetka, TIME_FORMAT( SEC_TO_TIME(TIMESTAMPDIFF(SECOND, p.vrijeme_pocetka, p.vrijeme_zavrsetka)), '%H:%i:%s' ) AS preostalo_vrijeme, p.opis_predmeta, COALESCE(MAX(po.vrijednost_ponude), p.pocetna_cijena) AS vrijednost_ponude, GROUP_CONCAT(DISTINCT s.slika SEPARATOR '|||') AS slike
-    FROM predmet p
-    LEFT JOIN ponuda po ON p.id_predmeta = po.id_predmeta
-    LEFT JOIN slika s ON p.id_predmeta = s.id_predmeta
-    WHERE p.id_predmeta = ?
-    GROUP BY p.id_predmeta`,
-    [id],
-    (error, results) => {
-      if (error) throw error;
-      if (results.length > 0 && results[0].slike) {
-        results[0].slike = results[0].slike.split("|||");
-      }
-      res.send(results);
-    },
-  );
+  try {
+    const results = await queryAsync(
+      `SELECT p.naziv_predmeta, p.id_predmeta, p.pocetna_cijena, p.vrijeme_pocetka, p.vrijeme_zavrsetka, TIME_FORMAT( SEC_TO_TIME(TIMESTAMPDIFF(SECOND, p.vrijeme_pocetka, p.vrijeme_zavrsetka)), '%H:%i:%s' ) AS preostalo_vrijeme, p.opis_predmeta, COALESCE(MAX(po.vrijednost_ponude), p.pocetna_cijena) AS vrijednost_ponude, GROUP_CONCAT(DISTINCT s.slika SEPARATOR '|||') AS slike
+      FROM predmet p
+      LEFT JOIN ponuda po ON p.id_predmeta = po.id_predmeta
+      LEFT JOIN slika s ON p.id_predmeta = s.id_predmeta
+      WHERE p.id_predmeta = ?
+      GROUP BY p.id_predmeta`,
+      [id],
+    );
+
+    if (results.length > 0 && results[0].slike) {
+      results[0].slike = results[0].slike.split("|||");
+    }
+
+    res.send(results);
+  } catch (error) {
+    console.error("GreĹˇka pri dohvaÄ‡anju predmeta:", error);
+    res.status(500).send({ message: "GreĹˇka pri dohvaÄ‡anju predmeta." });
+  }
 });
+
+app.get(
+  "/api/auto-bid/:id_predmeta",
+  authJwt.verifyTokenUser,
+  async (req, res) => {
+    const { id_predmeta } = req.params;
+
+    try {
+      const autoBidRows = await queryAsync(
+        `SELECT maksimalni_iznos, aktivan, limit_dosegnut
+       FROM auto_bid
+       WHERE id_predmeta = ? AND id_korisnika = ?
+       ORDER BY vrijeme_postavljanja DESC, id_auto_bid DESC
+       LIMIT 1`,
+        [id_predmeta, req.userId],
+      );
+
+      if (autoBidRows.length === 0) {
+        res.send(null);
+        return;
+      }
+
+      res.send({
+        maksimalni_iznos: normalizeMoney(autoBidRows[0].maksimalni_iznos),
+        aktivan: autoBidRows[0].aktivan,
+        limit_dosegnut: autoBidRows[0].limit_dosegnut,
+      });
+    } catch (error) {
+      console.error("GreĹˇka pri dohvaÄ‡anju auto-bida:", error);
+      res.status(500).send({ message: "GreĹˇka pri dohvaÄ‡anju auto-bida." });
+    }
+  },
+);
+
+app.post("/api/auto-bid", authJwt.verifyTokenUser, async (req, res) => {
+  const { id_predmeta, maksimalni_iznos } = req.body;
+
+  if (!id_predmeta || maksimalni_iznos === undefined) {
+    res.status(400).send({
+      message: "Potrebno je poslati ispravan predmet i maksimalni iznos.",
+    });
+    return;
+  }
+
+  try {
+    const validation = await validateAutoBidInput(
+      req.userId,
+      id_predmeta,
+      maksimalni_iznos,
+    );
+
+    const existingRows = await queryAsync(
+      `SELECT id_auto_bid
+       FROM auto_bid
+       WHERE id_predmeta = ? AND id_korisnika = ?
+       ORDER BY vrijeme_postavljanja DESC, id_auto_bid DESC`,
+      [id_predmeta, req.userId],
+    );
+
+    if (existingRows.length > 0) {
+      await queryAsync(
+        `UPDATE auto_bid
+         SET maksimalni_iznos = ?, aktivan = 1, limit_dosegnut = 0, vrijeme_postavljanja = NOW()
+         WHERE id_auto_bid = ?`,
+        [validation.normalizedMaxAmount, existingRows[0].id_auto_bid],
+      );
+
+      res.send({
+        error: false,
+        updated: true,
+        message: "Auto-bid je ažuriran.",
+      });
+      return;
+    }
+
+    await queryAsync(
+      `INSERT INTO auto_bid (
+         id_korisnika,
+         id_predmeta,
+         maksimalni_iznos,
+         aktivan,
+         limit_dosegnut,
+         vrijeme_postavljanja
+       ) VALUES (?, ?, ?, 1, 0, NOW())`,
+      [req.userId, id_predmeta, validation.normalizedMaxAmount],
+    );
+
+    res.send({
+      error: false,
+      created: true,
+      message: "Auto-bid je uspješno kreiran.",
+    });
+  } catch (error) {
+    console.error("GreĹˇka pri spremanju auto-bida:", error);
+    res.status(error.status || 500).send({
+      message: error.message || "GreĹˇka pri spremanju auto-bida.",
+    });
+  }
+});
+
+app.put("/api/auto-bid", authJwt.verifyTokenUser, async (req, res) => {
+  const { id_predmeta, maksimalni_iznos } = req.body;
+
+  if (!id_predmeta || maksimalni_iznos === undefined) {
+    res.status(400).send({
+      message: "Potrebno je poslati predmet i maksimalni iznos.",
+    });
+    return;
+  }
+
+  try {
+    const validation = await validateAutoBidInput(
+      req.userId,
+      id_predmeta,
+      maksimalni_iznos,
+    );
+
+    const existingRows = await queryAsync(
+      `SELECT id_auto_bid
+       FROM auto_bid
+       WHERE id_predmeta = ? AND id_korisnika = ?
+       ORDER BY vrijeme_postavljanja DESC, id_auto_bid DESC
+       LIMIT 1`,
+      [id_predmeta, req.userId],
+    );
+
+    if (existingRows.length === 0) {
+      res.status(404).send({ message: "Auto-bid nije pronađen." });
+      return;
+    }
+
+    await queryAsync(
+      `UPDATE auto_bid
+       SET maksimalni_iznos = ?, aktivan = 1, limit_dosegnut = 0, vrijeme_postavljanja = NOW()
+       WHERE id_auto_bid = ?`,
+      [validation.normalizedMaxAmount, existingRows[0].id_auto_bid],
+    );
+
+    res.send({
+      error: false,
+      message: "Auto-bid je ažuriran.",
+    });
+  } catch (error) {
+    console.error("Greška pri ažuriranju auto-bida:", error);
+    res.status(error.status || 500).send({
+      message: error.message || "Greška pri ažuriranju auto-bida.",
+    });
+  }
+});
+
+app.put("/api/auto-bid/disable", authJwt.verifyTokenUser, async (req, res) => {
+  const { id_predmeta } = req.body;
+
+  if (!id_predmeta) {
+    res.status(400).send({ message: "Potrebno je poslati id predmeta." });
+    return;
+  }
+
+  try {
+    const result = await disableAutoBidForUser(id_predmeta, req.userId);
+
+    if (result.affectedRows === 0) {
+      res.status(404).send({ message: "Auto-bid nije pronađen." });
+      return;
+    }
+
+    res.send({
+      error: false,
+      message: "Auto-bid je onemogućen.",
+    });
+  } catch (error) {
+    console.error("GreĹˇka pri gaĹˇenju auto-bida:", error);
+    res.status(500).send({ message: "GreĹˇka pri gaĹˇenju auto-bida." });
+  }
+});
+
+app.delete(
+  "/api/auto-bid/:id_predmeta",
+  authJwt.verifyTokenUser,
+  async (req, res) => {
+    try {
+      const result = await disableAutoBidForUser(
+        req.params.id_predmeta,
+        req.userId,
+      );
+
+      if (result.affectedRows === 0) {
+        res.status(404).send({ message: "Auto-bid nije pronađen." });
+        return;
+      }
+
+      res.send({
+        error: false,
+        message: "Auto-bid je onemogućen.",
+      });
+    } catch (error) {
+      console.error("Greška pri gašenju auto-bida:", error);
+      res.status(500).send({ message: "Greška pri gašenju auto-bida." });
+    }
+  },
+);
 
 app.get("/api/get-kategorija-predmet/:id", (req, res) => {
   const { id } = req.params;
@@ -337,36 +760,115 @@ app.get("/api/get-ponuda/:id", (req, res) => {
 app.post(
   "/unostrenutnaponuda",
   authJwt.verifyTokenUser,
-  function (request, response) {
-    const data = request.body;
-    const ponuda = [
-      [
-        data.vrijednost_ponude,
-        data.vrijeme_ponude,
-        data.id_korisnika,
-        data.id_predmeta,
-      ],
-    ];
+  async function (request, response) {
+    const { id_predmeta, vrijednost_ponude } = request.body;
+    const normalizedBidAmount = normalizeMoney(vrijednost_ponude);
 
-    connection.query(
-      "INSERT INTO ponuda (vrijednost_ponude, vrijeme_ponude, id_korisnika, id_predmeta) VALUES ?",
-      [ponuda],
-      function (error, results) {
-        if (error) throw error;
+    if (!id_predmeta || vrijednost_ponude === undefined) {
+      response.status(400).send({
+        message: "Potrebno je poslati predmet i vrijednost ponude.",
+      });
+      return;
+    }
 
-        // ✅ NOVO: emitira svim korisnicima u sobi tog predmeta
-        io.to(`predmet_${data.id_predmeta}`).emit("cijena_azurirana", {
-          id_predmeta: data.id_predmeta,
-          nova_cijena: data.vrijednost_ponude,
+    try {
+      if (Number.isNaN(normalizedBidAmount) || normalizedBidAmount <= 0) {
+        response.status(400).send({
+          message: "Vrijednost ponude nije ispravna.",
         });
+        return;
+      }
 
-        return response.send({
-          error: false,
-          data: results,
-          message: "Dodana je trenutna ponuda.",
-        });
-      },
-    );
+      await beginTransactionAsync();
+
+      const predmetRows = await queryAsync(
+        `SELECT id_predmeta, pocetna_cijena, vrijeme_pocetka, vrijeme_zavrsetka
+         FROM predmet
+         WHERE id_predmeta = ?
+         FOR UPDATE`,
+        [id_predmeta],
+      );
+
+      if (predmetRows.length === 0) {
+        const notFoundError = new Error("Predmet nije pronađen.");
+        notFoundError.status = 404;
+        throw notFoundError;
+      }
+
+      const predmet = predmetRows[0];
+      const sada = new Date();
+      const vrijemePocetka = new Date(predmet.vrijeme_pocetka);
+      const vrijemeZavrsetka = new Date(predmet.vrijeme_zavrsetka);
+
+      if (sada < vrijemePocetka || sada > vrijemeZavrsetka) {
+        const inactiveAuctionError = new Error(
+          "Aukcija trenutno nije aktivna za licitiranje.",
+        );
+        inactiveAuctionError.status = 400;
+        throw inactiveAuctionError;
+      }
+
+      const currentPrice = await getCurrentPrice(id_predmeta);
+
+      if (currentPrice === null) {
+        const priceError = new Error("Trenutna cijena nije dostupna.");
+        priceError.status = 400;
+        throw priceError;
+      }
+
+      if (normalizedBidAmount <= currentPrice) {
+        const invalidBidError = new Error(
+          `Ponuda mora biti veća od trenutne cijene (${currentPrice}$).`,
+        );
+        invalidBidError.status = 400;
+        throw invalidBidError;
+      }
+
+      const insertResult = await queryAsync(
+        `INSERT INTO ponuda (vrijednost_ponude, vrijeme_ponude, id_korisnika, id_predmeta)
+         VALUES (?, NOW(), ?, ?)`,
+        [normalizedBidAmount, request.userId, id_predmeta],
+      );
+
+      const autoBidResult = await processAutoBid(
+        id_predmeta,
+        normalizedBidAmount,
+        request.userId,
+      );
+
+      await commitAsync();
+
+      const finalPrice = autoBidResult.triggered
+        ? autoBidResult.autoBid.vrijednost_ponude
+        : normalizedBidAmount;
+
+      io.to(`predmet_${id_predmeta}`).emit("cijena_azurirana", {
+        id_predmeta: Number(id_predmeta),
+        nova_cijena: finalPrice,
+      });
+
+      return response.send({
+        error: false,
+        data: {
+          manualBid: {
+            id_ponude: insertResult.insertId,
+            id_predmeta: Number(id_predmeta),
+            id_korisnika: request.userId,
+            vrijednost_ponude: normalizedBidAmount,
+          },
+          autoBid: autoBidResult.autoBid,
+        },
+        autoBidTriggered: autoBidResult.triggered,
+        currentPrice: finalPrice,
+        message: "Ponuda je uspješno evidentirana.",
+      });
+    } catch (error) {
+      await rollbackAsync();
+      console.error("Greška pri unosu ponude:", error);
+      return response.status(error.status || 500).send({
+        message: error.message || "Greška pri unosu ponude.",
+      });
+    }
   },
 );
 
@@ -401,7 +903,7 @@ app.post("/api/unos-slike", authJwt.verifyTokenUser, function (req, res) {
         console.error(error);
         return res.status(500).send({
           error: true,
-          message: "Dogodila se greška prilikom dodavanja teksta.",
+          message: "Dogodila se greĹˇka prilikom dodavanja teksta.",
         });
       }
       return res.send({
@@ -469,17 +971,17 @@ app.post("/regaKorisnika", function (request, response) {
       [korisnik],
       function (error, results, fields) {
         if (error) {
-          console.error("Registracija korisnika neuspješna.", error);
+          console.error("Registracija korisnika neuspjeĹˇna.", error);
           return response.status(500).json({
             error: true,
-            message: "Registracija korisnika neuspješna.",
+            message: "Registracija korisnika neuspjeĹˇna.",
           });
         }
         console.log("data", data);
         return response.send({
           error: false,
           data: results,
-          message: "Uspješna registracija!",
+          message: "UspjeĹˇna registracija!",
         });
       },
     );
@@ -749,7 +1251,7 @@ app.post("/api/dodajKategoriju", authJwt.verifyTokenAdmin, (req, res) => {
       return res.send({
         error: false,
         data: results,
-        message: "Kategorija unešena uspješno.",
+        message: "Kategorija uneĹˇena uspjeĹˇno.",
       });
     },
   );
@@ -766,15 +1268,15 @@ app.delete(
       [idKat],
       (error, results) => {
         if (error) {
-          console.error("Neuspješno brisanje.");
+          console.error("NeuspjeĹˇno brisanje.");
           return res
             .status(500)
-            .json({ error: true, message: "Neuspješno brisanje " + idKat });
+            .json({ error: true, message: "NeuspjeĹˇno brisanje " + idKat });
         }
-        console.log("Brisanje uspješno.");
+        console.log("Brisanje uspjeĹˇno.");
         return res.send({
           error: false,
-          message: "Kategorija uspješno obrisana.",
+          message: "Kategorija uspjeĹˇno obrisana.",
         });
       },
     );
@@ -819,12 +1321,12 @@ app.delete("/api/brisanjePredmeta/:id", authJwt.verifyTokenUser, (req, res) => {
     [req.params.id],
     (error, results) => {
       if (error) {
-        console.error("Neuspješno brisanje.");
+        console.error("NeuspjeĹˇno brisanje.");
         return res
           .status(500)
-          .json({ error: true, message: "Neuspješno brisanje " + error });
+          .json({ error: true, message: "NeuspjeĹˇno brisanje " + error });
       }
-      console.log("Brisanje uspješno.");
+      console.log("Brisanje uspjeĹˇno.");
       return res.send({ error: false, message: "." });
     },
   );
@@ -864,7 +1366,7 @@ app.put("/api/izmjenaPredmeta/:id", authJwt.verifyTokenUser, (req, res) => {
 });
 
 app.get("/api/get-predmet2/:id", (req, res) => {
-  //razlika izmedu ovog i obicnog get-predmet je što ovaj lovi i id kategorije i id slika.
+  //razlika izmedu ovog i obicnog get-predmet je Ĺˇto ovaj lovi i id kategorije i id slika.
   const { id } = req.params;
 
   connection.query(
@@ -892,10 +1394,10 @@ app.delete("/api/brisanjeSlike/:id", authJwt.verifyTokenUser, (req, res) => {
     [req.params.id],
     (error, results) => {
       if (error) {
-        console.error("Neuspješno brisanje.");
+        console.error("NeuspjeĹˇno brisanje.");
         return res
           .status(500)
-          .json({ error: true, message: "Neuspješno brisanje " + error });
+          .json({ error: true, message: "NeuspjeĹˇno brisanje " + error });
       }
       return res.send({ error: false, message: "." });
     },
@@ -923,7 +1425,7 @@ app.post(
     });
     return response.send({
       error: false,
-      message: "Slike su uspješno dodane.",
+      message: "Slike su uspjeĹˇno dodane.",
     });
   },
 );
