@@ -1,10 +1,17 @@
-﻿<template>
+<template>
   <q-card class="q-pa-sm q-gutter-sm" flat bordered>
     <q-card-section>
       <div class="text-h3 text-bold text-center text-blue-7 q-ml-sm">
         Prikaz aukcije
         <div class="q-ml-sm flex justify-end q-gutter-sm">
-          <q-btn size="15px" name="send" rel="stylesheet" to="/" color="red" label="Natrag" />
+          <q-btn
+            size="15px"
+            name="send"
+            rel="stylesheet"
+            to="/"
+            color="red"
+            label="Natrag"
+          />
         </div>
       </div>
     </q-card-section>
@@ -14,19 +21,41 @@
       <div class="row flex flex-center">
         <div style="width: 600px">
           <q-card-section class="q-pt-none">
-            <template v-if="!showSingleImage && item.slike && item.slike.length > 1">
-              <q-carousel control-color="black" animated v-model="slide" navigation infinite :autoplay="autoplay" arrows transition-prev="slide-right" transition-next="slide-left" @mouseenter="autoplay = false" @mouseleave="autoplay = true">
-                <q-carousel-slide :key="index" v-for="(image, index) in item.slike" :name="index + startingIndex">
+            <template
+              v-if="!showSingleImage && item.slike && item.slike.length > 1"
+            >
+              <q-carousel
+                control-color="black"
+                animated
+                v-model="slide"
+                navigation
+                infinite
+                :autoplay="autoplay"
+                arrows
+                transition-prev="slide-right"
+                transition-next="slide-left"
+                @mouseenter="autoplay = false"
+                @mouseleave="autoplay = true"
+              >
+                <q-carousel-slide
+                  :key="index"
+                  v-for="(image, index) in item.slike"
+                  :name="index + startingIndex"
+                >
                   <q-img :src="image" />
                 </q-carousel-slide>
               </q-carousel>
             </template>
             <template v-else>
-              <q-img v-if="showSingleImage" :src="item.slike ? item.slike[0] : item.slika" />
+              <q-img
+                v-if="showSingleImage"
+                :src="item.slike ? item.slike[0] : item.slika"
+              />
             </template>
           </q-card-section>
         </div>
       </div>
+
       <div class="q-ml-sm col flex flex-start q-gutter-sm">
         <div class="q-ml-sm flex flex-start q-gutter-sm">
           <div style="width: 80%">
@@ -56,7 +85,6 @@
               </template>
             </q-field>
           </div>
-
           <div style="width: 39.5%">
             <q-field filled label="Završno vrijeme aukcije" stack-label>
               <template v-slot:control>
@@ -76,17 +104,21 @@
             </q-field>
           </div>
           <div style="width: 39.5%">
-            <q-field filled label="Trenutna cijena " stack-label>
-              <div class="self-center full-width no-outline" tabindex="0">
-                {{ item.trenutna_cijena + "$" }}
-              </div>
+            <q-field filled label="Trenutna cijena" stack-label>
+              <template v-slot:control>
+                <div class="self-center full-width no-outline" tabindex="0">
+                  {{ item.trenutna_cijena + "$" }}
+                </div>
+              </template>
             </q-field>
           </div>
         </div>
       </div>
     </div>
   </q-card>
-  <div class="q-pa-md flex flex-center">
+
+  <!-- Manual bid + watch buttons -->
+  <div class="q-pa-md flex flex-center q-gutter-sm">
     <q-btn label="Ponuda" color="primary" @click="showDialog = true" />
     <q-btn
       v-if="isAuthenticated"
@@ -95,49 +127,139 @@
       :icon="pratim ? 'visibility_off' : 'visibility'"
       @click="togglePracenje"
     />
-    <q-dialog v-model="showDialog">
-      <q-card style="width: 300px">
-        <q-card-section>
-          <div class="text-h6">Ponudi</div>
-        </q-card-section>
-        <q-card-section class="q-pt-none">
-          <q-select outlined v-model="odabranaCijena" :options="prices" label="Odaberi cijenu" />
-        </q-card-section>
-
-        <q-card-actions align="right" class="bg-white text-teal">
-          <q-btn flat label="Cancel" color="primary" v-close-popup />
-          <q-btn flat label="Potvrdi ponudu" @click="potvrdiPonudu" />
-        </q-card-actions>
-      </q-card>
-    </q-dialog>
   </div>
 
-  <div v-if="isAuthenticated" class="q-pa-md">
-    <q-card flat bordered class="q-pa-md q-gutter-md">
-      <div class="text-h6 text-blue-7">Auto-bid</div>
-      <div class="row q-col-gutter-md items-end">
-        <div class="col-12 col-md-4">
-          <q-input v-model.number="autoBidForm.maksimalni_iznos" outlined type="number" min="0" step="1" label="Maksimalni iznos" />
-        </div>
-        <div class="col-auto">
-          <q-btn color="primary" :label="autoBidStatus && autoBidStatus.aktivan ? 'Ažuriraj auto-bid' : 'Postavi auto-bid'" @click="spremiAutoBid" />
-        </div>
-        <div class="col-auto" v-if="autoBidStatus && autoBidStatus.aktivan">
-          <q-btn flat color="negative" label="Onemogući" @click="onemoguciAutoBid" />
-        </div>
-      </div>
+  <q-dialog v-model="showDialog">
+    <q-card style="width: 300px">
+      <q-card-section>
+        <div class="text-h6">Ponudi</div>
+      </q-card-section>
+      <q-card-section class="q-pt-none">
+        <q-select
+          outlined
+          v-model="odabranaCijena"
+          :options="prices"
+          label="Odaberi cijenu"
+        />
+      </q-card-section>
+      <q-card-actions align="right" class="bg-white text-teal">
+        <q-btn flat label="Odustani" color="primary" v-close-popup />
+        <q-btn flat label="Potvrdi ponudu" @click="potvrdiPonudu" />
+      </q-card-actions>
+    </q-card>
+  </q-dialog>
 
-      <div class="row q-col-gutter-sm items-center">
-        <div class="col-auto">
-          <q-badge :color="statusBoja" rounded :label="statusLabel" />
+  <!-- ─── Auto-bid section ─────────────────────────────────────── -->
+  <div v-if="isAuthenticated" class="q-pa-md">
+    <q-card flat bordered>
+      <!-- Header -->
+      <q-card-section class="bg-blue-1 q-pb-sm">
+        <div class="row items-center q-gutter-sm">
+          <q-icon name="smart_toy" color="blue-7" size="sm" />
+          <span class="text-h6 text-blue-7">Auto-bid</span>
+          <q-chip
+            :color="statusBoja"
+            text-color="white"
+            :label="statusLabel"
+            size="sm"
+            data-testid="status-chip"
+          />
         </div>
-        <div class="col text-body2" v-if="autoBidStatus">
-          Maksimalni iznos: {{ Number(autoBidStatus.maksimalni_iznos).toFixed(2) }} $
+        <p class="text-caption text-grey-7 q-mt-xs q-mb-none">
+          Sustav će automatski licitirati u vaše ime do zadanog maksimalnog
+          iznosa.
+        </p>
+      </q-card-section>
+
+      <q-separator />
+
+      <q-card-section>
+        <!-- Limit reached notice -->
+        <q-banner
+          v-if="autoBidStatus && autoBidStatus.limit_dosegnut"
+          class="bg-orange-1 q-mb-md"
+          rounded
+          data-testid="limit-banner"
+        >
+          <template v-slot:avatar>
+            <q-icon name="warning" color="orange-7" />
+          </template>
+          Vaš Auto-bid limit je dosegnut. Postavite novi, viši iznos i kliknite
+          "Spremi Auto-bid".
+        </q-banner>
+
+        <div class="row q-col-gutter-md items-start">
+          <!-- Amount input -->
+          <div class="col-12 col-sm-6 col-md-5">
+            <q-input
+              v-model.number="autoBidForm.maksimalni_iznos"
+              outlined
+              type="number"
+              min="0"
+              step="0.01"
+              label="Maksimalni Auto-bid iznos"
+              hint="Sustav će automatski licitirati do ovog iznosa."
+              :error="!!autoBidError"
+              :error-message="autoBidError"
+              :disable="autoBidLoading"
+              prefix="$"
+              data-testid="auto-bid-input"
+            />
+          </div>
+
+          <!-- Action buttons -->
+          <div class="col-12 col-sm-auto self-start q-pt-sm">
+            <div class="row q-gutter-sm">
+              <q-btn
+                class="col-12 col-sm-auto"
+                color="primary"
+                icon="save"
+                :label="autoBidButtonLabel"
+                :loading="autoBidLoading"
+                :disable="autoBidLoading"
+                @click="spremiAutoBid"
+                data-testid="save-auto-bid-btn"
+              />
+              <q-btn
+                v-if="autoBidStatus && autoBidStatus.aktivan"
+                class="col-12 col-sm-auto"
+                flat
+                color="negative"
+                icon="pause_circle"
+                label="Ugasi Auto-bid"
+                :loading="autoBidLoading"
+                :disable="autoBidLoading"
+                @click="onemoguciAutoBid"
+                data-testid="disable-auto-bid-btn"
+              />
+            </div>
+          </div>
         </div>
-      </div>
+
+        <!-- Current configured amount (own data only — never shows other users' amounts) -->
+        <div v-if="autoBidStatus" class="q-mt-sm text-body2 text-grey-8">
+          <q-icon name="info" size="xs" color="grey-6" />
+          Vaš trenutni maksimalni iznos:
+          <strong
+            >{{ Number(autoBidStatus.maksimalni_iznos).toFixed(2) }} $</strong
+          >
+        </div>
+      </q-card-section>
     </q-card>
   </div>
 
+  <!-- Not-logged-in notice (shown instead of auto-bid section) -->
+  <div v-else class="q-pa-md">
+    <q-banner class="bg-grey-2" rounded>
+      <template v-slot:avatar>
+        <q-icon name="login" color="grey-7" />
+      </template>
+      Prijavite se kako biste mogli postaviti automatsko licitiranje (Auto-bid).
+    </q-banner>
+  </div>
+  <!-- ─────────────────────────────────────────────────────────── -->
+
+  <!-- Bid history -->
   <div class="q-pa-md">
     <div class="text-h5 text-bold text-blue-7 q-mb-md">Povijest ponuda</div>
     <q-table
@@ -155,10 +277,48 @@
 import { ref } from "vue";
 import axios from "axios";
 import { io } from "socket.io-client";
+import { jwtDecode } from "jwt-decode";
 
-const baseUrl = "http://localhost:3000/api/";
+const BASE_URL = "http://localhost:3000";
+const API_URL = `${BASE_URL}/api`;
+
+/**
+ * Pure validation for the auto-bid amount.
+ * Exported as a named export so unit tests can exercise it without mounting the component.
+ *
+ * @param {number|string|null} amount
+ * @param {number} currentPrice
+ * @returns {string|null} Error message, or null when valid.
+ */
+export function validateAutoBidAmount(amount, currentPrice) {
+  if (amount === null || amount === undefined || amount === "") {
+    return "Iznos je obavezan.";
+  }
+  const num = Number(amount);
+  if (isNaN(num)) {
+    return "Iznos mora biti broj.";
+  }
+  if (num <= 0) {
+    return "Iznos mora biti pozitivan broj.";
+  }
+  if (num <= Number(currentPrice)) {
+    return `Iznos mora biti veći od trenutne cijene (${Number(
+      currentPrice,
+    ).toFixed(2)} $).`;
+  }
+  return null;
+}
 
 export default {
+  name: "PrikazAukcije",
+
+  setup() {
+    return {
+      slide: ref(2),
+      autoplay: ref(false),
+    };
+  },
+
   computed: {
     id_predmeta() {
       return this.$route.query.id_predmeta;
@@ -166,159 +326,320 @@ export default {
     startingIndex() {
       return 2;
     },
+    isAuthenticated() {
+      return !!localStorage.getItem("token");
+    },
     statusLabel() {
-      if (!this.autoBidStatus) {
-        return "Nije postavljen";
-      }
-
-      if (this.autoBidStatus.limit_dosegnut) {
-        return "Limit dosegnut";
-      }
-
+      if (!this.autoBidStatus) return "Nije postavljen";
+      if (this.autoBidStatus.limit_dosegnut) return "Limit dosegnut";
       return this.autoBidStatus.aktivan ? "Aktivan" : "Onemogućen";
     },
     statusBoja() {
-      if (!this.autoBidStatus) {
-        return "grey";
-      }
-
-      if (this.autoBidStatus.limit_dosegnut) {
-        return "orange";
-      }
-
+      if (!this.autoBidStatus) return "grey";
+      if (this.autoBidStatus.limit_dosegnut) return "orange";
       return this.autoBidStatus.aktivan ? "positive" : "negative";
     },
+    autoBidButtonLabel() {
+      if (!this.autoBidStatus) return "Spremi Auto-bid";
+      return "Ažuriraj Auto-bid";
+    },
   },
+
   data() {
     return {
-      item: [],
+      item: {},
       showDialog: false,
       odabranaCijena: "",
       prices: [],
-      predmet: {
-        id_ponude: null,
-        vrijednost_ponude: null,
-        vrijeme_ponude: null,
-        id_korisnika: null,
-        id_predmeta: null,
-      },
       autoBidStatus: null,
+      autoBidForm: { maksimalni_iznos: null },
+      autoBidError: null,
+      autoBidLoading: false,
       showSingleImage: false,
       ponude: [],
+      pratim: false,
+      socket: null,
       kolonePonuda: [
-        { name: "korisnik", label: "Korisnik", field: (row) => `${row.ime_korisnika} ${row.prezime_korisnika}`, align: "left", sortable: true },
-        { name: "vrijednost", label: "Iznos ponude ($)", field: "vrijednost_ponude", align: "right", sortable: true },
-        { name: "vrijeme", label: "Vrijeme ponude", field: "vrijeme_ponude", align: "center", sortable: true },
+        {
+          name: "korisnik",
+          label: "Korisnik",
+          field: (row) => `${row.ime_korisnika} ${row.prezime_korisnika}`,
+          align: "left",
+          sortable: true,
+        },
+        {
+          name: "vrijednost",
+          label: "Iznos ponude ($)",
+          field: "vrijednost_ponude",
+          align: "right",
+          sortable: true,
+        },
+        {
+          name: "vrijeme",
+          label: "Vrijeme ponude",
+          field: "vrijeme_ponude",
+          align: "center",
+          sortable: true,
+        },
       ],
     };
   },
-  mounted() {
-    axios.get(baseUrl + "get-predmet/" + this.id_predmeta, {}).then((response) => {
-      this.item = response.data[0];
-      this.item.trenutna_cijena = this.item.pocetna_cijena;
-      if (this.item.slike && this.item.slike.length > 0) {
-        if (this.item.slike.length === 1) {
-          this.showSingleImage = true;
-          this.item.slika = this.item.slike[0];
-        } else {
-          this.showSingleImage = false;
-        }
-      }
-    },
-    async dohvatiPonude() {
-      const response = await axios.get(baseUrl + "get-ponuda/" + this.id_predmeta);
-      this.ponude = response.data;
-    },
-    async dohvatiTrenutnuCijenu() {
-      const response = await axios.get(baseUrl + "get-predmet-trenutna-cijena/" + this.id_predmeta, {});
-      if (response.data.max_vrijednost_ponude != null) {
-        this.item.trenutna_cijena = response.data.max_vrijednost_ponude;
-      }
-      this.generirajCijene();
-    },
-    generirajCijene() {
-      this.prices = [
-        {
-          label: "+ 10%: " + (this.item.trenutna_cijena * 1.1).toFixed(2) + " $",
-          value: (this.item.trenutna_cijena * 1.1).toFixed(2),
-        },
-        {
-          label: "+ 20%: " + (this.item.trenutna_cijena * 1.2).toFixed(2) + " $",
-          value: (this.item.trenutna_cijena * 1.2).toFixed(2),
-        },
-        {
-          label: "+ 30%: " + (this.item.trenutna_cijena * 1.3).toFixed(2) + " $",
-          value: (this.item.trenutna_cijena * 1.3).toFixed(2),
-        },
-        {
-          label: "+ 40%: " + (this.item.trenutna_cijena * 1.4).toFixed(2) + " $",
-          value: (this.item.trenutna_cijena * 1.4).toFixed(2),
-        },
-        {
-          label: "+ 50%: " + (this.item.trenutna_cijena * 1.5).toFixed(2) + " $",
-          value: (this.item.trenutna_cijena * 1.5).toFixed(2),
-        },
-        {
-          label: "+ 100%: " + (this.item.trenutna_cijena * 2).toFixed(2) + " $",
-          value: (this.item.trenutna_cijena * 2).toFixed(2),
-        },
-      ];
-    });
+
+  async mounted() {
+    await this.dohvatiPredmet();
+    await Promise.all([this.dohvatiPonude(), this.dohvatiTrenutnuCijenu()]);
+    if (this.isAuthenticated) {
+      await this.dohvatiAutoBid();
+    }
+    this.setupSocket();
+  },
+
+  beforeUnmount() {
+    if (this.socket) {
+      this.socket.disconnect();
+    }
   },
 
   methods: {
     formattedDate(dateString) {
+      if (!dateString) return "";
       return new Date(dateString).toLocaleString("hr-HR").replace(",", "");
     },
-    potvrdiPonudu() {
-      // Get the JWT token from local storage
+
+    getAuthHeaders() {
       const token = localStorage.getItem("token");
-      if (!token) {
-        return;
-      }
+      return token ? { Authorization: `Bearer ${token}` } : {};
+    },
 
-      const headers = { Authorization: `Bearer ${token}` };
-
-      const decodedToken = jwtDecode(token);
-
-      console.log(this.odabranaCijena.value);
-      if (this.odabranaCijena) {
-        // Increase the current price based on the selected value
-        const selectedPrice = parseInt(this.odabranaCijena.value);
-
-      if (selectedPrice <= this.item.trenutna_cijena) {
-        return;
-      }
-
+    getCurrentUserId() {
+      const token = localStorage.getItem("token");
+      if (!token) return null;
       try {
-        const response = await axios.post(
-          "http://localhost:3000/unostrenutnaponuda",
-          {
-            id_predmeta: this.id_predmeta,
-            vrijednost_ponude: selectedPrice,
-          },
-          { headers },
-        );
-
-        this.item.trenutna_cijena = response.data.currentPrice;
-        this.generirajCijene();
-        await this.dohvatiPonude();
-
-        if (this.isAuthenticated) {
-          await this.dohvatiAutoBid();
-        }
-
-        this.showDialog = false;
-      } catch (error) {
-        console.error("Error storing new price:", error);
+        return jwtDecode(token).id;
+      } catch {
+        return null;
       }
     },
-  },
-  setup() {
-    return {
-      slide: ref(2),
-      autoplay: ref(false),
-    };
+
+    // ── Data fetching ──────────────────────────────────────────────
+
+    async dohvatiPredmet() {
+      try {
+        const { data } = await axios.get(
+          `${API_URL}/get-predmet/${this.id_predmeta}`,
+        );
+        this.item = data[0] || {};
+        this.item.trenutna_cijena = this.item.pocetna_cijena;
+        if (this.item.slike && this.item.slike.length > 0) {
+          this.showSingleImage = this.item.slike.length === 1;
+          if (this.showSingleImage) this.item.slika = this.item.slike[0];
+        }
+      } catch (err) {
+        console.error("Greška pri dohvaćanju predmeta:", err);
+      }
+    },
+
+    async dohvatiPonude() {
+      try {
+        const { data } = await axios.get(
+          `${API_URL}/get-ponuda/${this.id_predmeta}`,
+        );
+        this.ponude = data;
+      } catch (err) {
+        console.error("Greška pri dohvaćanju ponuda:", err);
+      }
+    },
+
+    async dohvatiTrenutnuCijenu() {
+      try {
+        const { data } = await axios.get(
+          `${API_URL}/get-predmet-trenutna-cijena/${this.id_predmeta}`,
+        );
+        if (data.max_vrijednost_ponude != null) {
+          this.item.trenutna_cijena = data.max_vrijednost_ponude;
+        }
+        this.generirajCijene();
+      } catch (err) {
+        console.error("Greška pri dohvaćanju trenutne cijene:", err);
+      }
+    },
+
+    generirajCijene() {
+      const base = this.item.trenutna_cijena || 0;
+      this.prices = [1.1, 1.2, 1.3, 1.4, 1.5, 2].map((mult) => ({
+        label: `+ ${Math.round((mult - 1) * 100)}%: ${(base * mult).toFixed(
+          2,
+        )} $`,
+        value: (base * mult).toFixed(2),
+      }));
+    },
+
+    // ── Manual bid ────────────────────────────────────────────────
+
+    async potvrdiPonudu() {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        this.$q.notify({
+          type: "negative",
+          message: "Morate biti prijavljeni za licitiranje.",
+        });
+        return;
+      }
+      if (!this.odabranaCijena) return;
+
+      const selectedPrice = parseFloat(this.odabranaCijena.value);
+      if (selectedPrice <= this.item.trenutna_cijena) return;
+
+      try {
+        const { data } = await axios.post(
+          `${BASE_URL}/unostrenutnaponuda`,
+          { id_predmeta: this.id_predmeta, vrijednost_ponude: selectedPrice },
+          { headers: this.getAuthHeaders() },
+        );
+        this.item.trenutna_cijena = data.currentPrice;
+        this.generirajCijene();
+        await this.dohvatiPonude();
+        if (this.isAuthenticated) await this.dohvatiAutoBid();
+        this.showDialog = false;
+      } catch (err) {
+        console.error("Greška pri unosu ponude:", err);
+        this.$q.notify({
+          type: "negative",
+          message: err.response?.data?.message || "Greška pri slanju ponude.",
+        });
+      }
+    },
+
+    async togglePracenje() {
+      // TODO: integrate with lista_pracenja endpoint once available
+      this.$q.notify({
+        type: "info",
+        message: "Praćenje nije još implementirano.",
+      });
+    },
+
+    // ── Auto-bid ──────────────────────────────────────────────────
+
+    async dohvatiAutoBid() {
+      try {
+        const { data } = await axios.get(
+          `${API_URL}/auto-bid/${this.id_predmeta}`,
+          {
+            headers: this.getAuthHeaders(),
+          },
+        );
+        this.autoBidStatus = data || null;
+        if (this.autoBidStatus?.maksimalni_iznos != null) {
+          this.autoBidForm.maksimalni_iznos = Number(
+            this.autoBidStatus.maksimalni_iznos,
+          );
+        }
+      } catch (err) {
+        // 404 means no auto-bid exists yet — not an error
+        if (err.response?.status !== 404) {
+          console.error("Greška pri dohvaćanju auto-bida:", err);
+        }
+        this.autoBidStatus = null;
+      }
+    },
+
+    async spremiAutoBid() {
+      this.autoBidError = null;
+
+      const validationMsg = validateAutoBidAmount(
+        this.autoBidForm.maksimalni_iznos,
+        this.item.trenutna_cijena,
+      );
+      if (validationMsg) {
+        this.autoBidError = validationMsg;
+        return;
+      }
+
+      this.autoBidLoading = true;
+      try {
+        const payload = {
+          id_predmeta: this.id_predmeta,
+          maksimalni_iznos: this.autoBidForm.maksimalni_iznos,
+        };
+        const headers = this.getAuthHeaders();
+
+        if (this.autoBidStatus) {
+          // Auto-bid already exists (active, disabled, or limit reached) — update it
+          await axios.put(`${API_URL}/auto-bid`, payload, { headers });
+        } else {
+          // First-time creation
+          await axios.post(`${API_URL}/auto-bid`, payload, { headers });
+        }
+
+        await this.dohvatiAutoBid();
+        this.$q.notify({
+          type: "positive",
+          message: "Auto-bid je uspješno postavljen.",
+        });
+      } catch (err) {
+        const msg =
+          err.response?.data?.message || "Greška pri postavljanju Auto-bida.";
+        this.autoBidError = msg;
+        this.$q.notify({ type: "negative", message: msg });
+      } finally {
+        this.autoBidLoading = false;
+      }
+    },
+
+    async onemoguciAutoBid() {
+      this.autoBidLoading = true;
+      try {
+        await axios.put(
+          `${API_URL}/auto-bid/disable`,
+          { id_predmeta: this.id_predmeta },
+          { headers: this.getAuthHeaders() },
+        );
+        await this.dohvatiAutoBid();
+        this.$q.notify({
+          type: "positive",
+          message: "Auto-bid je onemogućen.",
+        });
+      } catch (err) {
+        this.$q.notify({
+          type: "negative",
+          message:
+            err.response?.data?.message ||
+            "Greška pri onemogućavanju Auto-bida.",
+        });
+      } finally {
+        this.autoBidLoading = false;
+      }
+    },
+
+    // ── Socket.io ─────────────────────────────────────────────────
+
+    setupSocket() {
+      this.socket = io(BASE_URL);
+
+      // Join the auction room for real-time price updates
+      this.socket.emit("pridruzi_se_predmetu", this.id_predmeta);
+      this.socket.on(
+        "cijena_azurirana",
+        async ({ id_predmeta, nova_cijena }) => {
+          if (Number(id_predmeta) === Number(this.id_predmeta)) {
+            this.item.trenutna_cijena = nova_cijena;
+            this.generirajCijene();
+            await this.dohvatiPonude();
+            if (this.isAuthenticated) await this.dohvatiAutoBid();
+          }
+        },
+      );
+
+      // Join the user's personal room to receive Auto-bid notifications
+      const userId = this.getCurrentUserId();
+      if (userId) {
+        this.socket.emit("pridruzi_se_korisniku", userId);
+        this.socket.on("nova_notifikacija", ({ poruka }) => {
+          this.$q.notify({ type: "info", message: poruka });
+          this.dohvatiAutoBid();
+        });
+      }
+    },
   },
 };
 </script>
