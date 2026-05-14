@@ -321,6 +321,7 @@
 <script>
 import { ref } from "vue";
 import axios from "axios";
+import socket, { SOCKET_EVENTS } from "../socket";
 
 const BASE_URL = "http://localhost:3000";
 const API_URL = `${BASE_URL}/api`;
@@ -402,6 +403,8 @@ export default {
       showSingleImage: false,
       ponude: [],
       pratim: false,
+      cijenaAzuriranaHandler: null,
+      socketPredmetId: null,
       kolonePonuda: [
         {
           name: "korisnik",
@@ -434,6 +437,11 @@ export default {
     if (this.isAuthenticated) {
       await this.dohvatiAutoBid();
     }
+    this.setupSocket();
+  },
+
+  beforeUnmount() {
+    this.cleanupSocket();
   },
 
   methods: {
@@ -542,6 +550,39 @@ export default {
         type: "info",
         message: "Praćenje nije još implementirano.",
       });
+    },
+
+    setupSocket() {
+      this.cleanupSocket();
+      if (!this.id_predmeta) return;
+
+      if (!socket.connected) {
+        socket.connect();
+      }
+
+      this.cijenaAzuriranaHandler = ({ id_predmeta, trenutna_cijena }) => {
+        if (Number(id_predmeta) !== Number(this.id_predmeta)) return;
+        if (trenutna_cijena === undefined || trenutna_cijena === null) return;
+
+        this.item.trenutna_cijena = trenutna_cijena;
+        this.generirajCijene();
+      };
+
+      socket.on(SOCKET_EVENTS.cijenaAzurirana, this.cijenaAzuriranaHandler);
+      socket.emit(SOCKET_EVENTS.joinPredmet, this.id_predmeta);
+      this.socketPredmetId = this.id_predmeta;
+    },
+
+    cleanupSocket() {
+      if (this.cijenaAzuriranaHandler) {
+        socket.off(SOCKET_EVENTS.cijenaAzurirana, this.cijenaAzuriranaHandler);
+        this.cijenaAzuriranaHandler = null;
+      }
+
+      if (this.socketPredmetId) {
+        socket.emit(SOCKET_EVENTS.leavePredmet, this.socketPredmetId);
+        this.socketPredmetId = null;
+      }
     },
 
     // ── Auto-bid ──────────────────────────────────────────────────

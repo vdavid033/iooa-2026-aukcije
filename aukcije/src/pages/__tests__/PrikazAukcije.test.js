@@ -13,6 +13,16 @@ vi.mock("axios", () => ({
   },
 }));
 
+vi.mock("socket.io-client", () => ({
+  io: vi.fn(() => ({
+    connected: false,
+    connect: vi.fn(),
+    emit: vi.fn(),
+    on: vi.fn(),
+    off: vi.fn(),
+  })),
+}));
+
 import axios from "axios";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
