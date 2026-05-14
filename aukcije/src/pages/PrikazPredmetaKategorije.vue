@@ -61,6 +61,7 @@
 <script>
 import { ref } from "vue";
 import axios from "axios";
+import { jwtDecode } from "jwt-decode";
 import socket, { SOCKET_EVENTS } from "../socket";
 
 const baseUrl = "http://localhost:3000/api/";
@@ -151,7 +152,11 @@ export default {
         socket.connect();
       }
 
-      this.cijenaAzuriranaHandler = ({ id_predmeta, trenutna_cijena }) => {
+      this.cijenaAzuriranaHandler = ({
+        id_predmeta,
+        trenutna_cijena,
+        id_korisnika,
+      }) => {
         const item = this.items.find(
           (predmet) => Number(predmet.id_predmeta) === Number(id_predmeta),
         );
@@ -159,6 +164,19 @@ export default {
         if (!item) return;
 
         item.trenutna_cijena = trenutna_cijena;
+
+        const currentUserId = this.getCurrentUserId();
+
+        if (
+          id_korisnika !== undefined &&
+          id_korisnika !== null &&
+          Number(id_korisnika) !== Number(currentUserId)
+        ) {
+          this.$q.notify({
+            type: "info",
+            message: "Cijena predmeta je ažurirana.",
+          });
+        }
       };
 
       socket.on(SOCKET_EVENTS.cijenaAzurirana, this.cijenaAzuriranaHandler);
@@ -181,6 +199,16 @@ export default {
         socket.emit(SOCKET_EVENTS.leavePredmet, id_predmeta);
       });
       this.joinedPredmeti.clear();
+    },
+    getCurrentUserId() {
+      const token = localStorage.getItem("token");
+      if (!token) return null;
+
+      try {
+        return jwtDecode(token).id;
+      } catch {
+        return null;
+      }
     },
     sortiranjeOpcija(selectedsortianje) {
       switch (selectedsortianje) {
