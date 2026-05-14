@@ -1,9 +1,11 @@
 ﻿const express = require("express");
+const http = require("http");
 const session = require("express-session");
 const bcrypt = require("bcrypt");
 const cors = require("cors");
 const bodyParser = require("body-parser");
 const mysql = require("mysql");
+const { Server } = require("socket.io");
 const { join } = require("path");
 const path = require("path");
 const multer = require("multer");
@@ -16,6 +18,10 @@ const {
   normalizeMoney,
   BID_INCREMENT,
 } = require("./autoBidCalculator");
+const {
+  REALTIME_ROOMS,
+  REALTIME_CLIENT_EVENTS,
+} = require("./realtimeContract");
 
 const app = express();
 const port = 3000;
@@ -43,6 +49,44 @@ const corsOptions = {
     "Authorization",
   ],
 };
+
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: corsOptions,
+});
+
+function getSocketPredmetId(payload) {
+  const id_predmeta =
+    payload && typeof payload === "object" ? payload.id_predmeta : payload;
+
+  if (id_predmeta === undefined || id_predmeta === null || id_predmeta === "") {
+    return null;
+  }
+
+  const normalizedId = Number(id_predmeta);
+
+  if (!Number.isInteger(normalizedId) || normalizedId <= 0) {
+    return null;
+  }
+
+  return normalizedId;
+}
+
+io.on("connection", (socket) => {
+  socket.on(REALTIME_CLIENT_EVENTS.joinPredmet, (payload) => {
+    const id_predmeta = getSocketPredmetId(payload);
+    if (!id_predmeta) return;
+
+    socket.join(REALTIME_ROOMS.predmet(id_predmeta));
+  });
+
+  socket.on(REALTIME_CLIENT_EVENTS.leavePredmet, (payload) => {
+    const id_predmeta = getSocketPredmetId(payload);
+    if (!id_predmeta) return;
+
+    socket.leave(REALTIME_ROOMS.predmet(id_predmeta));
+  });
+});
 // Parser za JSON podatke
 app.use(bodyParser.json());
 
@@ -893,7 +937,7 @@ app.get("/api/get-predmet-trenutna-cijena/:id", (req, res) => {
   );
 });
 
-app.listen(port, () => {
+server.listen(port, () => {
   console.log("Server running at port: " + port);
 });
 
@@ -1645,3 +1689,9 @@ setInterval(() => {
     }
   );
 }, 60 * 1000);
+
+module.exports = {
+  app,
+  server,
+  io,
+};
