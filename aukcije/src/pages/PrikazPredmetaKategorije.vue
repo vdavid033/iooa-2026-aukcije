@@ -61,6 +61,7 @@
 <script>
 import { ref } from "vue";
 import axios from "axios";
+import socket, { SOCKET_EVENTS } from "../socket";
 
 const baseUrl = "http://localhost:3000/api/";
 
@@ -108,6 +109,8 @@ export default {
     return {
       Pretrazivanje: "",
       items: [],
+      joinedPredmeti: new Set(),
+      cijenaAzuriranaHandler: null,
       selectedsortianje: "",
       sortiranje: [
         { label: "Cijena: manja prema većoj", value: "price-asc" },
@@ -124,7 +127,12 @@ export default {
       .get(baseUrl + "get-kategorija-predmet/" + this.id_kategorije, {})
       .then((response) => {
         this.items = response.data;
+        this.setupSocket();
       });
+  },
+
+  beforeUnmount() {
+    this.cleanupSocket();
   },
 
   methods: {
@@ -136,6 +144,43 @@ export default {
     },
     navigateToItem(id_predmeta) {
       this.$router.push({ path: "prikaz", query: { id_predmeta } });
+    },
+    setupSocket() {
+      this.cleanupSocket();
+      if (!socket.connected) {
+        socket.connect();
+      }
+
+      this.cijenaAzuriranaHandler = ({ id_predmeta, trenutna_cijena }) => {
+        const item = this.items.find(
+          (predmet) => Number(predmet.id_predmeta) === Number(id_predmeta),
+        );
+
+        if (!item) return;
+
+        item.trenutna_cijena = trenutna_cijena;
+      };
+
+      socket.on(SOCKET_EVENTS.cijenaAzurirana, this.cijenaAzuriranaHandler);
+
+      this.items.forEach((item) => {
+        if (!item.id_predmeta) return;
+        if (this.joinedPredmeti.has(item.id_predmeta)) return;
+
+        this.joinedPredmeti.add(item.id_predmeta);
+        socket.emit(SOCKET_EVENTS.joinPredmet, item.id_predmeta);
+      });
+    },
+    cleanupSocket() {
+      if (this.cijenaAzuriranaHandler) {
+        socket.off(SOCKET_EVENTS.cijenaAzurirana, this.cijenaAzuriranaHandler);
+        this.cijenaAzuriranaHandler = null;
+      }
+
+      this.joinedPredmeti.forEach((id_predmeta) => {
+        socket.emit(SOCKET_EVENTS.leavePredmet, id_predmeta);
+      });
+      this.joinedPredmeti.clear();
     },
     sortiranjeOpcija(selectedsortianje) {
       switch (selectedsortianje) {
