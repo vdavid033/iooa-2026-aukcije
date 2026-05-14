@@ -332,6 +332,11 @@ export default {
       }
     },
 
+    removeImage(index) {
+    this.base64Images.splice(index, 1);
+    this.files.splice(index, 1);
+  },
+
     closeAndReload() {
       this.showDialog = false;
       this.$router.push({
@@ -380,7 +385,7 @@ export default {
       if (
         this.vrijemePocetka &&
         this.vrijemeZavrsetka &&
-        this.vrijemePocetka > this.vrijemeZavrsetka
+        new Date(this.vrijemePocetka) >= new Date(this.vrijemeZavrsetka)
       ) {
         this.$q.notify({
           color: "negative",
