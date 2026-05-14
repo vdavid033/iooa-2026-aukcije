@@ -21,6 +21,8 @@ const {
 const {
   REALTIME_ROOMS,
   REALTIME_CLIENT_EVENTS,
+  REALTIME_SERVER_EVENTS,
+  createCijenaAzuriranaPayload,
 } = require("./realtimeContract");
 
 const app = express();
@@ -171,6 +173,18 @@ async function getCurrentPrice(id_predmeta) {
   }
 
   return normalizeMoney(rows[0].trenutna_cijena);
+}
+
+async function getPonudaRealtimeData(id_ponude) {
+  const rows = await queryAsync(
+    `SELECT id_ponude, id_predmeta, id_korisnika,
+            DATE_FORMAT(vrijeme_ponude, "%Y-%m-%d %H:%i:%s") AS vrijeme_ponude
+     FROM ponuda
+     WHERE id_ponude = ?`,
+    [id_ponude],
+  );
+
+  return rows[0] || null;
 }
 
 async function createNotification(id_korisnika, message) {
@@ -833,10 +847,30 @@ app.post(
       const finalPrice = autoBidResult.triggered
         ? autoBidResult.autoBid.vrijednost_ponude
         : normalizedBidAmount;
+      const finalBid = autoBidResult.triggered
+        ? autoBidResult.autoBid
+        : {
+            id_ponude: insertResult.insertId,
+            id_predmeta: Number(id_predmeta),
+            id_korisnika: request.userId,
+          };
+      const realtimeBidData = await getPonudaRealtimeData(finalBid.id_ponude);
+      const realtimePayload = createCijenaAzuriranaPayload({
+        id_predmeta: Number(id_predmeta),
+        trenutna_cijena: finalPrice,
+        id_ponude: finalBid.id_ponude,
+        id_korisnika: finalBid.id_korisnika,
+        vrijeme_ponude: realtimeBidData?.vrijeme_ponude,
+      });
 
       await disableAutoBidForUser(id_predmeta, request.userId);
 
       await commitAsync();
+
+      io.to(REALTIME_ROOMS.predmet(id_predmeta)).emit(
+        REALTIME_SERVER_EVENTS.cijenaAzurirana,
+        realtimePayload,
+      );
 
       return response.send({
         error: false,
