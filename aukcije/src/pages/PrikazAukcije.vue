@@ -321,8 +321,6 @@
 <script>
 import { ref } from "vue";
 import axios from "axios";
-import { io } from "socket.io-client";
-import { jwtDecode } from "jwt-decode";
 
 const BASE_URL = "http://localhost:3000";
 const API_URL = `${BASE_URL}/api`;
@@ -404,7 +402,6 @@ export default {
       showSingleImage: false,
       ponude: [],
       pratim: false,
-      socket: null,
       kolonePonuda: [
         {
           name: "korisnik",
@@ -437,13 +434,6 @@ export default {
     if (this.isAuthenticated) {
       await this.dohvatiAutoBid();
     }
-    this.setupSocket();
-  },
-
-  beforeUnmount() {
-    if (this.socket) {
-      this.socket.disconnect();
-    }
   },
 
   methods: {
@@ -455,16 +445,6 @@ export default {
     getAuthHeaders() {
       const token = localStorage.getItem("token");
       return token ? { Authorization: `Bearer ${token}` } : {};
-    },
-
-    getCurrentUserId() {
-      const token = localStorage.getItem("token");
-      if (!token) return null;
-      try {
-        return jwtDecode(token).id;
-      } catch {
-        return null;
-      }
     },
 
     // ── Data fetching ──────────────────────────────────────────────
@@ -660,35 +640,6 @@ export default {
       }
     },
 
-    // ── Socket.io ─────────────────────────────────────────────────
-
-    setupSocket() {
-      this.socket = io(BASE_URL);
-
-      // Join the auction room for real-time price updates
-      this.socket.emit("pridruzi_se_predmetu", this.id_predmeta);
-      this.socket.on(
-        "cijena_azurirana",
-        async ({ id_predmeta, nova_cijena }) => {
-          if (Number(id_predmeta) === Number(this.id_predmeta)) {
-            this.item.trenutna_cijena = nova_cijena;
-            this.generirajCijene();
-            await this.dohvatiPonude();
-            if (this.isAuthenticated) await this.dohvatiAutoBid();
-          }
-        },
-      );
-
-      // Join the user's personal room to receive Auto-bid notifications
-      const userId = this.getCurrentUserId();
-      if (userId) {
-        this.socket.emit("pridruzi_se_korisniku", userId);
-        this.socket.on("nova_notifikacija", ({ poruka }) => {
-          this.$q.notify({ type: "info", message: poruka });
-          this.dohvatiAutoBid();
-        });
-      }
-    },
   },
 };
 </script>

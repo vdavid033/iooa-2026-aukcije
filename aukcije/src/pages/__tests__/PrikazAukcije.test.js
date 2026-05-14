@@ -13,18 +13,6 @@ vi.mock("axios", () => ({
   },
 }));
 
-vi.mock("socket.io-client", () => ({
-  io: vi.fn(() => ({
-    emit: vi.fn(),
-    on: vi.fn(),
-    disconnect: vi.fn(),
-  })),
-}));
-
-vi.mock("jwt-decode", () => ({
-  jwtDecode: vi.fn(() => ({ id: 42 })),
-}));
-
 import axios from "axios";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -64,7 +52,6 @@ function createWrapper(dataOverrides = {}) {
         prices: [],
         pratim: false,
         showSingleImage: false,
-        socket: null,
         ...dataOverrides,
       };
     },
