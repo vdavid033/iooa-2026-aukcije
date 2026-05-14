@@ -21,8 +21,7 @@ const {
 const {
   REALTIME_ROOMS,
   REALTIME_CLIENT_EVENTS,
-  REALTIME_SERVER_EVENTS,
-  createCijenaAzuriranaPayload,
+  emitCijenaAzurirana,
 } = require("./realtimeContract");
 
 const app = express();
@@ -855,22 +854,19 @@ app.post(
             id_korisnika: request.userId,
           };
       const realtimeBidData = await getPonudaRealtimeData(finalBid.id_ponude);
-      const realtimePayload = createCijenaAzuriranaPayload({
+      const realtimePayload = {
         id_predmeta: Number(id_predmeta),
         trenutna_cijena: finalPrice,
         id_ponude: finalBid.id_ponude,
         id_korisnika: finalBid.id_korisnika,
         vrijeme_ponude: realtimeBidData?.vrijeme_ponude,
-      });
+      };
 
       await disableAutoBidForUser(id_predmeta, request.userId);
 
       await commitAsync();
 
-      io.to(REALTIME_ROOMS.predmet(id_predmeta)).emit(
-        REALTIME_SERVER_EVENTS.cijenaAzurirana,
-        realtimePayload,
-      );
+      emitCijenaAzurirana(io, realtimePayload);
 
       return response.send({
         error: false,

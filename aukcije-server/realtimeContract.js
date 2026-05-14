@@ -29,9 +29,21 @@ function createCijenaAzuriranaPayload({
   };
 }
 
+function emitCijenaAzurirana(io, payload) {
+  const realtimePayload = createCijenaAzuriranaPayload(payload);
+
+  io.to(REALTIME_ROOMS.predmet(realtimePayload.id_predmeta)).emit(
+    REALTIME_SERVER_EVENTS.cijenaAzurirana,
+    realtimePayload,
+  );
+
+  return realtimePayload;
+}
+
 module.exports = {
   REALTIME_ROOMS,
   REALTIME_CLIENT_EVENTS,
   REALTIME_SERVER_EVENTS,
   createCijenaAzuriranaPayload,
+  emitCijenaAzurirana,
 };

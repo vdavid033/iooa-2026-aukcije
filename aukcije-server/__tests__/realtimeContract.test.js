@@ -5,6 +5,7 @@ const {
   REALTIME_CLIENT_EVENTS,
   REALTIME_SERVER_EVENTS,
   createCijenaAzuriranaPayload,
+  emitCijenaAzurirana,
 } = require("../realtimeContract");
 
 describe("realtimeContract", () => {
@@ -33,6 +34,33 @@ describe("realtimeContract", () => {
       id_ponude: 5,
       id_korisnika: 9,
       vrijeme_ponude: "2026-05-14 12:30:00",
+    });
+  });
+
+  test("emits cijena_azurirana to predmet room after successful bid payload is prepared", () => {
+    const emit = jest.fn();
+    const to = jest.fn(() => ({ emit }));
+    const io = { to };
+
+    const payload = emitCijenaAzurirana(io, {
+      id_predmeta: 1,
+      trenutna_cijena: 150,
+      id_ponude: 7,
+      id_korisnika: 3,
+      vrijeme_ponude: "2026-05-14 12:35:00",
+    });
+
+    expect(to).toHaveBeenCalledWith("predmet_1");
+    expect(emit).toHaveBeenCalledWith("cijena_azurirana", {
+      id_predmeta: 1,
+      trenutna_cijena: 150,
+      id_ponude: 7,
+      id_korisnika: 3,
+      vrijeme_ponude: "2026-05-14 12:35:00",
+    });
+    expect(payload).toMatchObject({
+      id_predmeta: 1,
+      trenutna_cijena: 150,
     });
   });
 });
