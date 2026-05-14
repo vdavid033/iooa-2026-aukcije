@@ -59,7 +59,6 @@
 </template>
 
 <script>
-import { io } from "socket.io-client";
 import { ref } from "vue";
 import axios from "axios";
 
@@ -109,7 +108,6 @@ export default {
     return {
       Pretrazivanje: "",
       items: [],
-      socket: null,
       selectedsortianje: "",
       sortiranje: [
         { label: "Cijena: manja prema većoj", value: "price-asc" },
@@ -126,24 +124,6 @@ export default {
       .get(baseUrl + "get-kategorija-predmet/" + this.id_kategorije, {})
       .then((response) => {
         this.items = response.data;
-
-        // ✅ DODAJ OVO — tek nakon što se items učitaju
-        this.socket = io("http://localhost:3000");
-
-        // Pridruži se sobi za svaki predmet koji je vidljiv na listi
-        this.items.forEach((item) => {
-          this.socket.emit("pridruzi_se_predmetu", item.id_predmeta);
-        });
-
-        // Slušaj ažuriranja cijene
-        this.socket.on("cijena_azurirana", (data) => {
-          const predmet = this.items.find(
-            (item) => item.id_predmeta == data.id_predmeta,
-          );
-          if (predmet) {
-            predmet.trenutna_cijena = data.nova_cijena;
-          }
-        });
       });
   },
 
@@ -183,12 +163,6 @@ export default {
           break;
       }
     },
-  },
-
-  beforeUnmount() {
-    if (this.socket) {
-      this.socket.disconnect();
-    }
   },
 };
 </script>

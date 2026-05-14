@@ -16,15 +16,6 @@ const {
   normalizeMoney,
   BID_INCREMENT,
 } = require("./autoBidCalculator");
-const nodemailer = require("nodemailer");
-// Email transporter (koristi Gmail ili drugi SMTP)
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: "aukcijeaplikacija@gmail.com", // zamijeni svojim emailom
-    pass: "uqqodzjrlejpobet", // Gmail App Password (ne obiÄŤna lozinka!)
-  },
-});
 
 const app = express();
 const port = 3000;
@@ -52,40 +43,6 @@ const corsOptions = {
     "Authorization",
   ],
 };
-const http = require("http");
-const { Server } = require("socket.io");
-
-// Kreiraj HTTP server oko Express app-a
-const server = http.createServer(app);
-
-// Inicijaliziraj Socket.io s CORS podeĹˇavanjem
-const io = new Server(server, {
-  cors: {
-    origin: "*", // isto kao i tvoj postojeÄ‡i CORS
-    methods: ["GET", "POST"],
-  },
-});
-
-// WebSocket dogaÄ‘aji
-io.on("connection", (socket) => {
-  console.log("Korisnik spojen:", socket.id);
-
-  // Korisnik se pridruĹľuje sobi specifiÄŤnoj za jedan predmet
-  socket.on("pridruzi_se_predmetu", (id_predmeta) => {
-    socket.join(`predmet_${id_predmeta}`);
-    console.log(`Socket ${socket.id} uĹˇao u sobu predmet_${id_predmeta}`);
-  });
-
-  socket.on("pridruzi_se_korisniku", (id_korisnika) => {
-    socket.join(`korisnik_${id_korisnika}`);
-    console.log(`Socket ${socket.id} ušao u sobu korisnik_${id_korisnika}`);
-  });
-
-  socket.on("disconnect", () => {
-    console.log("Korisnik odspojio:", socket.id);
-  });
-});
-
 // Parser za JSON podatke
 app.use(bodyParser.json());
 
@@ -254,8 +211,7 @@ async function getActiveAutoBidsForItem(id_predmeta, excludedUserId) {
   );
 }
 
-// Marks a single auto-bid as limit-reached, persists a notification, and emits
-// a real-time socket event so the user sees the notification immediately.
+// Marks a single auto-bid as limit-reached and persists a notification.
 async function markAutoBidLimitReached(id_auto_bid, id_korisnika) {
   await queryAsync(
     `UPDATE auto_bid SET limit_dosegnut = 1 WHERE id_auto_bid = ?`,
@@ -266,10 +222,6 @@ async function markAutoBidLimitReached(id_auto_bid, id_korisnika) {
     id_korisnika,
     "Vaš Auto-bid limit za aukciju je dosegnut.",
   );
-
-  io.to(`korisnik_${id_korisnika}`).emit("nova_notifikacija", {
-    poruka: "Vaš Auto-bid limit za aukciju je dosegnut.",
-  });
 }
 
 // Handles the full multi-user auto-bid cycle after a manual (or auto) bid is placed.
@@ -842,12 +794,6 @@ app.post(
 
       await commitAsync();
 
-      // ✅ Emitira svim korisnicima u sobi tog predmeta
-      io.to(`predmet_${id_predmeta}`).emit("cijena_azurirana", {
-        id_predmeta: id_predmeta,
-        nova_cijena: finalPrice,
-      });
-
       return response.send({
         error: false,
         data: {
@@ -947,7 +893,7 @@ app.get("/api/get-predmet-trenutna-cijena/:id", (req, res) => {
   );
 });
 
-server.listen(port, () => {
+app.listen(port, () => {
   console.log("Server running at port: " + port);
 });
 
@@ -1569,13 +1515,6 @@ function posaljiNotifikacije(notifikacije) {
     [notifikacije],
     (err) => {
       if (err) return;
-      notifikacije.forEach(([id_k, id_p, poruka]) => {
-        io.to(`korisnik_${id_k}`).emit("nova_notifikacija", {
-          poruka,
-          id_predmeta: id_p,
-          datum_kreiranja: new Date(),
-        });
-      });
     }
   );
 }
