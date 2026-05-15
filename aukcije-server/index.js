@@ -1,4 +1,4 @@
-﻿const express = require("express");
+const express = require("express");
 const http = require("http");
 const session = require("express-session");
 const bcrypt = require("bcrypt");
@@ -788,22 +788,43 @@ app.get("/api/all-kategorija", (req, res) => {
   });
 }); */
 
-app.get("/api/get-ponuda/:id", (req, res) => {
-  const { id } = req.params;
-
-  connection.query(
-    `SELECT po.id_ponude, po.vrijednost_ponude, DATE_FORMAT(po.vrijeme_ponude, "%Y-%m-%d %H:%i:%s") AS vrijeme_ponude, k.ime_korisnika, k.prezime_korisnika
+function getPonudeZaPredmet(id_predmeta) {
+  return queryAsync(
+    `SELECT
+       po.id_ponude,
+       po.vrijednost_ponude,
+       DATE_FORMAT(po.vrijeme_ponude, "%Y-%m-%d %H:%i:%s") AS vrijeme_ponude,
+       po.id_korisnika,
+       k.ime_korisnika,
+       k.prezime_korisnika
      FROM ponuda po
      JOIN korisnik k ON po.id_korisnika = k.id_korisnika
      WHERE po.id_predmeta = ?
-     ORDER BY po.vrijednost_ponude DESC`,
-    [id],
-    (error, results) => {
-      if (error) throw error;
-      res.send(results);
-    },
+     ORDER BY po.vrijeme_ponude ASC, po.id_ponude ASC`,
+    [id_predmeta],
   );
-});
+}
+
+async function sendPonudeZaPredmet(req, res) {
+  const id_predmeta = req.params.id_predmeta || req.params.id;
+  const normalizedId = Number(id_predmeta);
+
+  if (!Number.isInteger(normalizedId) || normalizedId <= 0) {
+    res.status(400).send({ message: "Id predmeta nije ispravan." });
+    return;
+  }
+
+  try {
+    const results = await getPonudeZaPredmet(normalizedId);
+    res.send(results);
+  } catch (error) {
+    console.error("Greška pri dohvaćanju povijesti ponuda:", error);
+    res.status(500).send({ message: "Greška pri dohvaćanju povijesti ponuda." });
+  }
+}
+
+app.get("/api/predmeti/:id_predmeta/ponude", sendPonudeZaPredmet);
+app.get("/api/get-ponuda/:id", sendPonudeZaPredmet);
 
 app.post(
   "/unostrenutnaponuda",

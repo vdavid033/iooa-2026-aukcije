@@ -1,7 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { shallowMount } from "@vue/test-utils";
 import { flushPromises } from "@vue/test-utils";
-import PrikazAukcije, { validateAutoBidAmount } from "../PrikazAukcije.vue";
+import PrikazAukcije, {
+  validateAutoBidAmount,
+  sortBidHistory,
+  getLatestBidId,
+} from "../PrikazAukcije.vue";
 
 // ── Module mocks ──────────────────────────────────────────────────────────────
 
@@ -122,6 +126,34 @@ describe("validateAutoBidAmount", () => {
 
   it("accepts decimal amount greater than current price", () => {
     expect(validateAutoBidAmount(100.01, 100)).toBeNull();
+  });
+});
+
+
+// ── 1.1 Bid history pure helpers ─────────────────────────────────────────────
+
+describe("bid history helpers", () => {
+  it("sorts bid history chronologically and uses id as tie-breaker", () => {
+    const sorted = sortBidHistory([
+      { id_ponude: 3, vrijeme_ponude: "2026-05-15 10:05:00" },
+      { id_ponude: 1, vrijeme_ponude: "2026-05-15 10:00:00" },
+      { id_ponude: 2, vrijeme_ponude: "2026-05-15 10:00:00" },
+    ]);
+
+    expect(sorted.map((ponuda) => ponuda.id_ponude)).toEqual([1, 2, 3]);
+  });
+
+  it("returns the latest bid id for highlight", () => {
+    expect(
+      getLatestBidId([
+        { id_ponude: 7, vrijeme_ponude: "2026-05-15 11:00:00" },
+        { id_ponude: 8, vrijeme_ponude: "2026-05-15 11:10:00" },
+      ]),
+    ).toBe(8);
+  });
+
+  it("returns null when there are no bids", () => {
+    expect(getLatestBidId([])).toBeNull();
   });
 });
 

@@ -306,15 +306,66 @@
 
   <!-- Bid history -->
   <div class="q-pa-md">
-    <div class="text-h5 text-bold text-blue-7 q-mb-md">Povijest ponuda</div>
-    <q-table
-      :rows="ponude"
-      :columns="kolonePonuda"
-      row-key="id_ponude"
-      flat
-      bordered
-      no-data-label="Još nema ponuda za ovaj predmet."
-    />
+    <q-card flat bordered>
+      <q-card-section class="row items-center justify-between q-gutter-sm">
+        <div>
+          <div class="text-h5 text-bold text-blue-7">Povijest ponuda</div>
+          <div class="text-caption text-grey-7">
+            Ponude su prikazane kronološki, od najstarije prema najnovijoj.
+          </div>
+        </div>
+        <q-chip
+          v-if="ponude.length"
+          color="blue-1"
+          text-color="blue-8"
+          icon="history"
+          :label="`${ponude.length} ponuda`"
+        />
+      </q-card-section>
+
+      <q-separator />
+
+      <q-card-section
+        v-if="!ponude.length"
+        class="text-grey-7"
+        data-testid="povijest-ponuda-empty"
+      >
+        Još nema ponuda za ovaj predmet.
+      </q-card-section>
+
+      <q-list v-else separator data-testid="povijest-ponuda-list">
+        <q-item
+          v-for="ponuda in ponude"
+          :key="ponuda.id_ponude"
+          :class="isNajnovijaPonuda(ponuda) ? 'bg-green-1' : ''"
+          :data-testid="isNajnovijaPonuda(ponuda) ? 'najnovija-ponuda' : 'ponuda-red'"
+        >
+          <q-item-section avatar>
+            <q-avatar color="blue-1" text-color="blue-8" icon="person" />
+          </q-item-section>
+
+          <q-item-section>
+            <q-item-label class="text-weight-medium">
+              {{ getNazivPonuditelja(ponuda) }}
+            </q-item-label>
+            <q-item-label caption>
+              {{ formatVrijemePonude(ponuda.vrijeme_ponude) }}
+            </q-item-label>
+          </q-item-section>
+
+          <q-item-section side top>
+            <div class="text-subtitle1 text-weight-bold">
+              {{ formatIznosPonude(ponuda.vrijednost_ponude) }}
+            </div>
+            <q-badge
+              v-if="isNajnovijaPonuda(ponuda)"
+              color="positive"
+              label="Najnovija"
+            />
+          </q-item-section>
+        </q-item>
+      </q-list>
+    </q-card>
   </div>
 </template>
 
@@ -351,6 +402,39 @@ export function validateAutoBidAmount(amount, currentPrice) {
     ).toFixed(2)} $).`;
   }
   return null;
+}
+
+function getBidTimestamp(vrijemePonude) {
+  if (!vrijemePonude) return 0;
+
+  const normalizedDate =
+    typeof vrijemePonude === "string"
+      ? vrijemePonude.replace(" ", "T")
+      : vrijemePonude;
+  const timestamp = new Date(normalizedDate).getTime();
+
+  return Number.isNaN(timestamp) ? 0 : timestamp;
+}
+
+export function sortBidHistory(ponude) {
+  if (!Array.isArray(ponude)) return [];
+
+  return [...ponude].sort((a, b) => {
+    const timeDiff =
+      getBidTimestamp(a.vrijeme_ponude) - getBidTimestamp(b.vrijeme_ponude);
+
+    if (timeDiff !== 0) return timeDiff;
+
+    return Number(a.id_ponude || 0) - Number(b.id_ponude || 0);
+  });
+}
+
+export function getLatestBidId(ponude) {
+  const sorted = sortBidHistory(ponude);
+
+  if (!sorted.length) return null;
+
+  return Number(sorted[sorted.length - 1].id_ponude);
 }
 
 export default {
@@ -402,32 +486,10 @@ export default {
       autoBidLoading: false,
       showSingleImage: false,
       ponude: [],
+      najnovijaPonudaId: null,
       pratim: false,
       cijenaAzuriranaHandler: null,
       socketPredmetId: null,
-      kolonePonuda: [
-        {
-          name: "korisnik",
-          label: "Korisnik",
-          field: (row) => `${row.ime_korisnika} ${row.prezime_korisnika}`,
-          align: "left",
-          sortable: true,
-        },
-        {
-          name: "vrijednost",
-          label: "Iznos ponude ($)",
-          field: "vrijednost_ponude",
-          align: "right",
-          sortable: true,
-        },
-        {
-          name: "vrijeme",
-          label: "Vrijeme ponude",
-          field: "vrijeme_ponude",
-          align: "center",
-          sortable: true,
-        },
-      ],
     };
   },
 
@@ -455,6 +517,42 @@ export default {
       return token ? { Authorization: `Bearer ${token}` } : {};
     },
 
+    getNazivPonuditelja(ponuda) {
+      const ime = ponuda?.ime_korisnika || "";
+      const prezime = ponuda?.prezime_korisnika || "";
+      const naziv = `${ime} ${prezime}`.trim();
+
+      return naziv || "Nepoznat korisnik";
+    },
+
+    formatIznosPonude(iznos) {
+      const numericValue = Number(iznos);
+
+      if (!Number.isFinite(numericValue)) {
+        return `${iznos} $`;
+      }
+
+      return `${numericValue.toFixed(2)} $`;
+    },
+
+    formatVrijemePonude(vrijemePonude) {
+      if (!vrijemePonude) return "";
+
+      const normalizedDate =
+        typeof vrijemePonude === "string"
+          ? vrijemePonude.replace(" ", "T")
+          : vrijemePonude;
+      const date = new Date(normalizedDate);
+
+      if (Number.isNaN(date.getTime())) return vrijemePonude;
+
+      return date.toLocaleString("hr-HR").replace(",", "");
+    },
+
+    isNajnovijaPonuda(ponuda) {
+      return Number(ponuda?.id_ponude) === Number(this.najnovijaPonudaId);
+    },
+
     // ── Data fetching ──────────────────────────────────────────────
 
     async dohvatiPredmet() {
@@ -473,12 +571,19 @@ export default {
       }
     },
 
-    async dohvatiPonude() {
+    async dohvatiPonude(options = {}) {
+      const { oznaciNajnoviju = true } = options;
+
       try {
         const { data } = await axios.get(
-          `${API_URL}/get-ponuda/${this.id_predmeta}`,
+          `${API_URL}/predmeti/${this.id_predmeta}/ponude`,
         );
-        this.ponude = data;
+        const sortiranePonude = sortBidHistory(data);
+
+        this.ponude = sortiranePonude;
+        if (oznaciNajnoviju) {
+          this.najnovijaPonudaId = getLatestBidId(sortiranePonude);
+        }
       } catch (err) {
         console.error("Greška pri dohvaćanju ponuda:", err);
       }
@@ -560,12 +665,25 @@ export default {
         socket.connect();
       }
 
-      this.cijenaAzuriranaHandler = ({ id_predmeta, trenutna_cijena }) => {
+      this.cijenaAzuriranaHandler = async ({
+        id_predmeta,
+        trenutna_cijena,
+        id_ponude,
+      }) => {
         if (Number(id_predmeta) !== Number(this.id_predmeta)) return;
         if (trenutna_cijena === undefined || trenutna_cijena === null) return;
 
         this.item.trenutna_cijena = trenutna_cijena;
         this.generirajCijene();
+
+        await this.dohvatiPonude({ oznaciNajnoviju: !id_ponude });
+        if (id_ponude) {
+          this.najnovijaPonudaId = Number(id_ponude);
+        }
+
+        if (this.isAuthenticated) {
+          await this.dohvatiAutoBid();
+        }
       };
 
       socket.on(SOCKET_EVENTS.cijenaAzurirana, this.cijenaAzuriranaHandler);
