@@ -56,78 +56,11 @@ connection.query(`
 });
 
 app.get("/api/korisnici", authJwt.verifyTokenAdmin, (req, res) => {
-  console.log('Admin users requested by user:', req.userId);
-  const search = (req.query.search || '').trim().toLowerCase();
-  const role = (req.query.role || 'all').toLowerCase();
+  connection.query("SELECT id_korisnika, ime_korisnika, prezime_korisnika, email_korisnika, adresa_korisnika FROM korisnik WHERE ime_korisnika != 'obrisani' AND prezime_korisnika != 'korisnik'", (error, results) => {
+    if (error) throw error;
 
-  let whereClause = "WHERE ime_korisnika != 'obrisani' AND prezime_korisnika != 'korisnik'";
-  const params = [];
-
-  if (search) {
-    whereClause += " AND (LOWER(ime_korisnika) LIKE ? OR LOWER(prezime_korisnika) LIKE ? OR LOWER(email_korisnika) LIKE ?)";
-    const searchParam = `%${search}%`;
-    params.push(searchParam, searchParam, searchParam);
-  }
-
-  if (role === 'admin' || role === 'user') {
-    whereClause += " AND LOWER(uloga) = ?";
-    params.push(role);
-  }
-
-  const query = `SELECT id_korisnika, ime_korisnika, prezime_korisnika, email_korisnika, adresa_korisnika, uloga FROM korisnik ${whereClause}`;
-
-  connection.query(query, params, (error, results) => {
-    if (error) {
-      console.error('Greška pri dohvaćanju korisnika:', error);
-      return res.status(500).json({ error: true, message: 'Greška pri dohvaćanju korisnika.' });
-    }
-    res.json(results);
+    res.send(results);
   });
-});
-
-app.put("/api/korisnici/:id", authJwt.verifyTokenAdmin, (req, res) => {
-  const idKorisnika = req.params.id;
-  const { ime_korisnika, prezime_korisnika, email_korisnika, adresa_korisnika, uloga } = req.body;
-
-  if (!ime_korisnika || !prezime_korisnika || !email_korisnika || !uloga) {
-    return res.status(400).json({ error: true, message: 'Sva obavezna polja moraju biti popunjena.' });
-  }
-
-  connection.query(
-    "UPDATE korisnik SET ime_korisnika = ?, prezime_korisnika = ?, email_korisnika = ?, adresa_korisnika = ?, uloga = ? WHERE id_korisnika = ?",
-    [ime_korisnika.trim(), prezime_korisnika.trim(), email_korisnika.trim(), adresa_korisnika?.trim() || '', uloga.trim().toLowerCase(), idKorisnika],
-    (error, results) => {
-      if (error) {
-        console.error('Greška pri ažuriranju korisnika:', error);
-        return res.status(500).json({ error: true, message: 'Greška pri ažuriranju korisnika.' });
-      }
-      if (results.affectedRows === 0) {
-        return res.status(404).json({ error: true, message: 'Korisnik nije pronađen.' });
-      }
-      res.send({ error: false, message: 'Korisnik uspješno ažuriran.' });
-    }
-  );
-});
-
-app.delete("/api/korisnici/:id", authJwt.verifyTokenAdmin, (req, res) => {
-  const idKorisnika = req.params.id;
-  const deletedEmail = `obrisani_${idKorisnika}_${Date.now()}@example.com`;
-  const deletedPassword = require('crypto').randomBytes(64).toString('hex');
-
-  connection.query(
-    "UPDATE korisnik SET ime_korisnika = ?, prezime_korisnika = ?, email_korisnika = ?, adresa_korisnika = ?, lozinka_korisnika = ?, uloga = ? WHERE id_korisnika = ?",
-    ['obrisani', 'korisnik', deletedEmail, 'obrisani korisnik', deletedPassword, 'user', idKorisnika],
-    (error, results) => {
-      if (error) {
-        console.error('Greška pri brisanju korisnika:', error);
-        return res.status(500).json({ error: true, message: 'Greška pri brisanju korisnika.' });
-      }
-      if (results.affectedRows === 0) {
-        return res.status(404).json({ error: true, message: 'Korisnik nije pronađen.' });
-      }
-      res.send({ error: false, message: 'Korisnik uspješno obrisan.' });
-    }
-  );
 });
 
 app.get("/getUnosPredmeta", authJwt.verifyTokenUser, function (request, response) {
@@ -216,7 +149,7 @@ app.get("/api/pretrazi-predmet", (req, res) => {
     return res.status(400).send({ message: "Ključna riječ je obavezna." });
   }
 
-  const searchKeyword = `%${keyword.toLowerCase()}%`;
+  const searchKeyword = %${keyword.toLowerCase()}%;
 
   const query = `
     SELECT
@@ -345,7 +278,7 @@ app.get("/api/pretrazi-predmet", (req, res) => {
     return res.status(400).send({ message: "Ključna riječ je obavezna." });
   }
 
-  const searchKeyword = `%${keyword.toLowerCase()}%`;
+  const searchKeyword = %${keyword.toLowerCase()}%;
 
   const query = `
     SELECT
@@ -417,7 +350,7 @@ app.get("/api/vlastita-ponuda-korisnik/:id", (req, res) => {
   const { id } = req.params;
 
   connection.query(
-    `SELECT p.*, pr.*, s.*
+    `SELECT p., pr., s.*
     FROM ponuda p
     JOIN predmet pr ON p.id_predmeta = pr.id_predmeta
     LEFT JOIN slika s ON pr.id_predmeta = s.id_predmeta
@@ -462,7 +395,7 @@ app.get("/api/all-predmet-with-current-price", (req, res) => {
 
 app.get("/api/get-predmet-trenutna-cijena/:id", (req, res) => {
   const { id } = req.params;
-  connection.query("SELECT MAX(`vrijednost_ponude`) AS max_vrijednost_ponude FROM `ponuda` WHERE id_predmeta = ?", [id], (error, results) => {
+  connection.query("SELECT MAX(vrijednost_ponude) AS max_vrijednost_ponude FROM ponuda WHERE id_predmeta = ?", [id], (error, results) => {
     if (error) {
       return res.status(500).send({ error: "Database error" });
     }
@@ -471,207 +404,6 @@ app.get("/api/get-predmet-trenutna-cijena/:id", (req, res) => {
     } else {
       res.status(404).send({ message: "No offers found for the given id_predmeta" });
     }
-  });
-});
-
-// Kreiraj tablicu transakcija ako ne postoji
-const createTransactionTableSQL = `
-  CREATE TABLE IF NOT EXISTS transakcija (
-    id_transakcije INT PRIMARY KEY AUTO_INCREMENT,
-    iznos_transakcije DECIMAL(10,2),
-    vrijeme_transakcije DATETIME DEFAULT CURRENT_TIMESTAMP,
-    id_korisnika INT,
-    id_predmeta INT,
-    status VARCHAR(20) DEFAULT 'završena',
-    FOREIGN KEY (id_korisnika) REFERENCES korisnik(id_korisnika),
-    FOREIGN KEY (id_predmeta) REFERENCES predmet(id_predmeta)
-  )
-`;
-
-connection.query(createTransactionTableSQL, (error) => {
-  if (error && error.code !== 'ER_TABLE_EXISTS_USING_CREATE') {
-    console.error("Greška pri kreiranju tablice transakcija:", error);
-  } else {
-    console.log("Tablica transakcija je sprema.");
-  }
-});
-
-// GET /api/admin/auctions - Lista aukcija sa filterima
-app.get("/api/admin/auctions", authJwt.verifyTokenAdmin, (req, res) => {
-  console.log('Admin auctions requested by user:', req.userId);
-  const search = (req.query.search || '').trim();
-  const status = (req.query.status || 'all').toLowerCase();
-  const page = parseInt(req.query.page, 10) || 1;
-  const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 10, 1), 100);
-  const offset = (page - 1) * limit;
-
-  let whereClause = '1=1';
-  const params = [];
-
-  if (search) {
-    const searchParam = `%${search.toLowerCase()}%`;
-    whereClause += ' AND (LOWER(p.naziv_predmeta) LIKE ? OR LOWER(k.ime_korisnika) LIKE ? OR LOWER(k.prezime_korisnika) LIKE ?)';
-    params.push(searchParam, searchParam, searchParam);
-  }
-
-  if (status === 'active') {
-    whereClause += ' AND p.vrijeme_zavrsetka > NOW()';
-  } else if (status === 'ended') {
-    whereClause += ' AND p.vrijeme_zavrsetka <= NOW()';
-  }
-
-  const query = `
-    SELECT
-      p.id_predmeta,
-      p.naziv_predmeta,
-      CONCAT(k.ime_korisnika, ' ', k.prezime_korisnika) AS prodavac,
-      COALESCE(MAX(po.vrijednost_ponude), p.pocetna_cijena) AS trenutna_cijena,
-      COUNT(DISTINCT po.id_ponude) AS broj_ponuda,
-      CASE WHEN p.vrijeme_zavrsetka > NOW() THEN 'Aktivna' ELSE 'Završena' END AS status,
-      p.vrijeme_zavrsetka
-    FROM predmet p
-    JOIN korisnik k ON p.id_korisnika = k.id_korisnika
-    LEFT JOIN ponuda po ON p.id_predmeta = po.id_predmeta
-    WHERE ${whereClause}
-    GROUP BY p.id_predmeta
-    ORDER BY p.vrijeme_zavrsetka ASC
-    LIMIT ? OFFSET ?
-  `;
-
-  const countQuery = `
-    SELECT COUNT(*) AS total
-    FROM predmet p
-    JOIN korisnik k ON p.id_korisnika = k.id_korisnika
-    WHERE ${whereClause}
-  `;
-
-  connection.query(countQuery, params, (error, countResults) => {
-    if (error) {
-      console.error('Greška kod brojanja aukcija:', error);
-      return res.status(500).json({ message: 'Greška kod brojanja aukcija', error });
-    }
-
-    const total = countResults[0]?.total || 0;
-
-    connection.query(query, [...params, limit, offset], (error, results) => {
-      if (error) {
-        console.error('Greška kod dohvaćanja aukcija:', error);
-        return res.status(500).json({ message: 'Greška kod dohvaćanja aukcija', error });
-      }
-
-      console.log('Auctions results:', results.length, 'rows');
-      res.json({ rows: results, total, page, limit, totalPages: Math.ceil(total / limit) });
-    });
-  });
-});
-
-// GET /api/admin/transactions - Lista transakcija sa filterima
-app.get("/api/admin/transactions", authJwt.verifyTokenAdmin, (req, res) => {
-  console.log('Admin transactions requested by user:', req.userId);
-  const search = (req.query.search || '').trim();
-  const status = (req.query.status || '').trim();
-  const page = parseInt(req.query.page, 10) || 1;
-  const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 10, 1), 100);
-  const offset = (page - 1) * limit;
-
-  let whereClause = '1=1';
-  const params = [];
-
-  if (search) {
-    const searchParam = `%${search.toLowerCase()}%`;
-    whereClause += ' AND (LOWER(p.naziv_predmeta) LIKE ? OR LOWER(kupac.ime_korisnika) LIKE ? OR LOWER(kupac.prezime_korisnika) LIKE ?)';
-    params.push(searchParam, searchParam, searchParam);
-  }
-
-  if (status) {
-    whereClause += ' AND t.status = ?';
-    params.push(status);
-  }
-
-  const query = `
-    SELECT
-      t.id_transakcije,
-      t.iznos_transakcije,
-      t.vrijeme_transakcije,
-      p.naziv_predmeta AS aukcija,
-      CONCAT(kupac.ime_korisnika, ' ', kupac.prezime_korisnika) AS kupac,
-      CONCAT(prodavac.ime_korisnika, ' ', prodavac.prezime_korisnika) AS prodavac,
-      'Završena' AS status
-    FROM transakcija t
-    JOIN predmet p ON t.id_predmeta = p.id_predmeta
-    JOIN korisnik kupac ON t.id_korisnika = kupac.id_korisnika
-    JOIN korisnik prodavac ON p.id_korisnika = prodavac.id_korisnika
-    WHERE ${whereClause}
-    ORDER BY t.vrijeme_transakcije DESC
-    LIMIT ? OFFSET ?
-  `;
-
-  const countQuery = `
-    SELECT COUNT(*) AS total
-    FROM transakcija t
-    JOIN predmet p ON t.id_predmeta = p.id_predmeta
-    JOIN korisnik kupac ON t.id_korisnika = kupac.id_korisnika
-    JOIN korisnik prodavac ON p.id_korisnika = prodavac.id_korisnika
-    WHERE ${whereClause}
-  `;
-
-  connection.query(countQuery, params, (error, countResults) => {
-    if (error) {
-      console.error('Greška kod brojanja transakcija:', error);
-      return res.status(500).json({ message: 'Greška kod brojanja transakcija', error });
-    }
-
-    const total = countResults[0]?.total || 0;
-    connection.query(query, [...params, limit, offset], (error, results) => {
-      if (error) {
-        console.error('Greška kod dohvaćanja transakcija:', error);
-        return res.status(500).json({ message: 'Greška kod dohvaćanja transakcija', error });
-      }
-
-      console.log('Transactions results:', results.length, 'rows');
-      res.json({ rows: results || [], total, page, limit, totalPages: Math.ceil(total / limit) });
-    });
-  });
-});
-
-// GET /api/admin/stats - Admin statistika
-app.get("/api/admin/stats", authJwt.verifyTokenAdmin, (req, res) => {
-  console.log('Admin stats requested by user:', req.userId);
-
-  const statsQuery = `
-    SELECT
-      (SELECT COUNT(*) FROM predmet) AS totalAuctions,
-      (SELECT COUNT(*) FROM predmet WHERE vrijeme_zavrsetka > NOW()) AS activeAuctions,
-      (SELECT COALESCE(SUM(iznos_transakcije), 0) FROM transakcija) AS totalRevenue,
-      (SELECT COALESCE(SUM(iznos_transakcije), 0) FROM transakcija WHERE MONTH(vrijeme_transakcije) = MONTH(CURRENT_DATE()) AND YEAR(vrijeme_transakcije) = YEAR(CURRENT_DATE())) AS monthlyRevenue,
-      (SELECT COUNT(*) FROM transakcija) AS totalTransactions,
-      (SELECT COUNT(*) FROM transakcija WHERE vrijeme_transakcije >= DATE_SUB(NOW(), INTERVAL 30 DAY)) AS last30DaysTransactions,
-      (SELECT COUNT(*) FROM transakcija) AS successfulTransactions
-  `;
-
-  connection.query(statsQuery, (error, results) => {
-    if (error) {
-      console.error('Greška kod dohvaćanja statistike:', error);
-      return res.status(500).json({ message: 'Greška kod dohvaćanja statistike', error });
-    }
-
-    const row = results[0] || {};
-    const totalTransactions = Number(row.totalTransactions) || 0;
-    const successfulTransactions = Number(row.successfulTransactions) || 0;
-    const successRate = totalTransactions > 0 ? Number(((successfulTransactions / totalTransactions) * 100).toFixed(1)) : 0;
-
-    console.log('Stats row:', row);
-
-    res.json({
-      totalAuctions: Number(row.totalAuctions) || 0,
-      activeAuctions: Number(row.activeAuctions) || 0,
-      totalRevenue: Number(row.totalRevenue) || 0,
-      monthlyRevenue: Number(row.monthlyRevenue) || 0,
-      totalTransactions: Number(row.totalTransactions) || 0,
-      last30DaysTransactions: Number(row.last30DaysTransactions) || 0,
-      successfulTransactions: Number(row.successfulTransactions) || 0,
-      successRate,
-    });
   });
 });
 
