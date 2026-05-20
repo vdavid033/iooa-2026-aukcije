@@ -826,6 +826,48 @@ async function sendPonudeZaPredmet(req, res) {
 app.get("/api/predmeti/:id_predmeta/ponude", sendPonudeZaPredmet);
 app.get("/api/get-ponuda/:id", sendPonudeZaPredmet);
 
+function getRacuniOrderClause(sortBy, sortDir) {
+  const direction = String(sortDir).toLowerCase() === "asc" ? "ASC" : "DESC";
+
+  const allowedSorts = {
+    datum: "t.vrijeme_transakcije",
+    iznos: "t.iznos_transakcije",
+  };
+
+  const column = allowedSorts[sortBy] || allowedSorts.datum;
+
+  return `${column} ${direction}, t.id_transakcije ${direction}`;
+}
+
+app.get("/api/racuni", authJwt.verifyTokenUser, (req, res) => {
+  const { sortBy = "datum", sortDir = "desc" } = req.query;
+
+  const sql = `
+    SELECT
+      t.id_transakcije,
+      t.id_predmeta,
+      t.iznos_transakcije,
+      DATE_FORMAT(t.vrijeme_transakcije, "%Y-%m-%d %H:%i:%s") AS vrijeme_transakcije,
+      p.naziv_predmeta
+    FROM transakcija t
+    JOIN predmet p ON p.id_predmeta = t.id_predmeta
+    WHERE t.id_korisnika = ?
+    ORDER BY ${getRacuniOrderClause(sortBy, sortDir)}
+  `;
+
+  connection.query(sql, [req.userId], (err, results) => {
+    if (err) {
+      console.error("Greška pri dohvaćanju računa:", err);
+      return res.status(500).json({
+        error: true,
+        message: "Greška pri dohvaćanju računa.",
+      });
+    }
+
+    return res.status(200).json(results);
+  });
+});
+
 app.post(
   "/unostrenutnaponuda",
   authJwt.verifyTokenUser,
