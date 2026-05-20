@@ -18,7 +18,6 @@
         </div>
 
         <q-space />
-
         <!-- DESNA STRANA -->
         <div class="row items-center q-gutter-sm">
 
@@ -27,70 +26,92 @@
             <q-btn flat label="Registracija" to="/registracija" />
             <q-btn color="primary" unelevated label="Prijava" to="/prijava" />
           </template>
-
+          
           <!-- DROPDOWN -->
-          <q-btn-dropdown
+          <q-btn
             flat
             color="primary"
-            icon="menu"
-            no-caret
-            class="q-ml-sm"
+            class="q-ml-sm menu-btn"
           >
-            <q-list style="min-width: 200px">
+            <q-icon name="menu" size="22px" />
 
-              <router-link to="/" class="link-style">
-                <q-item clickable v-close-popup>
-                  <q-item-section>
-                    <q-item-label>Početna</q-item-label>
-                  </q-item-section>
-                </q-item>
-              </router-link>
+            <q-icon
+              name="keyboard_arrow_down"
+              size="18px"
+              class="arrow-icon q-ml-xs"
+              :class="{ 'arrow-rotate': menuOpen }"
+            />
 
-              <router-link to="/postavi" class="link-style">
-                <q-item clickable v-close-popup>
-                  <q-item-section>
-                    <q-item-label>Dodaj aukciju</q-item-label>
-                  </q-item-section>
-                </q-item>
-              </router-link>
+            <q-menu
+              v-model="menuOpen"
+              anchor="bottom right"
+              self="top right"
+              :offset="[0, 14]"
+              class="custom-dropdown"
+            >
+              <q-list class="dropdown-list">
 
-              <router-link to="/Moj_profil" class="link-style">
-                <q-item clickable v-close-popup>
-                  <q-item-section>
-                    <q-item-label>Moj profil</q-item-label>
-                  </q-item-section>
-                </q-item>
-              </router-link>
-
-              <!-- LOGGED USER -->
-              <template v-if="isAuthenticated()">
-                <q-separator />
-
-                <q-item clickable v-close-popup @click="confirmLogout">
-                  <q-item-section>
-                    <q-item-label class="text-negative">
-                      Odjava
-                    </q-item-label>
-                  </q-item-section>
-                </q-item>
-              </template>
-
-              <!-- ADMIN -->
-              <template v-if="isAdmin()">
-                <q-separator />
-                <router-link to="/admin/" class="link-style">
-                  <q-item clickable v-close-popup>
-                    <q-item-section>
-                      <q-item-label class="text-primary">
-                        Admin Dashboard
-                      </q-item-label>
+                <router-link to="/" class="link-style">
+                  <q-item clickable v-close-popup class="dropdown-item">
+                    <q-item-section avatar>
+                      <q-icon name="home" color="primary" />
                     </q-item-section>
+                    <q-item-section>Početna</q-item-section>
                   </q-item>
                 </router-link>
-              </template>
 
-            </q-list>
-          </q-btn-dropdown>
+                <router-link to="/postavi" class="link-style">
+                  <q-item clickable v-close-popup class="dropdown-item">
+                    <q-item-section avatar>
+                      <q-icon name="add_circle" color="primary" />
+                    </q-item-section>
+                    <q-item-section>Dodaj aukciju</q-item-section>
+                  </q-item>
+                </router-link>
+
+                <router-link to="/Moj_profil" class="link-style">
+                  <q-item clickable v-close-popup class="dropdown-item">
+                    <q-item-section avatar>
+                      <q-icon name="person" color="primary" />
+                    </q-item-section>
+                    <q-item-section>Moj profil</q-item-section>
+                  </q-item>
+                </router-link>
+
+                <template v-if="isAdmin()">
+                  <q-separator class="q-my-sm" />
+
+                  <router-link to="/admin/" class="link-style">
+                    <q-item clickable v-close-popup class="dropdown-item">
+                      <q-item-section avatar>
+                        <q-icon name="admin_panel_settings" color="primary" />
+                      </q-item-section>
+                      <q-item-section>Admin Dashboard</q-item-section>
+                    </q-item>
+                  </router-link>
+                </template>
+
+                <template v-if="isAuthenticated()">
+                  <q-separator class="q-my-sm" />
+
+                  <q-item
+                    clickable
+                    v-close-popup
+                    @click="confirmLogout"
+                    class="dropdown-item logout-item"
+                  >
+                    <q-item-section avatar>
+                      <q-icon name="logout" color="negative" />
+                    </q-item-section>
+                    <q-item-section>
+                      <span class="text-negative">Odjava</span>
+                    </q-item-section>
+                  </q-item>
+                </template>
+
+              </q-list>
+            </q-menu>
+          </q-btn>
 
         </div>
       </q-toolbar>
@@ -134,6 +155,7 @@ export default defineComponent({
 
   setup() {
     const confirmLogoutDialog = ref(false);
+    const menuOpen = ref(false);
     const token = ref(localStorage.getItem("token"));
 
     const userIme = computed(() => {
@@ -176,6 +198,7 @@ export default defineComponent({
 
     return {
       confirmLogoutDialog,
+      menuOpen,
       isAuthenticated,
       isAdmin,
       confirmLogout,
@@ -191,5 +214,44 @@ export default defineComponent({
 .link-style {
   text-decoration: none;
   color: inherit;
+}
+
+.menu-btn {
+  border-radius: 10px;
+  min-width: 64px;
+}
+
+.arrow-icon {
+  transition: 0.25s ease;
+}
+
+.arrow-rotate {
+  transform: rotate(180deg);
+}
+
+.dropdown-list {
+  min-width: 260px;
+  padding: 14px;
+}
+
+.dropdown-item {
+  border-radius: 12px;
+  margin: 6px 0;
+  min-height: 54px;
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.dropdown-item:hover {
+  background: #eef4ff;
+}
+
+.logout-item:hover {
+  background: #fff0f0;
+}
+
+.custom-dropdown {
+  border-radius: 10px;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.16);
 }
 </style>

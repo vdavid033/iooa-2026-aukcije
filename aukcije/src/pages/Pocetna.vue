@@ -93,7 +93,7 @@
           <q-card class="auction-card" @click="navigateToItem(item.id_predmeta)">
             <q-img :src="item.slika || defaultImg" style="height: 220px">
               <div class="time-badge">
-                {{ item.preostalo_vrijeme }}h
+                {{ item.preostalo_vrijeme }}
               </div>
             </q-img>
 

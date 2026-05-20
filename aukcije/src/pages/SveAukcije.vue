@@ -65,7 +65,7 @@
                 class="time-badge"
                 :class="isActive(item) ? 'bg-red' : 'bg-grey-8'"
                 >
-                {{ isActive(item) ? item.preostalo_vrijeme + 'h' : 'Završena' }}
+                {{ isActive(item) ? item.preostalo_vrijeme : 'Završena' }}
                 </div>
             </q-img>
 
