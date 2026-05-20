@@ -149,7 +149,7 @@ app.get("/api/pretrazi-predmet", (req, res) => {
     return res.status(400).send({ message: "Ključna riječ je obavezna." });
   }
 
-  const searchKeyword = %${keyword.toLowerCase()}%;
+ const searchKeyword = `%${keyword.toLowerCase()}%`;
 
   const query = `
     SELECT
