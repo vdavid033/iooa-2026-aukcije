@@ -844,52 +844,52 @@ app.get("/api/admin/transactions", authJwt.verifyTokenAdmin, (req, res) => {
   const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 10));
   const offset = (page - 1) * limit;
   const search = req.query.search ? `%${req.query.search}%` : null;
-  const status = req.query.status || 'all';
 
   const conditions = [];
   const params = [];
 
   if (search) {
-    conditions.push('(p.naziv_predmeta LIKE ? OR CONCAT(kupac.ime_korisnika, " ", kupac.prezime_korisnika) LIKE ?)');
+    conditions.push('(p.naziv_predmeta LIKE ? OR CONCAT(k1.ime_korisnika, " ", k1.prezime_korisnika) LIKE ?)');
     params.push(search, search);
-  }
-  if (status !== 'all') {
-    conditions.push('t.status = ?');
-    params.push(status);
   }
 
   const where = conditions.length ? 'WHERE ' + conditions.join(' AND ') : '';
 
-  const countSql = `
-    SELECT COUNT(*) AS total
-    FROM transakcija t
-    JOIN predmet p ON t.id_predmeta = p.id_predmeta
-    JOIN korisnik kupac ON t.id_korisnika = kupac.id_korisnika
-    ${where}
+  const joins = `
+    JOIN predmet p  ON t.id_predmeta = p.id_predmeta
+    JOIN korisnik k1 ON t.id_korisnika = k1.id_korisnika
+    JOIN korisnik k2 ON p.id_korisnika = k2.id_korisnika
   `;
+
+  const countSql = `SELECT COUNT(*) AS total FROM transakcija t ${joins} ${where}`;
+
   const dataSql = `
     SELECT
       t.id_transakcije,
       p.naziv_predmeta,
-      CONCAT(kupac.ime_korisnika, ' ', kupac.prezime_korisnika) AS kupac,
-      CONCAT(prodavac.ime_korisnika, ' ', prodavac.prezime_korisnika) AS prodavac,
+      CONCAT(k1.ime_korisnika, ' ', k1.prezime_korisnika) AS kupac,
+      CONCAT(k2.ime_korisnika, ' ', k2.prezime_korisnika) AS prodavac,
       t.iznos_transakcije,
       DATE_FORMAT(t.vrijeme_transakcije, '%Y-%m-%d %H:%i:%s') AS vrijeme_transakcije,
-      t.status
+      'Završena' AS status
     FROM transakcija t
-    JOIN predmet p ON t.id_predmeta = p.id_predmeta
-    JOIN korisnik kupac ON t.id_korisnika = kupac.id_korisnika
-    JOIN korisnik prodavac ON p.id_korisnika = prodavac.id_korisnika
+    ${joins}
     ${where}
     ORDER BY t.vrijeme_transakcije DESC
     LIMIT ? OFFSET ?
   `;
 
   connection.query(countSql, params, (countErr, countRes) => {
-    if (countErr) return res.status(500).json({ error: countErr.message });
+    if (countErr) {
+      console.error('Transactions count error:', countErr.message);
+      return res.status(500).json({ error: countErr.message });
+    }
     const total = countRes[0].total;
     connection.query(dataSql, [...params, limit, offset], (dataErr, rows) => {
-      if (dataErr) return res.status(500).json({ error: dataErr.message });
+      if (dataErr) {
+        console.error('Transactions data error:', dataErr.message);
+        return res.status(500).json({ error: dataErr.message });
+      }
       res.json({ rows, total });
     });
   });
