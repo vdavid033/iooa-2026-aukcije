@@ -56,7 +56,7 @@ connection.query(`
 });
 
 app.get("/api/korisnici", authJwt.verifyTokenAdmin, (req, res) => {
-  connection.query("SELECT id_korisnika, ime_korisnika, prezime_korisnika, email_korisnika, adresa_korisnika FROM korisnik WHERE ime_korisnika != 'obrisani' AND prezime_korisnika != 'korisnik'", (error, results) => {
+  connection.query("SELECT id_korisnika, ime_korisnika, prezime_korisnika, email_korisnika, adresa_korisnika, uloga FROM korisnik WHERE ime_korisnika != 'obrisani' AND prezime_korisnika != 'korisnik'", (error, results) => {
     if (error) throw error;
 
     res.send(results);
@@ -761,4 +761,136 @@ app.post("/api/dodavanjeSlika", upload.none(), authJwt.verifyTokenUser, function
     }
   });
   return response.send({ error: false, message: "Slike su uspješno dodane." });
+});
+
+app.get("/api/admin/stats", authJwt.verifyTokenAdmin, (req, res) => {
+  const query = `
+    SELECT
+      (SELECT COUNT(*) FROM predmet) AS totalAuctions,
+      (SELECT COUNT(*) FROM predmet WHERE vrijeme_zavrsetka > NOW()) AS activeAuctions,
+      (SELECT COALESCE(SUM(iznos_transakcije), 0) FROM transakcija) AS totalRevenue,
+      (SELECT COALESCE(SUM(iznos_transakcije), 0) FROM transakcija
+       WHERE YEAR(vrijeme_transakcije) = YEAR(NOW()) AND MONTH(vrijeme_transakcije) = MONTH(NOW())) AS monthlyRevenue,
+      (SELECT COUNT(*) FROM transakcija) AS totalTransactions,
+      (SELECT COUNT(*) FROM transakcija WHERE vrijeme_transakcije >= DATE_SUB(NOW(), INTERVAL 30 DAY)) AS last30DaysTransactions,
+      ROUND(
+        COALESCE(
+          (SELECT COUNT(DISTINCT p.id_predmeta) FROM predmet p
+           JOIN ponuda po ON p.id_predmeta = po.id_predmeta
+           WHERE p.vrijeme_zavrsetka <= NOW()) /
+          NULLIF((SELECT COUNT(*) FROM predmet WHERE vrijeme_zavrsetka <= NOW()), 0) * 100
+        , 0)
+      , 1) AS successRate
+  `;
+  connection.query(query, (error, results) => {
+    if (error) return res.status(500).json({ error: error.message });
+    res.json(results[0]);
+  });
+});
+
+app.get("/api/admin/auctions", authJwt.verifyTokenAdmin, (req, res) => {
+  const page = Math.max(1, parseInt(req.query.page) || 1);
+  const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 10));
+  const offset = (page - 1) * limit;
+  const search = req.query.search ? `%${req.query.search}%` : null;
+  const status = req.query.status || 'all';
+
+  const conditions = [];
+  const params = [];
+
+  if (search) {
+    conditions.push('(p.naziv_predmeta LIKE ? OR CONCAT(k.ime_korisnika, " ", k.prezime_korisnika) LIKE ?)');
+    params.push(search, search);
+  }
+  if (status === 'active') {
+    conditions.push('p.vrijeme_zavrsetka > NOW()');
+  } else if (status === 'ended') {
+    conditions.push('p.vrijeme_zavrsetka <= NOW()');
+  }
+
+  const where = conditions.length ? 'WHERE ' + conditions.join(' AND ') : '';
+
+  const countSql = `SELECT COUNT(DISTINCT p.id_predmeta) AS total FROM predmet p LEFT JOIN korisnik k ON p.id_korisnika = k.id_korisnika ${where}`;
+  const dataSql = `
+    SELECT
+      p.id_predmeta,
+      p.naziv_predmeta,
+      CONCAT(k.ime_korisnika, ' ', k.prezime_korisnika) AS prodavac,
+      COALESCE(MAX(po.vrijednost_ponude), p.pocetna_cijena) AS trenutna_cijena,
+      COUNT(po.id_ponude) AS broj_ponuda,
+      CASE WHEN p.vrijeme_zavrsetka > NOW() THEN 'aktivna' ELSE 'završena' END AS status_aukcije,
+      p.vrijeme_zavrsetka
+    FROM predmet p
+    LEFT JOIN korisnik k ON p.id_korisnika = k.id_korisnika
+    LEFT JOIN ponuda po ON p.id_predmeta = po.id_predmeta
+    ${where}
+    GROUP BY p.id_predmeta, p.naziv_predmeta, k.ime_korisnika, k.prezime_korisnika, p.pocetna_cijena, p.vrijeme_zavrsetka
+    ORDER BY p.vrijeme_zavrsetka DESC
+    LIMIT ? OFFSET ?
+  `;
+
+  connection.query(countSql, params, (countErr, countRes) => {
+    if (countErr) return res.status(500).json({ error: countErr.message });
+    const total = countRes[0].total;
+    connection.query(dataSql, [...params, limit, offset], (dataErr, rows) => {
+      if (dataErr) return res.status(500).json({ error: dataErr.message });
+      res.json({ rows, total });
+    });
+  });
+});
+
+app.get("/api/admin/transactions", authJwt.verifyTokenAdmin, (req, res) => {
+  const page = Math.max(1, parseInt(req.query.page) || 1);
+  const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 10));
+  const offset = (page - 1) * limit;
+  const search = req.query.search ? `%${req.query.search}%` : null;
+  const status = req.query.status || 'all';
+
+  const conditions = [];
+  const params = [];
+
+  if (search) {
+    conditions.push('(p.naziv_predmeta LIKE ? OR CONCAT(kupac.ime_korisnika, " ", kupac.prezime_korisnika) LIKE ?)');
+    params.push(search, search);
+  }
+  if (status !== 'all') {
+    conditions.push('t.status = ?');
+    params.push(status);
+  }
+
+  const where = conditions.length ? 'WHERE ' + conditions.join(' AND ') : '';
+
+  const countSql = `
+    SELECT COUNT(*) AS total
+    FROM transakcija t
+    JOIN predmet p ON t.id_predmeta = p.id_predmeta
+    JOIN korisnik kupac ON t.id_korisnika = kupac.id_korisnika
+    ${where}
+  `;
+  const dataSql = `
+    SELECT
+      t.id_transakcije,
+      p.naziv_predmeta,
+      CONCAT(kupac.ime_korisnika, ' ', kupac.prezime_korisnika) AS kupac,
+      CONCAT(prodavac.ime_korisnika, ' ', prodavac.prezime_korisnika) AS prodavac,
+      t.iznos_transakcije,
+      DATE_FORMAT(t.vrijeme_transakcije, '%Y-%m-%d %H:%i:%s') AS vrijeme_transakcije,
+      t.status
+    FROM transakcija t
+    JOIN predmet p ON t.id_predmeta = p.id_predmeta
+    JOIN korisnik kupac ON t.id_korisnika = kupac.id_korisnika
+    JOIN korisnik prodavac ON p.id_korisnika = prodavac.id_korisnika
+    ${where}
+    ORDER BY t.vrijeme_transakcije DESC
+    LIMIT ? OFFSET ?
+  `;
+
+  connection.query(countSql, params, (countErr, countRes) => {
+    if (countErr) return res.status(500).json({ error: countErr.message });
+    const total = countRes[0].total;
+    connection.query(dataSql, [...params, limit, offset], (dataErr, rows) => {
+      if (dataErr) return res.status(500).json({ error: dataErr.message });
+      res.json({ rows, total });
+    });
+  });
 });
