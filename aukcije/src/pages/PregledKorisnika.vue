@@ -1,119 +1,237 @@
 <template>
-  <div class="q-pa-md">
-    <q-table flat bordered title="Korisnici" rows-per-page-label="Broj prikazanih redova:" :rows="korisnici" :col-props="colProps" :columns="stupci">
+  <q-page class="q-pa-md">
+    <div class="row items-center q-mb-lg">
+      <div class="col">
+        <h2 class="text-h5">Upravljanje korisnicima</h2>
+        <p class="text-subtitle2 text-grey-7">Pregledajte, pretražujte i filtrirajte korisnike.</p>
+      </div>
+    </div>
+
+    <div class="row q-col-gutter-md q-mb-md items-end">
+      <div class="col-12 col-md-5">
+        <q-input
+          filled
+          debounce="300"
+          v-model="search"
+          label="Pretraži korisnike"
+          placeholder="Ime, prezime ili E-mail"
+          clearable
+          dense
+        />
+      </div>
+      <div class="col-12 col-md-4">
+        <q-select
+          filled
+          v-model="selectedRole"
+          :options="roleOptions"
+          label="Filtriraj po ulozi"
+          clearable
+          dense
+        />
+      </div>
+      <div class="col-12 col-md-3">
+        <q-banner dense class="bg-white text-primary q-pa-sm">
+          Prikazano: <strong>{{ filteredUsers.length }}</strong> korisnika
+        </q-banner>
+      </div>
+    </div>
+
+    <q-table
+      flat
+      bordered
+      title="Korisnici"
+      rows-per-page-label="Broj redova po stranici:"
+      :rows="filteredUsers"
+      :columns="columns"
+      row-key="id_korisnika"
+      :loading="loading"
+      no-data-label="Nema korisnika za prikaz."
+      class="user-table"
+    >
       <template v-slot:body-cell-ime_korisnika="props">
-        {{ props.row.ime_korisnika }}
+        <div class="text-left" style="width: auto; min-width: 120px;">{{ props.row.ime_korisnika }}</div>
       </template>
       <template v-slot:body-cell-prezime_korisnika="props">
-        {{ props.row.prezime_korisnika }}
+        <div class="text-left" style="width: auto; min-width: 120px;">{{ props.row.prezime_korisnika }}</div>
       </template>
       <template v-slot:body-cell-email_korisnika="props">
-        {{ props.row.email_korisnika }}
+        <div class="text-left" style="max-width: 220px; word-break: break-word; white-space: normal;">{{ props.row.email_korisnika }}</div>
       </template>
       <template v-slot:body-cell-adresa_korisnika="props">
-        {{ props.row.adresa_korisnika }}
+        <div class="text-left" style="max-width: 220px; word-break: break-word; white-space: normal;">{{ props.row.adresa_korisnika }}</div>
       </template>
-      <template v-slot:body-cell-gumbovi="props">
-        <q-btn-group spread>
-          <q-btn color="primary" label="Izmijeni" @click="odiNaDetalje(props.row.id_korisnika)" />
-          <q-btn color="red" label="Obriši" @click="obrisiKorisnika(props.row.id_korisnika)" />
-        </q-btn-group>
+      <template v-slot:body-cell-actions="props">
+        <div style="display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;">
+          <q-btn dense color="primary" label="Uredi" size="sm" @click="editUser(props.row.id_korisnika)" />
+          <q-btn dense color="negative" label="Obriši" size="sm" @click="deleteUser(props.row.id_korisnika)" />
+        </div>
       </template>
     </q-table>
-  </div>
+  </q-page>
 </template>
 
-<script>
-import axios from "axios";
-export default {
-  data() {
-    return {
-      korisnici: [],
-      stupci: [
-        {
-          name: "ime",
-          required: true,
-          label: "Ime",
-          align: "left",
-          field: "ime_korisnika",
-          sortable: true,
-        },
-        {
-          name: "prezime",
-          required: true,
-          label: "Prezime",
-          align: "left",
-          field: "prezime_korisnika",
-          sortable: true,
-        },
-        {
-          name: "email",
-          required: true,
-          label: "E-mail",
-          align: "left",
-          field: "email_korisnika",
-          sortable: true,
-        },
-        {
-          name: "adresa",
-          required: true,
-          label: "Adresa",
-          align: "left",
-          field: "adresa_korisnika",
-          sortable: true,
-        },
-        {
-          name: "gumbovi",
-          label: "Dodatne mogucnosti",
-          align: "center",
-        },
-      ],
-    };
+<script setup>
+import { ref, computed, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
+import { useQuasar } from 'quasar';
+import axios from 'axios';
+
+const router = useRouter();
+const $q = useQuasar();
+
+const users = ref([]);
+const loading = ref(false);
+const search = ref('');
+const selectedRole = ref('all');
+
+const roleOptions = [
+  { label: 'Sve uloge', value: 'all' },
+  { label: 'Admin', value: 'admin' },
+  { label: 'User', value: 'user' },
+];
+
+const columns = [
+  {
+    name: 'id_korisnika',
+    label: 'ID',
+    field: 'id_korisnika',
+    align: 'left',
+    sortable: true,
+    style: 'width: 80px; min-width: 80px;',
   },
-
-  async mounted() {
-    // Get the JWT token from local storage
-    const token = localStorage.getItem("token");
-
-    // Set up the request headers to include the JWT token
-    const headers = { Authorization: `Bearer ${token}` };
-    this.dohvatiKorisnike(headers);
-    //console.log("korisnici nakon API poziva:", this.korisnici);
+  {
+    name: 'ime_korisnika',
+    label: 'Ime',
+    field: 'ime_korisnika',
+    align: 'left',
+    sortable: true,
+    style: 'width: 140px; min-width: 120px;',
   },
-
-  methods: {
-    async dohvatiKorisnike(headers) {
-      try {
-        const response = await axios.get("http://localhost:3000/api/korisnici", { headers });
-        //console.log("Response podaci:", response.data);
-        this.korisnici = response.data;
-      } catch (error) {
-        console.error("Greška pri dohvatu korisnika", error);
-      }
-    },
-
-    odiNaDetalje(idKorisnika) {
-      this.$router.push({ name: "korisnikdetalji", params: { id: idKorisnika } });
-    },
-
-    async obrisiKorisnika(idKorisnika) {
-        const token = localStorage.getItem("token");
-        const headers = { Authorization: `Bearer ${token}` };
-        if(window.confirm('Jeste li sigurni da želite obrisati korisnika?')) {
-            const response = await axios.put("http://localhost:3000/api/brisanjekorisnika/" + idKorisnika, null, { headers }); //null zbog PUT 'payloada'
-            const response2 = await axios.get("http://localhost:3000/api/korisnici", {headers});
-            this.korisnici = response2.data;
-        }}
-
+  {
+    name: 'prezime_korisnika',
+    label: 'Prezime',
+    field: 'prezime_korisnika',
+    align: 'left',
+    sortable: true,
+    style: 'width: 140px; min-width: 120px;',
   },
+  {
+    name: 'email_korisnika',
+    label: 'E-mail',
+    field: 'email_korisnika',
+    align: 'left',
+    sortable: true,
+    style: 'width: 220px; min-width: 180px;',
+  },
+  {
+    name: 'adresa_korisnika',
+    label: 'Adresa',
+    field: 'adresa_korisnika',
+    align: 'left',
+    sortable: true,
+    style: 'width: 220px; min-width: 180px;',
+  },
+  {
+    name: 'actions',
+    label: 'Akcije',
+    field: 'actions',
+    align: 'center',
+    style: 'width: 180px; min-width: 150px;',
+  },
+];
+
+const getHeaders = () => {
+  const token = localStorage.getItem('token');
+  return { Authorization: `Bearer ${token}` };
 };
+
+const loadUsers = async () => {
+  loading.value = true;
+  try {
+    const response = await axios.get('http://localhost:3000/api/korisnici', {
+      headers: getHeaders(),
+    });
+    const responseData = response.data;
+    const parsedUsers = Array.isArray(responseData)
+      ? responseData
+      : Array.isArray(responseData?.korisnici)
+      ? responseData.korisnici
+      : [];
+
+    console.log('Korisnici API response:', responseData);
+    console.log('Parsed users:', parsedUsers);
+
+    users.value = parsedUsers;
+  } catch (error) {
+    console.error('Greška pri dohvaćanju korisnika:', error);
+    $q.notify({
+      color: 'negative',
+      position: 'top',
+      message: 'Greška pri dohvaćanju korisnika!',
+      icon: 'warning',
+    });
+  } finally {
+    loading.value = false;
+  }
+};
+
+const filteredUsers = computed(() => {
+  const term = search.value.trim().toLowerCase();
+  return users.value.filter((user) => {
+    const matchesSearch = !term ||
+      user.ime_korisnika?.toLowerCase().includes(term) ||
+      user.prezime_korisnika?.toLowerCase().includes(term) ||
+      user.email_korisnika?.toLowerCase().includes(term);
+    const matchesRole = selectedRole.value === 'all' || !selectedRole.value ||
+      user.uloga?.toLowerCase() === selectedRole.value;
+    return matchesSearch && matchesRole;
+  });
+});
+
+const editUser = (id) => {
+  router.push({ name: 'korisnikdetalji', params: { id } });
+};
+
+const deleteUser = (id) => {
+  $q.dialog({
+    title: 'Brisanje korisnika',
+    message: 'Jeste li sigurni da želite obrisati ovog korisnika?',
+    cancel: true,
+    persistent: true,
+  }).onOk(async () => {
+    try {
+      await axios.put(`http://localhost:3000/api/brisanjekorisnika/${id}`, null, {
+        headers: getHeaders(),
+      });
+      $q.notify({
+        color: 'positive',
+        position: 'top',
+        message: 'Korisnik uspješno obrisan.',
+      });
+      loadUsers();
+    } catch (error) {
+      console.error('Greška pri brisanju korisnika:', error);
+      $q.notify({
+        color: 'negative',
+        position: 'top',
+        message: 'Greška pri brisanju korisnika!',
+        icon: 'warning',
+      });
+    }
+  });
+};
+
+onMounted(() => {
+  loadUsers();
+});
 </script>
 
-<style>
-.centar_gumbovi {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100%;
+<style scoped>
+.user-table .q-table__grid {
+  min-width: 100%;
+}
+.user-table .q-td,
+.user-table .q-th {
+  white-space: normal;
 }
 </style>

@@ -1,109 +1,132 @@
 <template>
   <q-layout view="hHh LpR fFf">
+    <!-- Header -->
     <q-header elevated class="bg-primary text-white">
       <q-toolbar>
-        <q-btn dense flat round icon="menu" @click="toggleLeftDrawer" />
-
-        <q-toolbar-title>
-          <router-link to="/" class="link-style">
-            <q-avatar>
-              <img src="~assets\aukcije_logo.jpg" alt="Logo" />
-            </q-avatar>
-          </router-link>
-          Admin dashboard
+        <q-btn dense flat round icon="menu" @click="drawerOpen = !drawerOpen" />
+        <q-toolbar-title class="text-h6 text-weight-bold">
+          Admin Panel
         </q-toolbar-title>
-        <q-space /><q-space /><q-space /><q-space /><q-space /><q-space /><q-space /><q-space />
-
-        <template v-if="isAuthenticated()">
-          <q-btn label="Odjava" color="negative" class="q-mr-md" @click="confirmLogout" />
-        </template>
+        <q-space />
+        <q-btn
+          label="Odjava"
+          color="negative"
+          flat
+          @click="showLogoutConfirm = true"
+          class="q-mr-md"
+        />
       </q-toolbar>
     </q-header>
 
-    <q-drawer show-if-above v-model="leftDrawerOpen" side="left" bordered>
-      <!-- drawer content -->
-      <q-list>
-        <q-item-label header class="text-bold text-black"> Polja </q-item-label>
-        <!-- veze za druge stranice podlayouta-->
-        <div class="q-pa-sm col">
-          <router-link to="kategorije" class="link-style" @click="toggleLeftDrawerClose">
-            <q-btn class="flex flex-center" color="positive" style="width: 280px"> Kategorije </q-btn>
-          </router-link>
-        </div>
-        <div class="q-pa-sm col">
-          <router-link to="pregledkorisnika" class="link-style" @click="toggleLeftDrawerClose">
-            <q-btn class="flex flex-center" color="positive" style="width: 280px"> Pregled korisnika </q-btn>
-          </router-link>
-        </div>
-        <div class="q-pa-sm col">
-          <router-link to="/" class="link-style" @click="toggleLeftDrawerClose">
-            <q-btn class="flex flex-center" color="negative" style="width: 280px"> Izlazak </q-btn>
-          </router-link>
-        </div>
+    <!-- Sidebar Drawer -->
+    <q-drawer
+      v-model="drawerOpen"
+      show-if-above
+      side="left"
+      bordered
+      :width="250"
+      class="bg-grey-1"
+    >
+      <q-list class="q-mt-md">
+        <q-item-label header class="text-h6 text-weight-bold text-primary">
+          Navigacija
+        </q-item-label>
+
+        <!-- Dashboard -->
+        <q-item
+          :to="{ name: 'admin-dashboard' }"
+          exact
+          clickable
+          v-ripple
+          :active="$route.name === 'admin-dashboard'"
+          active-class="bg-blue-1 text-primary"
+          class="q-mb-sm"
+        >
+          <q-item-section avatar>
+            <q-icon name="dashboard" />
+          </q-item-section>
+          <q-item-section>
+            <q-item-label>Dashboard</q-item-label>
+          </q-item-section>
+        </q-item>
+
+        <!-- Kategorije -->
+        <q-item
+          :to="{ name: 'admin-kategorije' }"
+          exact
+          clickable
+          v-ripple
+          :active="$route.name === 'admin-kategorije'"
+          active-class="bg-blue-1 text-primary"
+          class="q-mb-sm"
+        >
+          <q-item-section avatar>
+            <q-icon name="category" />
+          </q-item-section>
+          <q-item-section>
+            <q-item-label>Kategorije</q-item-label>
+          </q-item-section>
+        </q-item>
+
+        <!-- Korisnici -->
+        <q-item
+          :to="{ name: 'admin-korisnici' }"
+          exact
+          clickable
+          v-ripple
+          :active="$route.name === 'admin-korisnici'"
+          active-class="bg-blue-1 text-primary"
+          class="q-mb-sm"
+        >
+          <q-item-section avatar>
+            <q-icon name="people" />
+          </q-item-section>
+          <q-item-section>
+            <q-item-label>Korisnici</q-item-label>
+          </q-item-section>
+        </q-item>
       </q-list>
     </q-drawer>
 
+    <!-- Page Container -->
     <q-page-container>
       <router-view />
     </q-page-container>
+
     <!-- Logout Confirmation Dialog -->
-    <q-dialog v-model="confirmLogoutDialog" persistent>
+    <q-dialog v-model="showLogoutConfirm" persistent>
       <q-card>
         <q-card-section class="row items-center">
           <q-avatar icon="warning" color="negative" text-color="white" />
-          <span class="q-ml-sm">Jeste li sigurni da želite se odjaviti?</span>
+          <span class="q-ml-md text-body1">Jeste li sigurni da želite se odjaviti?</span>
         </q-card-section>
 
         <q-card-actions align="right">
           <q-btn flat label="Odustani" color="primary" v-close-popup />
-          <router-link to="/" class="link-style" @click="toggleLeftDrawerClose">
-            <q-btn flat label="Odjavi se" color="negative" @click="logoutAndReload" />
-          </router-link>
+          <q-btn flat label="Odjavi se" color="negative" @click="logout" />
         </q-card-actions>
       </q-card>
     </q-dialog>
   </q-layout>
 </template>
 
-<script>
-import Pocetna from "src/pages/Pocetna.vue";
-import router from "src/router";
-import { ref } from "vue";
+<script setup>
+import { ref } from 'vue';
+import { useRouter } from 'vue-router';
 
-export default {
-  setup() {
-    const confirmLogoutDialog = ref(false);
-    const leftDrawerOpen = ref(false);
-    const token = ref(localStorage.getItem("token"));
+const router = useRouter();
+const drawerOpen = ref(false);
+const showLogoutConfirm = ref(false);
 
-    const isAuthenticated = () => {
-      const token = localStorage.getItem("token");
-      return !!token;
-    };
-
-    const confirmLogout = () => {
-      confirmLogoutDialog.value = true;
-    };
-
-    const toggleLeftDrawerClose = () => {
-      leftDrawerOpen.value = false;
-    };
-
-    const logoutAndReload = () => {
-      // Clear JWT token from local storage
-      localStorage.removeItem("token");
-    };
-    return {
-      toggleLeftDrawerClose,
-      confirmLogoutDialog,
-      isAuthenticated,
-      confirmLogout,
-      leftDrawerOpen,
-      logoutAndReload,
-      toggleLeftDrawer() {
-        leftDrawerOpen.value = !leftDrawerOpen.value;
-      },
-    };
-  },
+const logout = () => {
+  localStorage.removeItem('token');
+  showLogoutConfirm.value = false;
+  router.push('/prijava');
 };
 </script>
+
+<style scoped>
+:deep(.q-drawer__content) {
+  background-color: #f5f5f5;
+}
+</style>

@@ -129,7 +129,7 @@ export default {
       const headers = { Authorization: `Bearer ${token}` };
 
       axios
-        .get(baseUrl + "all-kategorija", { headers })
+        .get(`${baseUrl}/all-kategorija`, { headers })
         .then((response) => {
           this.kategorija = response.data;
         })
