@@ -1,285 +1,200 @@
 <template>
-  <div class="auction-page">
-    <q-card class="auction-card" flat>
+  <q-page class="auction-page">
+    <div class="page-wrap">
+      <div class="auction-title">Prikaz aukcije</div>
 
-      <div class="auction-title">
-        Prikaz aukcije
-      </div>
+      <q-card class="auction-card" flat>
+        <div class="row q-col-gutter-lg">
 
-      <div class="row q-col-gutter-xl">
-
-        <div class="col-12 col-md-6">
-
-          <div class="image-wrapper">
-
-            <template
-              v-if="
-                !showSingleImage &&
-                item.slike &&
-                item.slike.length > 1
-              "
-            >
-              <q-carousel
-                v-model="slide"
-                animated
-                infinite
-                arrows
-                navigation
-                class="carousel-custom"
-                height="100%"
-              >
-                <q-carousel-slide
-                  v-for="(image, index) in item.slike"
-                  :key="index"
-                  :name="index"
-                  class="q-pa-none"
+          <div class="col-12 col-md-7">
+            <div class="image-panel">
+              <template v-if="!showSingleImage && item.slike && item.slike.length > 1">
+                <q-carousel
+                  v-model="slide"
+                  animated
+                  infinite
+                  arrows
+                  navigation
+                  height="100%"
+                  class="carousel-custom"
                 >
-                  <q-img
-                    :src="image"
-                    fit="cover"
-                    class="full-height"
-                  />
-                </q-carousel-slide>
-              </q-carousel>
-            </template>
+                  <q-carousel-slide
+                    v-for="(image, index) in item.slike"
+                    :key="index"
+                    :name="index"
+                    class="q-pa-none"
+                  >
+                    <q-img
+                      :src="image"
+                      fit="cover"
+                      class="full-height shifted-image"
+                    />
+                  </q-carousel-slide>
+                </q-carousel>
+              </template>
 
-            <template v-else>
-              <q-img
-                v-if="showSingleImage"
-                :src="item.slika"
-                fit="cover"
-                class="single-image"
-              />
+              <template v-else>
+                <q-img
+                  v-if="showSingleImage"
+                  :src="item.slika"
+                  fit="cover"
+                  class="single-image shifted-image"
+                />
 
-              <div
-                v-else
-                class="image-placeholder"
-              >
-                Slika
-              </div>
-            </template>
-          </div>
-
-          <div class="info-box seller-box">
-            <div class="label">
-            </div>
-
-            <div class="value">
-              {{ item.korisnik_ime }}
-              {{ item.korisnik_prezime }}
-            </div>
-          </div>
-        </div>
-
-        <div class="col-12 col-md-6">
-
-          <div class="info-box">
-            <div class="label">
-              Naziv proizvoda
-            </div>
-
-            <div class="title-value">
-              {{ item.naziv_predmeta }}
-            </div>
-          </div>
-
-          <div class="info-box">
-            <div class="label">
-              Opis proizvoda
-            </div>
-
-            <div class="value">
-              {{ item.opis_predmeta }}
-            </div>
-          </div>
-
-          <div class="row q-col-gutter-md">
-
-            <div class="col-12 col-sm-6">
-              <div class="info-box small-box">
-
-                <div class="label">
-                  Početno vrijeme aukcije
+                <div v-else class="image-placeholder">
+                  Nema slike
                 </div>
+              </template>
 
-                <div class="date-row">
-                  <q-icon
-                    name="event"
-                    size="18px"
-                  />
-
-                  <span>
-                    {{
-                      formattedDate(
-                        item.vrijeme_pocetka
-                      )
-                    }}
-                  </span>
-                </div>
-
+              <div class="image-badge">
+                <span>Aukcija</span>
+                <span class="badge-divider">•</span>
+                <q-icon name="person" size="16px" />
+                <span>
+                  {{ item.korisnik_ime || "Nepoznat" }}
+                  {{ item.korisnik_prezime || "" }}
+                </span>
               </div>
             </div>
 
-            <div class="col-12 col-sm-6">
-              <div class="info-box small-box">
-
-                <div class="label">
-                  Završno vrijeme aukcije
-                </div>
-
-                <div class="date-row">
-                  <q-icon
-                    name="event"
-                    size="18px"
-                  />
-
-                  <span>
-                    {{
-                      formattedDate(
-                        item.vrijeme_zavrsetka
-                      )
-                    }}
-                  </span>
-                </div>
-
-              </div>
+            <div class="auction-timer">
+              <q-icon name="schedule" size="20px" color="primary" />
+              <span>
+                Preostalo do kraja aukcije:
+                <strong>{{ vrijemeDoKraja }}</strong>
+              </span>
             </div>
-
           </div>
 
-          <div class="row q-col-gutter-md">
+          <div class="col-12 col-md-5">
+            <div class="details-panel">
 
-            <div class="col-12 col-sm-6">
-              <div class="info-box small-box">
-
-                <div class="label">
-                  Početna cijena proizvoda
+              <div class="product-box">
+                <div class="product-title">
+                  {{ item.naziv_predmeta || "Naziv nije dostupan" }}
                 </div>
-
-                <div class="price-row">
-                  <q-icon
-                    name="payments"
-                    size="20px"
-                  />
-
-                  <span>
-                    {{
-                      formatPrice(
-                        item.pocetna_cijena
-                      )
-                    }}
-                  </span>
-                </div>
-
               </div>
-            </div>
 
-            <div class="col-12 col-sm-6">
-              <div
-                class="
-                  info-box
-                  current-price-box
-                "
-              >
-
-                <div
-                  class="
-                    label
-                    current-price-label
-                  "
-                >
-                  Trenutna cijena
+              <div class="description-box">
+                <div class="section-label">Opis proizvoda</div>
+                <div class="description-text">
+                  {{ item.opis_predmeta || "Opis nije dostupan." }}
                 </div>
-
-                <div
-                  class="
-                    price-row
-                    current-price
-                  "
-                >
-                  <q-icon
-                    name="payments"
-                    size="20px"
-                  />
-
-                  <span>
-                    {{
-                      formatPrice(
-                        item.trenutna_cijena
-                      )
-                    }}
-                  </span>
-                </div>
-
               </div>
-            </div>
 
+              <div class="time-row">
+                <div class="time-box">
+                  <q-icon name="event" color="primary" size="22px" />
+                  <div>
+                    <div class="meta-label">Početak aukcije</div>
+                    <div class="meta-value">
+                      {{ formattedDate(item.vrijeme_pocetka) }}
+                    </div>
+                  </div>
+                </div>
+
+                <div class="time-box">
+                  <q-icon name="event_available" color="primary" size="22px" />
+                  <div>
+                    <div class="meta-label">Završetak aukcije</div>
+                    <div class="meta-value">
+                      {{ formattedDate(item.vrijeme_zavrsetka) }}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="price-panel">
+                <div class="price-grid">
+                  <div class="start-price-card">
+                    <div class="price-label">Početna cijena</div>
+                    <div class="start-price">
+                      {{ formatPrice(item.pocetna_cijena) }}
+                    </div>
+                  </div>
+
+                  <div class="current-price-card">
+                    <div class="price-label blue">Trenutna cijena</div>
+                    <div class="current-price">
+                      {{ formatPrice(item.trenutna_cijena) }}
+                    </div>
+                  </div>
+                </div>
+
+                <q-btn
+                  class="bid-btn"
+                  label="Postavi ponudu"
+                  icon="gavel"
+                  unelevated
+                  no-caps
+                  @click="showDialog = true"
+                />
+              </div>
+
+            </div>
           </div>
-
-          <q-btn
-            class="bid-btn"
-            label="PONUDA"
-            unelevated
-            no-caps
-            @click="showDialog = true"
-          />
 
         </div>
-      </div>
-    </q-card>
-
-    <q-dialog v-model="showDialog">
-
-      <q-card
-        style="
-          width: 400px;
-          border-radius: 20px;
-        "
-      >
-
-        <q-card-section>
-          <div
-            class="
-              text-h6
-              text-weight-bold
-            "
-          >
-            Ponudi cijenu
-          </div>
-        </q-card-section>
-
-        <q-card-section>
-
-          <q-select
-            outlined
-            v-model="odabranaCijena"
-            :options="prices"
-            label="Odaberi cijenu"
-          />
-
-        </q-card-section>
-
-        <q-card-actions align="right">
-
-          <q-btn
-            flat
-            label="Odustani"
-            color="grey-7"
-            v-close-popup
-          />
-
-          <q-btn
-            unelevated
-            label="Potvrdi"
-            color="primary"
-            @click="potvrdiPonudu"
-          />
-
-        </q-card-actions>
-
       </q-card>
-    </q-dialog>
-  </div>
+
+      <q-dialog v-model="showDialog">
+        <q-card class="bid-dialog">
+          <q-card-section>
+            <div class="dialog-title">Postavi novu ponudu</div>
+
+            <div class="dialog-subtitle">
+              Odaberi iznos veći od trenutne cijene.
+            </div>
+          </q-card-section>
+
+          <q-card-section>
+            <q-select
+              outlined
+              v-model="odabranaCijena"
+              :options="prices"
+              label="Odaberi cijenu"
+            />
+          </q-card-section>
+
+          <q-card-actions align="right">
+            <q-btn
+              flat
+              label="Odustani"
+              color="grey-7"
+              v-close-popup
+              no-caps
+            />
+
+            <q-btn
+              unelevated
+              label="Potvrdi ponudu"
+              color="primary"
+              no-caps
+              @click="potvrdiPonudu"
+            />
+          </q-card-actions>
+        </q-card>
+      </q-dialog>
+
+      <q-dialog v-model="successDialog" seamless>
+        <q-card class="success-dialog">
+          <div class="success-icon">✓</div>
+
+          <div class="success-title">
+            Ponuda uspješno postavljena
+          </div>
+
+          <div class="success-text">
+            Nova trenutna cijena:
+          </div>
+
+          <div class="success-price">
+            {{ formatPrice(successPrice) }}
+          </div>
+        </q-card>
+      </q-dialog>
+    </div>
+  </q-page>
 </template>
 
 <script>
@@ -287,98 +202,76 @@ import { jwtDecode } from "jwt-decode";
 import { ref } from "vue";
 import axios from "axios";
 
-const baseUrl =
-  "http://localhost:3000/api/";
+const baseUrl = "http://localhost:3000/api/";
 
 export default {
-
   computed: {
     id_predmeta() {
       return this.$route.query.id_predmeta;
+    },
+
+    vrijemeDoKraja() {
+      if (!this.item.vrijeme_zavrsetka) return "Nije dostupno";
+
+      const end = new Date(this.item.vrijeme_zavrsetka);
+      const now = new Date();
+      const diff = end - now;
+
+      if (diff <= 0) return "Aukcija završena";
+
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const hours = Math.floor(
+        (diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)
+      );
+      const minutes = Math.floor(
+        (diff % (1000 * 60 * 60)) / (1000 * 60)
+      );
+
+      return `${days}d ${hours}h ${minutes}m`;
     },
   },
 
   data() {
     return {
-
       item: {},
-
       showDialog: false,
-
+      successDialog: false,
+      successPrice: 0,
       odabranaCijena: "",
-
       prices: [],
-
       showSingleImage: false,
     };
   },
 
   mounted() {
+    axios.get(baseUrl + "get-predmet/" + this.id_predmeta).then((response) => {
+      this.item = response.data[0];
+      this.item.trenutna_cijena = this.item.pocetna_cijena;
 
-    axios
-      .get(
-        baseUrl +
-          "get-predmet/" +
-          this.id_predmeta
-      )
-      .then((response) => {
-
-        this.item = response.data[0];
-
-        this.item.trenutna_cijena =
-          this.item.pocetna_cijena;
-
-        if (
-          this.item.slike &&
-          this.item.slike.length > 0
-        ) {
-
-          if (
-            this.item.slike.length === 1
-          ) {
-
-            this.showSingleImage =
-              true;
-
-            this.item.slika =
-              this.item.slike[0];
-
-          } else {
-
-            this.showSingleImage =
-              false;
-          }
+      if (this.item.slike && this.item.slike.length > 0) {
+        if (this.item.slike.length === 1) {
+          this.showSingleImage = true;
+          this.item.slika = this.item.slike[0];
+        } else {
+          this.showSingleImage = false;
         }
+      }
 
-        axios
-          .get(
-            baseUrl +
-              "get-predmet-trenutna-cijena/" +
-              this.id_predmeta
-          )
-          .then((response2) => {
+      axios
+        .get(baseUrl + "get-predmet-trenutna-cijena/" + this.id_predmeta)
+        .then((response2) => {
+          if (response2.data.max_vrijednost_ponude != null) {
+            this.item.trenutna_cijena = response2.data.max_vrijednost_ponude;
+          }
 
-            if (
-              response2.data
-                .max_vrijednost_ponude !=
-              null
-            ) {
-
-              this.item.trenutna_cijena =
-                response2.data
-                  .max_vrijednost_ponude;
-            }
-
-            this.generatePrices();
-          });
-      });
+          this.generatePrices();
+        });
+    });
   },
 
   methods: {
-
     formattedDate(dateString) {
-
-      if (!dateString) return "";
+      if (!dateString) return "Nije definirano";
 
       return new Date(dateString)
         .toLocaleString("hr-HR")
@@ -386,132 +279,92 @@ export default {
     },
 
     formatPrice(price) {
-
-      if (!price) return "0";
-
-      return (
-        Number(price).toLocaleString(
-          "en-US"
-        ) + " $"
-      );
+      if (!price) return "0 $";
+      return Number(price).toLocaleString("en-US") + " $";
     },
 
     generatePrices() {
+      const current = Number(this.item.trenutna_cijena);
 
-      const current = Number(
-        this.item.trenutna_cijena
-      );
-
-      this.prices = [
-        1.1,
-        1.2,
-        1.3,
-        1.4,
-        1.5,
-        2,
-      ].map((multiplier) => ({
-
+      this.prices = [1.1, 1.2, 1.3, 1.4, 1.5, 2].map((multiplier) => ({
         label:
-          `+ ${Math.round(
-            (multiplier - 1) * 100
-          )}% : ${(
-            current * multiplier
-          ).toFixed(2)} $`,
-
-        value:
-          (
-            current * multiplier
-          ).toFixed(2),
+          `+ ${Math.round((multiplier - 1) * 100)}% : ` +
+          `${(current * multiplier).toFixed(2)} $`,
+        value: (current * multiplier).toFixed(2),
       }));
     },
 
     potvrdiPonudu() {
+      const token = localStorage.getItem("token");
 
-      const token =
-        localStorage.getItem(
-          "token"
-        );
-
-      if (
-        !token ||
-        !this.odabranaCijena
-      )
+      if (!token || !this.odabranaCijena) {
+        this.$q.notify({
+          type: "warning",
+          message: "Morate biti prijavljeni i odabrati cijenu.",
+          position: "center",
+          timeout: 2500,
+        });
         return;
+      }
 
       const headers = {
-        Authorization:
-          `Bearer ${token}`,
+        Authorization: `Bearer ${token}`,
       };
 
-      const decodedToken =
-        jwtDecode(token);
+      const decodedToken = jwtDecode(token);
+      const selectedPrice = parseFloat(this.odabranaCijena.value);
 
-      const selectedPrice =
-        parseFloat(
-          this.odabranaCijena.value
-        );
-
-      if (
-        selectedPrice >
-        this.item.trenutna_cijena
-      ) {
-
-        const currentDate =
-          new Date();
-
-        const formattedTime =
-          `${currentDate.getFullYear()}-${
-            currentDate.getMonth() + 1
-          }-${currentDate.getDate()} ${
-            currentDate.getHours()
-          }:${currentDate.getMinutes()}:${
-            currentDate.getSeconds()
-          }`;
-
-        const podaciPonude = {
-          id_predmeta:
-            this.id_predmeta,
-
-          vrijednost_ponude:
-            selectedPrice,
-
-          vrijeme_ponude:
-            formattedTime,
-
-          id_korisnika:
-            decodedToken.id,
-        };
-
-        axios
-          .post(
-            "http://localhost:3000/unostrenutnaponuda",
-            podaciPonude,
-            { headers }
-          )
-          .then((response) => {
-
-            console.log(
-              "Nova cijena spremljena:",
-              response.data
-            );
-
-            this.item.trenutna_cijena =
-              selectedPrice;
-
-            this.generatePrices();
-
-            this.odabranaCijena = "";
-
-            this.showDialog = false;
-          })
-          .catch((error) => {
-
-            console.error(
-              "Error kod spremanja:",
-              error
-            );
-          });
+      if (selectedPrice <= this.item.trenutna_cijena) {
+        this.$q.notify({
+          type: "negative",
+          message: "Nova ponuda mora biti veća od trenutne cijene.",
+          position: "center",
+          timeout: 2500,
+        });
+        return;
       }
+
+      const currentDate = new Date();
+
+      const formattedTime =
+        `${currentDate.getFullYear()}-${currentDate.getMonth() + 1}-${currentDate.getDate()} ` +
+        `${currentDate.getHours()}:${currentDate.getMinutes()}:${currentDate.getSeconds()}`;
+
+      const podaciPonude = {
+        id_predmeta: this.id_predmeta,
+        vrijednost_ponude: selectedPrice,
+        vrijeme_ponude: formattedTime,
+        id_korisnika: decodedToken.id,
+      };
+
+      axios
+        .post(
+          "http://localhost:3000/unostrenutnaponuda",
+          podaciPonude,
+          { headers }
+        )
+        .then(() => {
+          this.item.trenutna_cijena = selectedPrice;
+          this.successPrice = selectedPrice;
+          this.generatePrices();
+          this.odabranaCijena = "";
+          this.showDialog = false;
+          this.successDialog = true;
+
+          setTimeout(() => {
+            this.successDialog = false;
+          }, 2800);
+        })
+        .catch((error) => {
+          console.error("Error storing new price:", error);
+
+          this.$q.notify({
+            type: "negative",
+            message: "Greška kod postavljanja ponude.",
+            position: "center",
+            timeout: 2500,
+          });
+        });
     },
   },
 
@@ -522,47 +375,43 @@ export default {
   },
 };
 </script>
+
 <style scoped>
 .auction-page {
   min-height: 100vh;
-  background: #eef3fb;
-  padding: 40px;
+  background: linear-gradient(180deg, #eaf2ff 0%, #f8fafc 100%);
+  padding: 40px 28px;
 }
 
-.auction-card {
-  max-width: 1150px;
-  margin: auto;
-  padding: 40px;
-  border-radius: 30px;
-  background: white;
-  box-shadow:
-    0 10px 35px
-    rgba(0, 0, 0, 0.08);
+.page-wrap {
+  max-width: 1260px;
+  margin: 0 auto;
 }
 
 .auction-title {
   text-align: center;
-  font-size: 52px;
-  font-weight: 800;
+  font-size: 42px;
+  font-weight: 900;
   color: #0f172a;
-  margin-bottom: 40px;
+  margin-bottom: 26px;
+  letter-spacing: -0.03em;
 }
 
-.image-wrapper {
+.auction-card {
+  background: #ffffff;
+  border-radius: 34px;
+  padding: 30px;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.12);
+}
+
+.image-panel {
+  position: relative;
   width: 100%;
-  height: 380px;
-  border-radius: 24px;
+  height: 500px;
   overflow: hidden;
-  background: #f4f7fc;
-
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.image-placeholder {
-  font-size: 30px;
-  color: #9aa7bd;
+  border-radius: 28px;
+  background: #eef2f7;
+  box-shadow: inset 0 0 0 1px rgba(226, 232, 240, 0.85);
 }
 
 .single-image {
@@ -574,120 +423,294 @@ export default {
   height: 100%;
 }
 
-.info-box {
-  background: #f6f8fc;
-  border-radius: 20px;
-  padding: 18px 20px;
-  margin-bottom: 18px;
-}
-
-.small-box {
-  min-height: 110px;
-}
-
-.label {
-  font-size: 15px;
-  color: #718096;
-  margin-bottom: 10px;
-}
-
-.value {
-  font-size: 22px;
-  font-weight: 600;
-  color: #111827;
-}
-
-.title-value {
-  font-size: 34px;
-  font-weight: 700;
-  color: #111827;
-}
-
-.date-row,
-.price-row {
+.image-placeholder {
+  height: 100%;
   display: flex;
   align-items: center;
-  gap: 10px;
-
-  font-size: 20px;
-  font-weight: 600;
-  color: #111827;
-}
-
-.current-price-box {
-  border: 2px solid #3b82f6;
-  background: #f8fbff;
-}
-
-.current-price-label {
-  color: #2563eb;
-  font-weight: 700;
-}
-
-.current-price {
-  color: #2563eb;
+  justify-content: center;
+  color: #94a3b8;
+  font-size: 30px;
   font-weight: 800;
 }
 
-.seller-box {
-  margin-top: 18px;
+.image-badge {
+  position: absolute;
+  left: 22px;
+  top: 22px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(15, 23, 42, 0.86);
+  color: white;
+  padding: 10px 18px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 800;
+  backdrop-filter: blur(8px);
+}
+
+.badge-divider {
+  opacity: 0.65;
+}
+
+.auction-timer {
+  margin-top: 16px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 20px;
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 16px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.auction-timer strong {
+  color: #2563eb;
+  font-weight: 950;
+}
+
+.details-panel {
+  height: 572px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.product-box,
+.description-box,
+.time-box,
+.price-panel {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 22px;
+}
+
+.product-box {
+  padding: 24px 28px;
+}
+
+.product-title {
+  font-size: 34px;
+  font-weight: 900;
+  color: #0f172a;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+}
+
+.description-box {
+  padding: 22px 24px;
+}
+
+.section-label,
+.meta-label,
+.price-label {
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 950;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 6px;
+}
+
+.description-text {
+  color: #111827;
+  font-size: 17px;
+  line-height: 1.35;
+  font-weight: 700;
+}
+
+.time-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 13px;
+}
+
+.time-box {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 22px 18px;
+  min-height: 110px;
+  width: 100%;
+}
+
+.meta-value {
+  color: #0f172a;
+  font-size: 15px;
+  font-weight: 900;
+  line-height: 1.25;
+}
+
+.price-panel {
+  margin-top: auto;
+  padding: 18px;
+  background: linear-gradient(135deg, #eff6ff 0%, #ffffff 100%);
+  border: 2px solid #bfdbfe;
+}
+
+.price-grid {
+  display: grid;
+  grid-template-columns: 0.75fr 1.8fr;
+  gap: 13px;
+  margin-bottom: 16px;
+}
+
+.start-price-card,
+.current-price-card {
+  background: #ffffff;
+  border-radius: 18px;
+  padding: 14px 16px;
+}
+
+.start-price-card {
+  border: 1px solid #e2e8f0;
+}
+
+.current-price-card {
+  border: 2px solid #3b82f6;
+}
+
+.price-label.blue {
+  color: #2563eb;
+}
+
+.start-price {
+  font-size: 20px;
+  color: #0f172a;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.current-price {
+  font-size: clamp(22px, 1.75vw, 29px);
+  color: #2563eb;
+  font-weight: 950;
+  line-height: 1.05;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .bid-btn {
   width: 100%;
-  height: 65px;
+  height: 58px;
   border-radius: 18px;
-  margin-top: 8px;
-
-  background: linear-gradient(
-    90deg,
-    #3b82f6,
-    #2563eb
-  );
-
+  background: linear-gradient(90deg, #3b82f6, #2563eb);
   color: white;
+  font-size: 18px;
+  font-weight: 900;
+  box-shadow: 0 16px 30px rgba(37, 99, 235, 0.25);
+}
 
-  font-size: 22px;
-  font-weight: 700;
+.bid-dialog {
+  width: 440px;
+  border-radius: 26px;
+  padding: 8px;
+}
+
+.dialog-title {
+  font-size: 24px;
+  font-weight: 900;
+  color: #0f172a;
+}
+
+.dialog-subtitle {
+  color: #64748b;
+  font-size: 15px;
+  margin-top: 5px;
+}
+
+.success-dialog {
+  width: 430px;
+  border-radius: 34px;
+  padding: 34px 32px;
+  text-align: center;
+  box-shadow: 0 28px 70px rgba(15, 23, 42, 0.28);
+}
+
+.success-icon {
+  width: 88px;
+  height: 88px;
+  margin: 0 auto 22px auto;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #2563eb, #3b82f6);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 46px;
+  font-weight: 950;
+  box-shadow: 0 16px 34px rgba(37, 99, 235, 0.36);
+}
+
+.success-title {
+  font-size: 25px;
+  font-weight: 900;
+  color: #0f172a;
+  margin-bottom: 10px;
+}
+
+.success-text {
+  font-size: 15px;
+  font-weight: 600;
+  color: #64748b;
+  margin-bottom: 10px;
+}
+
+.success-price {
+  font-size: 36px;
+  font-weight: 950;
+  color: #2563eb;
+  white-space: nowrap;
 }
 
 @media (max-width: 1024px) {
-
-  .auction-title {
-    font-size: 38px;
+  .image-panel,
+  .details-panel {
+    height: auto;
   }
 
-  .title-value {
-    font-size: 28px;
+  .image-panel {
+    height: 420px;
+  }
+
+  .time-row,
+  .price-grid {
+    grid-template-columns: 1fr;
   }
 }
 
 @media (max-width: 768px) {
-
   .auction-page {
     padding: 20px;
   }
 
+  .auction-title {
+    font-size: 32px;
+  }
+
   .auction-card {
     padding: 20px;
+    border-radius: 26px;
   }
 
-  .auction-title {
-    font-size: 30px;
+  .image-panel {
+    height: 300px;
   }
 
-  .image-wrapper {
-    height: 260px;
+  .product-title {
+    font-size: 28px;
   }
 
-  .title-value {
-    font-size: 24px;
+  .success-dialog {
+    width: 92vw;
   }
 
-  .value,
-  .date-row,
-  .price-row {
-    font-size: 18px;
+  .success-price {
+    font-size: 28px;
   }
 }
 </style>
