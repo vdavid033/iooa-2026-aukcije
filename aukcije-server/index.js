@@ -180,10 +180,36 @@ ORDER BY preostalo_vrijeme DESC;
 });
 
 app.get("/api/all-kategorija", (req, res) => {
-  connection.query("SELECT * FROM kategorija", (error, results) => {
-    if (error) throw error;
+
+  const query = `
+    SELECT 
+      k.id_kategorije,
+      k.naziv_kategorije,
+      k.naziv_kategorije_en,
+      k.slika,
+
+      COUNT(p.id_predmeta) AS count
+
+    FROM kategorija k
+
+    LEFT JOIN predmet p 
+      ON k.id_kategorije = p.id_kategorije
+      AND p.vrijeme_zavrsetka > NOW()
+
+    GROUP BY k.id_kategorije
+
+    ORDER BY k.naziv_kategorije ASC
+  `;
+
+  connection.query(query, (error, results) => {
+    if (error) {
+      console.log(error);
+      return res.status(500).send(error);
+    }
+
     res.send(results);
   });
+
 });
 
 /* app.get("/api/get-predmet/:id", (req, res) => {
