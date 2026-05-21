@@ -48,12 +48,6 @@
 
               <div class="image-badge">
                 <span>Aukcija</span>
-                <span class="badge-divider">•</span>
-                <q-icon name="person" size="16px" />
-                <span>
-                  {{ item.korisnik_ime || "Nepoznat" }}
-                  {{ item.korisnik_prezime || "" }}
-                </span>
               </div>
             </div>
 
