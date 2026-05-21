@@ -236,35 +236,45 @@
   </q-page>
 </template>
 
+
 <script>
 import imageCompression from "browser-image-compression";
 import axios from "axios";
+import { useI18n } from "vue-i18n";
 
 export default {
+  setup() {
+    const { t, locale } = useI18n();
+    return { t, locale };
+  },
+
   data() {
     return {
       sifra_predmeta: null,
       naziv_predmeta: "",
       opis_predmeta: "",
       selectedKategorija: null,
-      selectedKorisnik: null,
       pocetna_cijena: "",
       slika: null,
       file: null,
       base64Image: null,
-      base64Text: null,
-      imageUrl: "",
-      showDialog: false,
       vrijemePocetka: null,
       vrijemeZavrsetka: null,
       decoded: null,
       insertedPredmetId_dohvat: null,
 
+      kategorijeRaw: [],
       kategorije: [],
       korisnik: [],
       files: [],
       base64Images: [],
     };
+  },
+
+  watch: {
+    locale() {
+      this.setKategorijeOptions();
+    },
   },
 
   methods: {
@@ -290,11 +300,14 @@ export default {
         this.$q.notify({
           color: "negative",
           position: "top",
-          message: "Dopuštene su samo slike.",
+          message: this.t("createAuction.onlyImages"),
           icon: "warning",
         });
+
         this.files = [];
-        e.target.value = null;
+        this.base64Images = [];
+        this.base64Image = null;
+        this.slika = null;
         return;
       }
 
@@ -323,12 +336,19 @@ export default {
           reader.readAsDataURL(compressedFile);
           const base64String = await promise;
 
+
           this.base64Images.push(base64String);
           this.slika = base64String;
+          this.base64Image = base64String;
         }
       } catch (error) {
         console.error(error);
-        alert("Došlo je do pogreške prilikom kompresije slika.");
+        this.$q.notify({
+          color: "negative",
+          position: "top",
+          message: this.t("createAuction.imageCompressionError"),
+          icon: "warning",
+        });
       }
     },
 
@@ -348,6 +368,7 @@ export default {
     otkazi_gumb() {
       this.$router.push("/Pocetna").then(() => {
         window.location.reload();
+        window.location.reload();
       });
     },
 
@@ -366,17 +387,20 @@ export default {
         this.$q.notify({
           color: "negative",
           position: "top",
-          message: "Niste ispunili sva polja",
+          message: this.t("createAuction.requiredFields"),
           icon: "warning",
         });
         return;
       }
 
       if (!this.files.length) {
+      }
+
+      if (!this.files.length) {
         this.$q.notify({
           color: "negative",
           position: "top",
-          message: "Molimo odaberite barem jednu sliku.",
+          message: this.t("createAuction.selectImage"),
           icon: "warning",
         });
         return;
@@ -397,6 +421,7 @@ export default {
       }
 
       const formData = new FormData();
+
 
       this.base64Images.forEach((base64String, index) => {
         formData.append(`file${index}`, base64String);
@@ -439,6 +464,7 @@ export default {
     },
   },
 
+
   mounted() {
     function parseJwt(token) {
       var base64Url = token.split(".")[1];
@@ -454,11 +480,12 @@ export default {
       return JSON.parse(jsonPayload);
     }
 
+
     const token = localStorage.getItem("token");
+
 
     if (token) {
       const headers = { Authorization: `Bearer ${token}` };
-
       this.decoded = parseJwt(token);
 
       axios

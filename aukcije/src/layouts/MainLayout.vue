@@ -137,8 +137,8 @@
         </q-card-section>
 
         <q-card-actions align="right">
-          <q-btn flat label="Odustani" color="primary" v-close-popup />
-          <q-btn flat label="Odjavi se" color="negative" @click="logoutAndReload" />
+          <q-btn flat :label="t('common.cancel')" color="primary" v-close-popup />
+          <q-btn flat :label="t('menu.logout')" color="negative" @click="logoutAndReload" />
         </q-card-actions>
       </q-card>
     </q-dialog>
@@ -149,11 +149,28 @@
 <script>
 import { defineComponent, ref, computed } from "vue";
 import { jwtDecode } from "jwt-decode";
+import { useI18n } from "vue-i18n";
 
 export default defineComponent({
   name: "MainLayout",
 
   setup() {
+    const { locale, t } = useI18n();
+
+    const lang = ref(localStorage.getItem("lang") || "hr-HR");
+
+    const languageOptions = [
+      { label: "HR", value: "hr-HR" },
+      { label: "ENG", value: "en-US" },
+    ];
+
+    const changeLanguage = (value) => {
+      lang.value = value;
+      locale.value = value;
+      localStorage.setItem("lang", value);
+    };
+
+    const leftDrawerOpen = ref(false);
     const confirmLogoutDialog = ref(false);
     const menuOpen = ref(false);
     const token = ref(localStorage.getItem("token"));
@@ -197,6 +214,10 @@ export default defineComponent({
     };
 
     return {
+      lang,
+      languageOptions,
+      changeLanguage,
+      leftDrawerOpen,
       confirmLogoutDialog,
       menuOpen,
       isAuthenticated,
@@ -205,6 +226,8 @@ export default defineComponent({
       logoutAndReload,
       userIme,
       userPrezime,
+      userIme,
+      t
     };
   },
 });

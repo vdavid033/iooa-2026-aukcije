@@ -288,8 +288,14 @@
 
 <script>
 import axios from "axios";
+import { useI18n } from "vue-i18n";
 
 export default {
+  setup() {
+    const { t } = useI18n();
+    return { t };
+  },
+
   data() {
     return {
       korisnik_trenutno: {
@@ -309,9 +315,24 @@ export default {
       const token = localStorage.getItem("token");
       const userId = this.getUserIdFromToken(token);
       const headers = { Authorization: `Bearer ${token}` };
+      
 
       const userData = await this.fetchUserData(userId);
       this.korisnik_trenutno = userData;
+
+      await this.dohvatPredmeta(userId, headers);
+      await this.dohvatPonude(userId, headers);
+    } catch (error) {
+      console.error("Greška:", error);
+    }
+  },
+
+  watch: {
+    "$i18n.locale"() {
+      try{
+      const token = localStorage.getItem("token");
+      const userId = this.getUserIdFromToken(token);
+      const headers = { Authorization: `Bearer ${token}` };
 
       this.dohvatPredmeta(userId, headers);
       this.dohvatPonude(userId, headers);

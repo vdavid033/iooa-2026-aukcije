@@ -191,6 +191,7 @@
   </q-page>
 </template>
 
+
 <script>
 import { jwtDecode } from "jwt-decode";
 import { ref } from "vue";
@@ -225,52 +226,130 @@ export default {
     },
   },
 
+
   data() {
     return {
+      item: {},
       item: {},
       showDialog: false,
       successDialog: false,
       successPrice: 0,
       odabranaCijena: "",
       prices: [],
-      showSingleImage: false,
     };
   },
 
+  computed: {
+    id_predmeta() {
+      return this.$route.query.id_predmeta;
+    },
+
+    translatedName() {
+      return this.isEnglish()
+        ? this.item.naziv_predmeta_en || this.item.naziv_predmeta
+        : this.item.naziv_predmeta;
+    },
+
+    translatedDescription() {
+      return this.isEnglish()
+        ? this.item.opis_en || this.item.opis_predmeta
+        : this.item.opis_predmeta;
+    },
+  },
+
+
   mounted() {
-    axios.get(baseUrl + "get-predmet/" + this.id_predmeta).then((response) => {
-      this.item = response.data[0];
-      this.item.trenutna_cijena = this.item.pocetna_cijena;
+    this.ucitajPredmet();
+  },
 
-      if (this.item.slike && this.item.slike.length > 0) {
-        if (this.item.slike.length === 1) {
-          this.showSingleImage = true;
-          this.item.slika = this.item.slike[0];
-        } else {
-          this.showSingleImage = false;
-        }
-      }
-
-      axios
-        .get(baseUrl + "get-predmet-trenutna-cijena/" + this.id_predmeta)
-        .then((response2) => {
-          if (response2.data.max_vrijednost_ponude != null) {
-            this.item.trenutna_cijena = response2.data.max_vrijednost_ponude;
-          }
-
-          this.generatePrices();
-        });
-    });
+  watch: {
+    "$i18n.locale"() {
+      this.ucitajPredmet();
+    },
   },
 
   methods: {
+    isEnglish() {
+      return String(this.$i18n.locale || "hr").startsWith("en");
+    },
+
+    async ucitajPredmet() {
+      try {
+        if (!this.id_predmeta) {
+          console.error("Nema id_predmeta u URL-u.");
+          return;
+        }
+
+        const response = await axios.get(
+          baseUrl + "get-predmet/" + this.id_predmeta
+        );
+
+        console.log("ID iz URL-a:", this.id_predmeta);
+        console.log("Response iz baze:", response.data);
+
+        this.item = response.data[0] || {};
+
+        if (!this.item.id_predmeta) {
+          console.error("Backend nije vratio predmet za ovaj ID.");
+          return;
+        }
+
+        this.item.trenutna_cijena =
+          this.item.vrijednost_ponude ||
+          this.item.trenutna_cijena ||
+          this.item.pocetna_cijena;
+
+        if (typeof this.item.slike === "string" && this.item.slike.length > 0) {
+          this.item.slike = this.item.slike.split("|||");
+        }
+
+        if (!Array.isArray(this.item.slike)) {
+          this.item.slike = [];
+        }
+
+        if (this.item.slika && !this.item.slike.includes(this.item.slika)) {
+          this.item.slike.unshift(this.item.slika);
+        }
+
+        this.generirajCijene();
+      } catch (error) {
+        console.error("Greška pri dohvaćanju predmeta:", error);
+      }
+    },
+
+    generirajCijene() {
+      const trenutnaCijena = Number(
+        this.item.trenutna_cijena || this.item.pocetna_cijena || 0
+      );
+
+      this.prices = [10, 20, 30, 40, 50, 100].map((percent) => {
+        const multiplier = percent === 100 ? 2 : 1 + percent / 100;
+        const value = (trenutnaCijena * multiplier).toFixed(2);
+
+        return {
+          label: `+ ${percent}%: ${value} $`,
+          value,
+        };
+      });
+    },
+
     formattedDate(dateString) {
-      if (!dateString) return "Nije definirano";
+      if (!dateString) return "";
+
+      const locale = this.isEnglish() ? "en-US" : "hr-HR";
 
       return new Date(dateString)
-        .toLocaleString("hr-HR")
+        .toLocaleString(locale, {
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+          hour: "numeric",
+          minute: "2-digit",
+          hour12: this.isEnglish(),
+        })
         .replace(",", "");
     },
+
 
     formatPrice(price) {
       if (!price) return "0 $";
@@ -289,17 +368,6 @@ export default {
     },
 
     potvrdiPonudu() {
-      const token = localStorage.getItem("token");
-
-      if (!token || !this.odabranaCijena) {
-        this.$q.notify({
-          type: "warning",
-          message: "Morate biti prijavljeni i odabrati cijenu.",
-          position: "center",
-          timeout: 2500,
-        });
-        return;
-      }
 
       const headers = {
         Authorization: `Bearer ${token}`,

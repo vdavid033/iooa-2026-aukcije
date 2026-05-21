@@ -68,8 +68,14 @@
 
 <script>
 import axios from "axios";
+import { useI18n } from "vue-i18n";
 
 export default {
+  setup() {
+    const { t } = useI18n();
+    return { t };
+  },
+
   data() {
     return {
       email_korisnika: "",
@@ -77,6 +83,7 @@ export default {
       showPassword: false
     };
   },
+
 
   methods: {
     async login() {
@@ -104,6 +111,7 @@ export default {
 
       } catch (error) {
         console.error("Login failed:", error);
+
 
         this.$q.notify({
           color: "negative",

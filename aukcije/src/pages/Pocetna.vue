@@ -139,6 +139,7 @@
 
 <script>
 import axios from "axios";
+import { useI18n } from "vue-i18n";
 
 const baseUrl = "http://localhost:3000/api/";
 
@@ -161,6 +162,7 @@ export default {
       ]
     };
   },
+
 
   mounted() {
     const token = localStorage.getItem("token");
@@ -189,6 +191,57 @@ export default {
   },
 
   methods: {
+    // FIX ZA LOCALE
+    isEnglish() {
+      return String(this.locale?.value || this.locale || "hr").startsWith("en");
+    },
+
+    // FIX ZA EN NAZIV
+    itemName(item) {
+      const enName = String(item.naziv_predmeta_en || "").trim();
+
+      if (this.isEnglish() && enName) {
+        return enName;
+      }
+
+      return item.naziv_predmeta;
+    },
+
+    categoryName(item) {
+      return this.isEnglish()
+        ? item.naziv_kategorije_en || item.naziv_kategorije
+        : item.naziv_kategorije;
+    },
+
+    fetchHomeData() {
+      const token = localStorage.getItem("token");
+      const headers = { Authorization: `Bearer ${token}` };
+
+      axios
+        .get(baseUrl + "all-predmet", { headers })
+        .then((response) => {
+          console.log("DEBUG item:", response.data[0]); // provjera
+          this.items = response.data;
+        })
+        .catch((error) => {
+          console.error("Error fetching all-predmet:", error);
+        });
+
+      axios
+        .get(baseUrl + "all-kategorija", { headers })
+        .then((response) => {
+          this.kategorija = response.data;
+        })
+        .catch((error) => {
+          console.error("Error fetching all-kategorija:", error);
+        });
+    },
+
+    formattedDate(dateString) {
+      const currentLocale = this.isEnglish() ? "en-US" : "hr-HR";
+      return new Date(dateString).toLocaleString(currentLocale).replace(",", "");
+    },
+
     navigateToItem(id) {
       this.$router.push({ path: "prikaz", query: { id_predmeta: id } });
     },
@@ -228,6 +281,7 @@ export default {
     }
   }
 };
+
 </script>
 
 <style scoped>

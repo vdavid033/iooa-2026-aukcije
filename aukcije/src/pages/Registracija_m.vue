@@ -111,6 +111,11 @@
 import axios from "axios";
 
 export default {
+  setup() {
+    const { t } = useI18n();
+    return { t };
+  },
+
   data() {
     return {
       ime_korisnika: '',
@@ -124,6 +129,7 @@ export default {
     }
   },
 
+
   methods: {
 
     async registracija() {
@@ -133,7 +139,7 @@ export default {
         email: this.email_korisnika,
         lozinka: this.lozinka_korisnika,
         adresa: this.adresa_korisnika,
-      }
+      };
 
       try {
         const response = await axios.post(
