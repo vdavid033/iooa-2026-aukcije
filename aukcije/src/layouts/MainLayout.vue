@@ -226,8 +226,7 @@ export default defineComponent({
       logoutAndReload,
       userIme,
       userPrezime,
-      userIme,
-      t
+      t,
     };
   },
 });

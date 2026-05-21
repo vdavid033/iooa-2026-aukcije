@@ -201,35 +201,42 @@ const baseUrl = "http://localhost:3000/api/";
 
 export default {
   computed: {
-    id_predmeta() {
-      return this.$route.query.id_predmeta;
-    },
-
-    vrijemeDoKraja() {
-      if (!this.item.vrijeme_zavrsetka) return "Nije dostupno";
-
-      const end = new Date(this.item.vrijeme_zavrsetka);
-      const now = new Date();
-      const diff = end - now;
-
-      if (diff <= 0) return "Aukcija završena";
-
-      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-      const hours = Math.floor(
-        (diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)
-      );
-      const minutes = Math.floor(
-        (diff % (1000 * 60 * 60)) / (1000 * 60)
-      );
-
-      return `${days}d ${hours}h ${minutes}m`;
-    },
+  id_predmeta() {
+    return this.$route.query.id_predmeta;
   },
+
+  vrijemeDoKraja() {
+    if (!this.item.vrijeme_zavrsetka) return "Nije dostupno";
+
+    const end = new Date(this.item.vrijeme_zavrsetka);
+    const now = new Date();
+    const diff = end - now;
+
+    if (diff <= 0) return "Aukcija završena";
+
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+
+    return `${days}d ${hours}h ${minutes}m`;
+  },
+
+  translatedName() {
+    return this.isEnglish()
+      ? this.item.naziv_predmeta_en || this.item.naziv_predmeta
+      : this.item.naziv_predmeta;
+  },
+
+  translatedDescription() {
+    return this.isEnglish()
+      ? this.item.opis_en || this.item.opis_predmeta
+      : this.item.opis_predmeta;
+  }
+},
 
 
   data() {
     return {
-      item: {},
       item: {},
       showDialog: false,
       successDialog: false,
@@ -239,23 +246,6 @@ export default {
     };
   },
 
-  computed: {
-    id_predmeta() {
-      return this.$route.query.id_predmeta;
-    },
-
-    translatedName() {
-      return this.isEnglish()
-        ? this.item.naziv_predmeta_en || this.item.naziv_predmeta
-        : this.item.naziv_predmeta;
-    },
-
-    translatedDescription() {
-      return this.isEnglish()
-        ? this.item.opis_en || this.item.opis_predmeta
-        : this.item.opis_predmeta;
-    },
-  },
 
 
   mounted() {
@@ -367,67 +357,97 @@ export default {
       }));
     },
 
-    potvrdiPonudu() {
+    async potvrdiPonudu() {
+      try {
+        // 1. token (OBAVEZNO)
+        const token = localStorage.getItem("token");
 
-      const headers = {
-        Authorization: `Bearer ${token}`,
-      };
-
-      const decodedToken = jwtDecode(token);
-      const selectedPrice = parseFloat(this.odabranaCijena.value);
-
-      if (selectedPrice <= this.item.trenutna_cijena) {
-        this.$q.notify({
-          type: "negative",
-          message: "Nova ponuda mora biti veća od trenutne cijene.",
-          position: "center",
-          timeout: 2500,
-        });
-        return;
-      }
-
-      const currentDate = new Date();
-
-      const formattedTime =
-        `${currentDate.getFullYear()}-${currentDate.getMonth() + 1}-${currentDate.getDate()} ` +
-        `${currentDate.getHours()}:${currentDate.getMinutes()}:${currentDate.getSeconds()}`;
-
-      const podaciPonude = {
-        id_predmeta: this.id_predmeta,
-        vrijednost_ponude: selectedPrice,
-        vrijeme_ponude: formattedTime,
-        id_korisnika: decodedToken.id,
-      };
-
-      axios
-        .post(
-          "http://localhost:3000/unostrenutnaponuda",
-          podaciPonude,
-          { headers }
-        )
-        .then(() => {
-          this.item.trenutna_cijena = selectedPrice;
-          this.successPrice = selectedPrice;
-          this.generatePrices();
-          this.odabranaCijena = "";
-          this.showDialog = false;
-          this.successDialog = true;
-
-          setTimeout(() => {
-            this.successDialog = false;
-          }, 2800);
-        })
-        .catch((error) => {
-          console.error("Error storing new price:", error);
-
+        if (!token) {
           this.$q.notify({
             type: "negative",
-            message: "Greška kod postavljanja ponude.",
+            message: "Nema prijavljenog korisnika (token nedostaje).",
+            position: "center",
+          });
+          return;
+        }
+
+        const decodedToken = jwtDecode(token);
+
+        // 2. provjera odabrane cijene
+        if (!this.odabranaCijena) {
+          this.$q.notify({
+            type: "warning",
+            message: "Odaberi cijenu ponude.",
+            position: "center",
+          });
+          return;
+        }
+
+        // ako je object iz q-select: { label, value }
+        const selectedPrice = parseFloat(
+          typeof this.odabranaCijena === "object"
+            ? this.odabranaCijena.value
+            : this.odabranaCijena
+        );
+
+        // 3. validacija cijene
+        if (selectedPrice <= Number(this.item.trenutna_cijena)) {
+          this.$q.notify({
+            type: "negative",
+            message: "Nova ponuda mora biti veća od trenutne cijene.",
             position: "center",
             timeout: 2500,
           });
+          return;
+        }
+
+        // 4. headers
+        const headers = {
+          Authorization: `Bearer ${token}`,
+        };
+
+        // 5. format vremena (ISO je najstabilniji)
+        const vrijemePonude = new Date().toISOString();
+
+        // 6. payload
+        const podaciPonude = {
+          id_predmeta: this.id_predmeta,
+          vrijednost_ponude: selectedPrice,
+          vrijeme_ponude: vrijemePonude,
+          id_korisnika: decodedToken.id,
+        };
+
+        // 7. API call
+        await axios.post(
+          "http://localhost:3000/unostrenutnaponuda",
+          podaciPonude,
+          { headers }
+        );
+
+        // 8. UI update
+        this.item.trenutna_cijena = selectedPrice;
+        this.successPrice = selectedPrice;
+
+        this.odabranaCijena = null;
+        this.showDialog = false;
+        this.successDialog = true;
+
+        this.generirajCijene(); // koristi JEDNU funkciju
+
+        setTimeout(() => {
+          this.successDialog = false;
+        }, 2800);
+
+      } catch (error) {
+        console.error("Error storing new price:", error);
+
+        this.$q.notify({
+          type: "negative",
+          message: "Greška kod postavljanja ponude.",
+          position: "center",
         });
-    },
+      }
+    }
   },
 
   setup() {

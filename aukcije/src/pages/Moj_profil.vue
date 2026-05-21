@@ -329,17 +329,18 @@ export default {
 
   watch: {
     "$i18n.locale"() {
-      try{
-      const token = localStorage.getItem("token");
-      const userId = this.getUserIdFromToken(token);
-      const headers = { Authorization: `Bearer ${token}` };
+      try {
+        const token = localStorage.getItem("token");
+        const userId = this.getUserIdFromToken(token);
+        const headers = { Authorization: `Bearer ${token}` };
 
-      this.dohvatPredmeta(userId, headers);
-      this.dohvatPonude(userId, headers);
-      this.dohvatOsvojeniPredmeti(userId, headers);
+        this.dohvatPredmeta(userId, headers);
+        this.dohvatPonude(userId, headers);
+        this.dohvatOsvojeniPredmeti(userId, headers);
 
-    } catch (error) {
-      console.error(error);
+      } catch (error) {
+        console.error(error);
+      }
     }
   },
 
