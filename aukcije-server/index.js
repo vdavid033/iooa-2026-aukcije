@@ -615,3 +615,52 @@ app.post("/api/dodavanjeSlika", upload.none(), authJwt.verifyTokenUser, function
   });
   return response.send({ error: false, message: "Slike su uspješno dodane." });
 });
+
+// --- Automatsko zatvaranje aukcija i upis pobjednika ---
+
+const obradeneAukcije = new Set();
+
+// Predpuni Set iz baze kako server restart ne bi duplirao unose
+connection.query("SELECT id_predmeta FROM osvojeni_predmeti", (err, rows) => {
+  if (!err) rows.forEach((r) => obradeneAukcije.add(r.id_predmeta));
+});
+
+function obradiZavrsenuAukciju(aukcija) {
+  connection.query(
+    "SELECT id_korisnika FROM ponuda WHERE id_predmeta = ? ORDER BY vrijednost_ponude DESC LIMIT 1",
+    [aukcija.id_predmeta],
+    (err, ponude) => {
+      if (err) {
+        console.error("Greška pri dohvatu ponuda za aukciju", aukcija.id_predmeta, err);
+        return;
+      }
+      if (!ponude.length) {
+        console.log("Aukcija", aukcija.id_predmeta, "završila bez ponuda.");
+        return;
+      }
+      const pobjednik = ponude[0];
+      connection.query(
+        "INSERT IGNORE INTO osvojeni_predmeti (id_predmeta, id_korisnika, naziv_predmeta) VALUES (?, ?, ?)",
+        [aukcija.id_predmeta, pobjednik.id_korisnika, aukcija.naziv_predmeta],
+        (errI) => {
+          if (errI) console.error("Greška pri upisu pobjednika za aukciju", aukcija.id_predmeta, errI);
+        }
+      );
+    }
+  );
+}
+
+setInterval(() => {
+  connection.query(
+    "SELECT id_predmeta, naziv_predmeta FROM predmet WHERE vrijeme_zavrsetka <= NOW()",
+    (err, aukcije) => {
+      if (err || !aukcije.length) return;
+      aukcije
+        .filter((a) => !obradeneAukcije.has(a.id_predmeta))
+        .forEach((a) => {
+          obradeneAukcije.add(a.id_predmeta);
+          obradiZavrsenuAukciju(a);
+        });
+    }
+  );
+}, 60 * 1000);
