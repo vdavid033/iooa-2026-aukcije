@@ -1703,6 +1703,13 @@ function obradiZavrsenuAukciju(aukcija) {
 
       const pobjednik = pobjednici[0];
 
+      // FZ-2.4: Kreiraj transakciju
+      connection.query(
+        "INSERT INTO transakcija (id_korisnika, id_predmeta, iznos_transakcije, vrijeme_transakcije) VALUES (?, ?, ?, NOW())",
+        [pobjednik.id_korisnika, aukcija.id_predmeta, pobjednik.vrijednost_ponude],
+        (errT) => { if (errT) console.error("Greška pri kreiranju transakcije:", errT); }
+      );
+
       // Pobjedniku: čestitke
       notifikacije.push([
         pobjednik.id_korisnika,
