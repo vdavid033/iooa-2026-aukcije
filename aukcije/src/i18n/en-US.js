@@ -1,6 +1,7 @@
 export default {
   common: {
     hello: 'Hello',
+    appName: 'Auction Platform',
     close: 'Close',
     cancel: 'Cancel',
     back: 'Back',
@@ -35,6 +36,7 @@ export default {
 
   loginPage: {
     title: 'Login',
+    subtitle: 'Sign in to your account',
     email: 'Your email',
     password: 'Password',
     submit: 'Login',
@@ -44,6 +46,7 @@ export default {
 
   registerPage: {
     title: 'Registration',
+    subtitle: 'Create your account',
     firstName: 'Your first name',
     lastName: 'Your last name',
     email: 'Your email',
@@ -74,10 +77,44 @@ export default {
     sortPriceDesc: 'Price: high to low',
     sortNameAsc: 'Name: A to Z',
     sortNameDesc: 'Name: Z to A',
-    sortExpiration: 'Expiration time'
+    sortExpiration: 'Expiration time',
+    subtitle: 'Newest and most popular auctions',
+    viewAll: 'View all',
+    showMore: 'Show more',
+    auctions: 'auctions',
+    bids: 'bids',
+    active: 'Active',
+    viewAuction: 'View auction'
+  },
+
+  allAuctionsPage: {
+    title: 'All auctions',
+    subtitle: 'Overview of active and finished auctions',
+    searchPlaceholder: 'Search auctions',
+    statusLabel: 'Auction status',
+    sortBy: 'Sort by',
+    statusAll: 'All auctions',
+    statusActive: 'Active auctions',
+    statusFinished: 'Finished auctions',
+    sortNewest: 'Newest',
+    sortPriceAsc: 'Price: low to high',
+    sortPriceDesc: 'Price: high to low',
+    sortNameAsc: 'Name: A to Z',
+    sortNameDesc: 'Name: Z to A',
+    sortEndingSoon: 'Ending soon',
+    finished: 'Finished',
+    active: 'Active',
+    startingPrice: 'Starting price',
+    currentPrice: 'Current price',
+    endsAt: 'Ends',
+    bids: 'bids',
+    viewAuction: 'View auction',
+    noAuctions: 'No auctions to display.',
+    notDefined: 'Not defined'
   },
 
   createAuction: {
+
     title: 'Create auction',
     productName: 'Product name',
     enterName: 'Enter name',
@@ -91,6 +128,8 @@ export default {
     description: 'Product description',
     enterDescription: 'Enter description',
     uploadImage: 'Upload image',
+    clickToSelect: 'Click to select images',
+    fileHint: 'PNG, JPG up to 10MB',
     chooseFiles: 'Choose files',
     noFileSelected: 'No file selected',
     submit: 'Submit',
@@ -129,7 +168,18 @@ export default {
     noAuctionItems: 'You do not have any items that are or were on auction!',
     noBids: 'You do not have any bids!',
     confirmDelete: 'Are you sure you want to delete the item?',
-    deleteSuccess: 'Data deleted successfully!'
+    deleteSuccess: 'Data deleted successfully!',
+    subtitle: 'Your profile overview',
+    firstName: 'First name',
+    lastName: 'Last name',
+    email: 'Email',
+    address: 'Address',
+    active: 'Active',
+    finished: 'Finished',
+    view: 'View',
+    yourWonItems: 'Your won items',
+    noWonItems: 'You have not won any items yet!',
+    finalPrice: 'Final price'
   },
 
   updateProfilePage: {
@@ -163,7 +213,23 @@ export default {
     bid: "Place bid",
     makeBid: "Make a bid",
     selectPrice: "Select price",
-    confirmBid: "Confirm bid"
+    confirmBid: "Confirm bid",
+    noImage: 'No image',
+    auctionBadge: 'Auction',
+    timeLeft: 'Time left until auction ends:',
+    nameUnavailable: 'Name not available',
+    descUnavailable: 'Description not available.',
+    placeBid: 'Place bid',
+    newBidTitle: 'Place a new bid',
+    bidHint: 'Choose an amount higher than the current price.',
+    bidSuccess: 'Bid placed successfully',
+    newCurrentPrice: 'New current price:',
+    notAvailable: 'Not available',
+    auctionEnded: 'Auction ended',
+    notDefined: 'Not defined',
+    mustLogin: 'You must be logged in and select a price.',
+    bidTooLow: 'New bid must be higher than the current price.',
+    bidError: 'Error while placing the bid.'
   },
 
   categoryPage: {
@@ -179,7 +245,13 @@ export default {
     sortPriceDesc: 'Price: high to low',
     sortNameAsc: 'Name: A to Z',
     sortNameDesc: 'Name: Z to A',
-    sortExpiration: 'Expiration time'
+    sortExpiration: 'Expiration time',
+    title: 'Auctions in category',
+    subtitle: 'Overview of active auctions in the selected category',
+    noItems: 'No active auctions in this category.',
+    endsLabel: 'Ends',
+    active: 'Active',
+    viewAuction: 'View auction'
   },
 
   adminPage: {
@@ -197,7 +269,35 @@ export default {
     backHome: 'Back to home'
   },
 
+  usersPage: {
+    title: 'Users',
+    name: 'First name',
+    surname: 'Last name',
+    email: 'E-mail',
+    address: 'Address',
+    actions: 'Actions',
+    edit: 'Edit',
+    delete: 'Delete',
+    rowsPerPage: 'Rows per page:',
+    confirmDelete: 'Are you sure you want to delete the user?'
+  },
+
+  converterPage: {
+    imageLink: 'Enter image link',
+    convert: 'Convert to Base64',
+    copy: 'Copy to clipboard',
+    selectImageOrUrl: 'Please select an image or enter an image URL.',
+    urlError: 'An error occurred while fetching the image from the URL.',
+    copySuccess: 'Text successfully copied to clipboard!',
+    copyError: 'Copy failed.'
+  },
+
+  racuniPage: {
+    title: 'Invoices'
+  },
+
   editCategoryPage: {
+
     title: 'Update category',
     name: 'Name',
     currentName: 'Current name',

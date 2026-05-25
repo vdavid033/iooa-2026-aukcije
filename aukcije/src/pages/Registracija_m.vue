@@ -12,25 +12,25 @@
         </div>
 
         <div class="text-center q-mb-lg">
-          <div class="text-h5 text-weight-bold">Registracija</div>
-          <div class="text-grey">Kreirajte svoj račun</div>
+          <div class="text-h5 text-weight-bold">{{ $t('registerPage.title') }}</div>
+          <div class="text-grey">{{ $t('registerPage.subtitle') }}</div>
         </div>
 
         <q-form class="q-gutter-md" @submit="provjera">
 
-          <q-input filled v-model="ime_korisnika" label="Vaše ime">
+          <q-input filled v-model="ime_korisnika" :label="$t('registerPage.firstName')">
             <template v-slot:prepend>
               <q-icon name="person" />
             </template>
           </q-input>
 
-          <q-input filled v-model="prezime_korisnika" label="Vaše prezime">
+          <q-input filled v-model="prezime_korisnika" :label="$t('registerPage.lastName')">
             <template v-slot:prepend>
               <q-icon name="person" />
             </template>
           </q-input>
 
-          <q-input filled v-model="email_korisnika" type="email" label="Vaš email">
+          <q-input filled v-model="email_korisnika" type="email" :label="$t('registerPage.email')">
             <template v-slot:prepend>
               <q-icon name="email" />
             </template>
@@ -40,7 +40,7 @@
             filled
             :type="showPassword ? 'text' : 'password'"
             v-model="lozinka_korisnika"
-            label="Lozinka"
+            :label="$t('registerPage.password')"
           >
             <template v-slot:prepend>
               <q-icon name="lock" />
@@ -59,7 +59,7 @@
             filled
             :type="showConfirmPassword ? 'text' : 'password'"
             v-model="provjera_lozinke"
-            label="Ponovi lozinku"
+            :label="$t('registerPage.repeatPassword')"
           >
             <template v-slot:prepend>
               <q-icon name="lock" />
@@ -74,7 +74,7 @@
             </template>
           </q-input>
 
-          <q-input filled v-model="adresa_korisnika" label="Adresa">
+          <q-input filled v-model="adresa_korisnika" :label="$t('registerPage.address')">
             <template v-slot:prepend>
               <q-icon name="place" />
             </template>
@@ -84,7 +84,7 @@
             class="full-width q-mt-md"
             size="lg"
             type="submit"
-            label="REGISTRACIJA"
+            :label="$t('registerPage.submit')"
             color="primary"
             unelevated
           />
@@ -93,12 +93,12 @@
 
         <div class="text-center q-mt-md">
           <router-link to="prijava" class="text-primary">
-            Prijavi se
+            {{ $t('registerPage.goToLogin') }}
           </router-link>
         </div>
 
         <div class="text-center">
-          <span class="text-grey">Nastavi kao gost</span>
+          <span class="text-grey">{{ $t('registerPage.continueAsGuest') }}</span>
         </div>
 
       </q-card>
@@ -146,7 +146,7 @@ export default {
         this.$q.notify({
           color: 'positive',
           position: 'top',
-          message: 'Registracija uspješna!'
+          message: this.$t('registerPage.success')
         })
 
       } catch (error) {
@@ -155,14 +155,14 @@ export default {
           this.$q.notify({
             color: 'negative',
             position: 'top',
-            message: 'E-mail već u upotrebi!',
+            message: this.$t('registerPage.emailInUse'),
             icon: 'warning'
           });
         } else {
           this.$q.notify({
             color: 'negative',
             position: 'top',
-            message: 'Greška pri registraciji!',
+            message: this.$t('registerPage.registrationError'),
             icon: 'warning'
           });
         }
@@ -176,7 +176,7 @@ export default {
         this.$q.notify({
           color: 'negative',
           position: 'top',
-          message: 'Lozinke se ne podudaraju!',
+          message: this.$t('registerPage.passwordsMismatch'),
           icon: 'warning'
         })
       } else {
@@ -196,7 +196,7 @@ export default {
         this.$q.notify({
           color: 'negative',
           position: 'top',
-          message: 'Niste popunili sva polja!',
+          message: this.$t('registerPage.requiredFields'),
           icon: 'warning'
         })
       } else {

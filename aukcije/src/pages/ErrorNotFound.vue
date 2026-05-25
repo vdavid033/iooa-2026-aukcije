@@ -6,7 +6,7 @@
       <div style="font-size: 30vh">404</div>
 
       <div class="text-h2" style="opacity: 0.4">
-        Oops. Tražena stranica ne postoji...
+        {{ $t('errorPage.message') }}
       </div>
 
       <q-btn
@@ -15,7 +15,7 @@
         text-color="blue"
         unelevated
         to="/"
-        label="Povratak na početnu"
+        :label="$t('errorPage.backHome')"
         no-caps
       />
     </div>

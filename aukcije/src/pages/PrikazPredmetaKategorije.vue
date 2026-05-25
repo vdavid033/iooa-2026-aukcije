@@ -5,10 +5,10 @@
       <div class="row items-center justify-between q-mb-md">
         <div>
           <div class="text-h5 text-weight-bold">
-            Aukcije u kategoriji
+            {{ $t('categoryPage.title') }}
           </div>
           <div class="text-grey">
-            Pregled aktivnih aukcija odabrane kategorije
+            {{ $t('categoryPage.subtitle') }}
           </div>
         </div>
       </div>
@@ -18,7 +18,7 @@
           <q-input
             filled
             v-model="Pretrazivanje"
-            placeholder="Pretraži aukcije..."
+            :placeholder="$t('categoryPage.searchAuctions')"
             dense
           >
             <template v-slot:prepend>
@@ -33,7 +33,7 @@
             dense
             v-model="selectedsortianje"
             :options="sortiranje"
-            label="Sortiraj po"
+            :label="$t('categoryPage.sortBy')"
             emit-value
             map-options
             @update:model-value="sortiranjeOpcija"
@@ -42,7 +42,7 @@
       </div>
 
       <div v-if="filteredItems.length === 0" class="text-center q-mt-xl text-grey">
-        Nema aktivnih aukcija u ovoj kategoriji.
+        {{ $t('categoryPage.noItems') }}
       </div>
 
       <div class="row q-col-gutter-md">
@@ -60,33 +60,33 @@
 
             <q-card-section>
               <div class="text-subtitle1 text-weight-bold">
-                {{ item.naziv_predmeta }}
+                {{ $pick(item.naziv_predmeta, item.naziv_predmeta_en) }}
               </div>
 
               <div class="q-mt-sm">
                 <div class="row justify-between text-caption">
-                  <span>Početna:</span>
+                  <span>{{ $t('categoryPage.startingPrice') }}:</span>
                   <span>{{ item.pocetna_cijena }}€</span>
                 </div>
 
                 <div class="row justify-between text-weight-bold text-primary">
-                  <span>Trenutna:</span>
+                  <span>{{ $t('categoryPage.currentPrice') }}:</span>
                   <span>{{ item.trenutna_cijena }}€</span>
                 </div>
               </div>
 
               <div class="row justify-between items-center q-mt-sm">
                 <div class="text-caption">
-                  Završava: {{ formattedDate(item.vrijeme_zavrsetka) }}
+                  {{ $t('categoryPage.endsLabel') }}: {{ formattedDate(item.vrijeme_zavrsetka) }}
                 </div>
 
-                <q-badge color="green">Aktivna</q-badge>
+                <q-badge color="green">{{ $t('categoryPage.active') }}</q-badge>
               </div>
 
               <q-btn
                 flat
                 class="full-width q-mt-md"
-                label="Pogledaj aukciju"
+                :label="$t('categoryPage.viewAuction')"
                 color="primary"
                 @click.stop="navigateToItem(item.id_predmeta)"
               />
@@ -111,18 +111,20 @@ export default {
       items: [],
       selectedsortianje: "",
       defaultImg: "https://via.placeholder.com/400",
-
-      sortiranje: [
-        { label: "Cijena: Niska - Visoka", value: "price-asc" },
-        { label: "Cijena: Visoka - Niska", value: "price-desc" },
-        { label: "Naziv A-Z", value: "name-asc" },
-        { label: "Naziv Z-A", value: "name-desc" },
-        { label: "Završava uskoro", value: "expiration" }
-      ]
     };
   },
 
   computed: {
+    sortiranje() {
+      return [
+        { label: this.$t('categoryPage.sortPriceAsc'), value: "price-asc" },
+        { label: this.$t('categoryPage.sortPriceDesc'), value: "price-desc" },
+        { label: this.$t('categoryPage.sortNameAsc'), value: "name-asc" },
+        { label: this.$t('categoryPage.sortNameDesc'), value: "name-desc" },
+        { label: this.$t('categoryPage.sortExpiration'), value: "expiration" }
+      ];
+    },
+
     id_kategorije() {
       return this.$route.query.id_kategorije;
     },

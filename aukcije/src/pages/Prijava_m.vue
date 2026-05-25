@@ -12,13 +12,13 @@
         </div>
 
         <div class="text-center q-mb-lg">
-          <div class="text-h5 text-weight-bold">Prijava</div>
-          <div class="text-grey">Pristupite svom računu</div>
+          <div class="text-h5 text-weight-bold">{{ $t('loginPage.title') }}</div>
+          <div class="text-grey">{{ $t('loginPage.subtitle') }}</div>
         </div>
 
         <q-form class="q-gutter-md" @submit.prevent="login">
 
-          <q-input filled v-model="email_korisnika" type="email" label="Vaš email">
+          <q-input filled v-model="email_korisnika" type="email" :label="$t('loginPage.email')">
             <template v-slot:prepend>
               <q-icon name="email" />
             </template>
@@ -28,7 +28,7 @@
             filled
             :type="showPassword ? 'text' : 'password'"
             v-model="lozinka_korisnika"
-            label="Lozinka"
+            :label="$t('loginPage.password')"
           >
             <template v-slot:prepend>
               <q-icon name="lock" />
@@ -47,7 +47,7 @@
             class="full-width q-mt-md"
             size="lg"
             type="submit"
-            label="PRIJAVA"
+            :label="$t('loginPage.submit')"
             color="primary"
             unelevated
           />
@@ -56,7 +56,7 @@
 
         <div class="text-center q-mt-md">
           <router-link to="registracija" class="text-primary">
-            Registrirajte se
+            {{ $t('loginPage.register') }}
           </router-link>
         </div>
 
@@ -108,7 +108,7 @@ export default {
         this.$q.notify({
           color: "negative",
           position: "top",
-          message: "Prijava nije uspjela. Provjerite podatke.",
+          message: this.$t('loginPage.failed'),
           icon: "warning",
         });
       }

@@ -93,6 +93,8 @@ app.get("/api/all-predmet", (req, res) => {
         p.id_predmeta,
         p.opis_predmeta,
         p.naziv_predmeta,
+        p.naziv_predmeta_en,
+        p.opis_en,
         p.pocetna_cijena,
         p.vrijeme_pocetka,
         p.vrijeme_zavrsetka,
@@ -125,7 +127,7 @@ app.get("/api/get-predmet/:id", (req, res) => {
   const { id } = req.params;
 
   connection.query(
-    `SELECT p.naziv_predmeta, p.id_predmeta, p.pocetna_cijena, p.vrijeme_pocetka, p.vrijeme_zavrsetka, TIME_FORMAT( SEC_TO_TIME(TIMESTAMPDIFF(SECOND, p.vrijeme_pocetka, p.vrijeme_zavrsetka)), '%H:%i:%s' ) AS preostalo_vrijeme, p.opis_predmeta, COALESCE(MAX(po.vrijednost_ponude), p.pocetna_cijena) AS vrijednost_ponude, GROUP_CONCAT(DISTINCT s.slika SEPARATOR '|||') AS slike
+    `SELECT p.naziv_predmeta, p.id_predmeta, p.pocetna_cijena, p.vrijeme_pocetka, p.vrijeme_zavrsetka, TIME_FORMAT( SEC_TO_TIME(TIMESTAMPDIFF(SECOND, p.vrijeme_pocetka, p.vrijeme_zavrsetka)), '%H:%i:%s' ) AS preostalo_vrijeme, p.opis_predmeta, p.naziv_predmeta_en, p.opis_en, COALESCE(MAX(po.vrijednost_ponude), p.pocetna_cijena) AS vrijednost_ponude, GROUP_CONCAT(DISTINCT s.slika SEPARATOR '|||') AS slike
     FROM predmet p 
     LEFT JOIN ponuda po ON p.id_predmeta = po.id_predmeta 
     LEFT JOIN slika s ON p.id_predmeta = s.id_predmeta 
@@ -151,6 +153,8 @@ app.get("/api/get-kategorija-predmet/:id", (req, res) => {
     p.id_predmeta,
     p.opis_predmeta,
     p.naziv_predmeta,
+    p.naziv_predmeta_en,
+    p.opis_en,
     p.pocetna_cijena,
     p.vrijeme_pocetka,
     p.vrijeme_zavrsetka,
@@ -495,6 +499,8 @@ app.get("/api/vlastiti-predmeti/:id", authJwt.verifyTokenUser, (req, res) => {
     p.id_predmeta,
     p.opis_predmeta,
     p.naziv_predmeta,
+    p.naziv_predmeta_en,
+    p.opis_en,
     p.pocetna_cijena,
     p.vrijeme_pocetka,
     p.vrijeme_zavrsetka,
@@ -526,7 +532,9 @@ app.get("/api/osvojeni-predmeti/:id", authJwt.verifyTokenUser, (req, res) => {
     `SELECT
     op.id_predmeta,
     op.naziv_predmeta,
+    p.naziv_predmeta_en,
     p.opis_predmeta,
+    p.opis_en,
     (SELECT slika FROM slika WHERE id_predmeta = p.id_predmeta LIMIT 1) AS slika,
     COALESCE(MAX(po.vrijednost_ponude), p.pocetna_cijena) AS konacna_cijena
 FROM osvojeni_predmeti op

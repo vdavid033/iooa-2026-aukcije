@@ -5,7 +5,7 @@
 
       <div class="text-center q-mb-lg">
         <div class="title-text">
-          Postavi aukciju
+          {{ $t('createAuction.title') }}
         </div>
       </div>
 
@@ -16,13 +16,13 @@
           <div class="form-content">
 
             <div>
-              <div class="label-text q-mb-sm">Naziv proizvoda</div>
+              <div class="label-text q-mb-sm">{{ $t('createAuction.productName') }}</div>
 
               <q-input
                 outlined
                 bg-color="white"
                 v-model="naziv_predmeta"
-                placeholder="npr. BMW 320d 2020"
+                :placeholder="$t('createAuction.enterName')"
                 class="custom-input"
               />
             </div>
@@ -30,7 +30,7 @@
             <div class="row q-col-gutter-lg">
 
               <div class="col-12 col-md-6">
-                <div class="label-text q-mb-sm">Kategorija</div>
+                <div class="label-text q-mb-sm">{{ $t('createAuction.category') }}</div>
 
                 <q-select
                   outlined
@@ -41,13 +41,13 @@
                   option-value="value"
                   emit-value
                   map-options
-                  label="Odaberi kategoriju"
+                  :label="$t('createAuction.selectCategory')"
                   class="custom-input"
                 />
               </div>
 
               <div class="col-12 col-md-6">
-                <div class="label-text q-mb-sm">Početna cijena (€)</div>
+                <div class="label-text q-mb-sm">{{ $t('createAuction.startPrice') }} (€)</div>
 
                 <q-input
                   outlined
@@ -65,7 +65,7 @@
 
               <div class="col-12 col-md-6">
                 <div class="label-text q-mb-sm">
-                  Datum i vrijeme početka aukcije
+                  {{ $t('createAuction.startDate') }}
                 </div>
 
                 <q-input
@@ -89,7 +89,7 @@
 
               <div class="col-12 col-md-6">
                 <div class="label-text q-mb-sm">
-                  Datum i vrijeme završetka aukcije
+                  {{ $t('createAuction.endDate') }}
                 </div>
 
                 <q-input
@@ -114,7 +114,7 @@
             </div>
 
             <div>
-              <div class="label-text q-mb-sm">Opis proizvoda</div>
+              <div class="label-text q-mb-sm">{{ $t('createAuction.description') }}</div>
 
               <q-input
                 outlined
@@ -122,13 +122,13 @@
                 type="textarea"
                 rows="5"
                 v-model="opis_predmeta"
-                placeholder="Detaljno opišite proizvod..."
+                :placeholder="$t('createAuction.enterDescription')"
                 class="custom-input"
               />
             </div>
 
             <div>
-              <div class="label-text q-mb-md">Unesite slike</div>
+              <div class="label-text q-mb-md">{{ $t('createAuction.uploadImage') }}</div>
 
               <div class="upload-box">
 
@@ -163,11 +163,11 @@
                   <q-icon name="upload" size="38px" class="upload-icon" />
 
                   <div class="upload-title">
-                    Kliknite za odabir slika
+                    {{ $t('createAuction.clickToSelect') }}
                   </div>
 
                   <div class="upload-subtitle">
-                    PNG, JPG do 10MB
+                    {{ $t('createAuction.fileHint') }}
                   </div>
 
                   <input
@@ -189,7 +189,7 @@
 
             <div class="col">
               <q-btn
-                label="Postavi"
+                :label="$t('createAuction.submit')"
                 type="submit"
                 class="full-width submit-btn"
                 unelevated
@@ -198,7 +198,7 @@
 
             <div class="col">
               <q-btn
-                label="Otkaži"
+                :label="$t('createAuction.cancel')"
                 class="full-width cancel-btn"
                 unelevated
                 @click="otkazi_gumb"
@@ -213,7 +213,7 @@
           <q-card style="min-width: 300px">
 
             <q-card-section class="text-center text-subtitle1">
-              Predmet uspješno dodan!
+              {{ $t('createAuction.success') }}
             </q-card-section>
 
             <q-card-actions align="center">
@@ -239,6 +239,7 @@
 <script>
 import imageCompression from "browser-image-compression";
 import axios from "axios";
+import { pickLang } from "../boot/i18n";
 
 export default {
   data() {
@@ -274,7 +275,7 @@ export default {
         this.$q.notify({
           color: "negative",
           position: "top",
-          message: "Niste prijavljeni, pristup odbijen",
+          message: this.$t('createAuction.notLoggedIn'),
           icon: "warning",
         });
         this.$router.push("pocetna");
@@ -290,7 +291,7 @@ export default {
         this.$q.notify({
           color: "negative",
           position: "top",
-          message: "Dopuštene su samo slike.",
+          message: this.$t('createAuction.onlyImages'),
           icon: "warning",
         });
         this.files = [];
@@ -328,7 +329,7 @@ export default {
         }
       } catch (error) {
         console.error(error);
-        alert("Došlo je do pogreške prilikom kompresije slika.");
+        alert(this.$t('createAuction.imageCompressionError'));
       }
     },
 
@@ -366,7 +367,7 @@ export default {
         this.$q.notify({
           color: "negative",
           position: "top",
-          message: "Niste ispunili sva polja",
+          message: this.$t('createAuction.requiredFields'),
           icon: "warning",
         });
         return;
@@ -376,7 +377,7 @@ export default {
         this.$q.notify({
           color: "negative",
           position: "top",
-          message: "Molimo odaberite barem jednu sliku.",
+          message: this.$t('createAuction.selectImage'),
           icon: "warning",
         });
         return;
@@ -390,7 +391,7 @@ export default {
         this.$q.notify({
           color: "negative",
           position: "top",
-          message: "Datum početka ne može biti nakon datuma završetka.",
+          message: this.$t('createAuction.invalidDateRange'),
           icon: "warning",
         });
         return;
@@ -465,7 +466,7 @@ export default {
         .get("http://localhost:3000/getUnosPredmeta", { headers })
         .then((response) => {
           this.kategorije = response.data.kategorije.map(k => ({
-            label: k.naziv_kategorije,
+            label: pickLang(k.naziv_kategorije, k.naziv_kategorije_en),
             value: k.id_kategorije,
           }));
 

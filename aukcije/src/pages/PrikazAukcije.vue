@@ -1,7 +1,7 @@
 <template>
   <q-page class="auction-page">
     <div class="page-wrap">
-      <div class="auction-title">Prikaz aukcije</div>
+      <div class="auction-title">{{ $t('auctionViewPage.title') }}</div>
 
       <q-card class="auction-card" flat>
         <div class="row q-col-gutter-lg">
@@ -42,19 +42,19 @@
                 />
 
                 <div v-else class="image-placeholder">
-                  Nema slike
+                  {{ $t('auctionViewPage.noImage') }}
                 </div>
               </template>
 
               <div class="image-badge">
-                <span>Aukcija</span>
+                <span>{{ $t('auctionViewPage.auctionBadge') }}</span>
               </div>
             </div>
 
             <div class="auction-timer">
               <q-icon name="schedule" size="20px" color="primary" />
               <span>
-                Preostalo do kraja aukcije:
+                {{ $t('auctionViewPage.timeLeft') }}
                 <strong>{{ vrijemeDoKraja }}</strong>
               </span>
             </div>
@@ -65,14 +65,14 @@
 
               <div class="product-box">
                 <div class="product-title">
-                  {{ item.naziv_predmeta || "Naziv nije dostupan" }}
+                  {{ $pick(item.naziv_predmeta, item.naziv_predmeta_en) || $t('auctionViewPage.nameUnavailable') }}
                 </div>
               </div>
 
               <div class="description-box">
-                <div class="section-label">Opis proizvoda</div>
+                <div class="section-label">{{ $t('auctionViewPage.productDescription') }}</div>
                 <div class="description-text">
-                  {{ item.opis_predmeta || "Opis nije dostupan." }}
+                  {{ $pick(item.opis_predmeta, item.opis_en) || $t('auctionViewPage.descUnavailable') }}
                 </div>
               </div>
 
@@ -80,7 +80,7 @@
                 <div class="time-box">
                   <q-icon name="event" color="primary" size="22px" />
                   <div>
-                    <div class="meta-label">Početak aukcije</div>
+                    <div class="meta-label">{{ $t('auctionViewPage.startTime') }}</div>
                     <div class="meta-value">
                       {{ formattedDate(item.vrijeme_pocetka) }}
                     </div>
@@ -90,7 +90,7 @@
                 <div class="time-box">
                   <q-icon name="event_available" color="primary" size="22px" />
                   <div>
-                    <div class="meta-label">Završetak aukcije</div>
+                    <div class="meta-label">{{ $t('auctionViewPage.endTime') }}</div>
                     <div class="meta-value">
                       {{ formattedDate(item.vrijeme_zavrsetka) }}
                     </div>
@@ -101,14 +101,14 @@
               <div class="price-panel">
                 <div class="price-grid">
                   <div class="start-price-card">
-                    <div class="price-label">Početna cijena</div>
+                    <div class="price-label">{{ $t('auctionViewPage.startPrice') }}</div>
                     <div class="start-price">
                       {{ formatPrice(item.pocetna_cijena) }}
                     </div>
                   </div>
 
                   <div class="current-price-card">
-                    <div class="price-label blue">Trenutna cijena</div>
+                    <div class="price-label blue">{{ $t('auctionViewPage.currentPrice') }}</div>
                     <div class="current-price">
                       {{ formatPrice(item.trenutna_cijena) }}
                     </div>
@@ -117,7 +117,7 @@
 
                 <q-btn
                   class="bid-btn"
-                  label="Postavi ponudu"
+                  :label="$t('auctionViewPage.placeBid')"
                   icon="gavel"
                   unelevated
                   no-caps
@@ -134,10 +134,10 @@
       <q-dialog v-model="showDialog">
         <q-card class="bid-dialog">
           <q-card-section>
-            <div class="dialog-title">Postavi novu ponudu</div>
+            <div class="dialog-title">{{ $t('auctionViewPage.newBidTitle') }}</div>
 
             <div class="dialog-subtitle">
-              Odaberi iznos veći od trenutne cijene.
+              {{ $t('auctionViewPage.bidHint') }}
             </div>
           </q-card-section>
 
@@ -146,14 +146,14 @@
               outlined
               v-model="odabranaCijena"
               :options="prices"
-              label="Odaberi cijenu"
+              :label="$t('auctionViewPage.selectPrice')"
             />
           </q-card-section>
 
           <q-card-actions align="right">
             <q-btn
               flat
-              label="Odustani"
+              :label="$t('common.cancel')"
               color="grey-7"
               v-close-popup
               no-caps
@@ -161,7 +161,7 @@
 
             <q-btn
               unelevated
-              label="Potvrdi ponudu"
+              :label="$t('auctionViewPage.confirmBid')"
               color="primary"
               no-caps
               @click="potvrdiPonudu"
@@ -175,11 +175,11 @@
           <div class="success-icon">✓</div>
 
           <div class="success-title">
-            Ponuda uspješno postavljena
+            {{ $t('auctionViewPage.bidSuccess') }}
           </div>
 
           <div class="success-text">
-            Nova trenutna cijena:
+            {{ $t('auctionViewPage.newCurrentPrice') }}
           </div>
 
           <div class="success-price">
@@ -205,13 +205,13 @@ export default {
     },
 
     vrijemeDoKraja() {
-      if (!this.item.vrijeme_zavrsetka) return "Nije dostupno";
+      if (!this.item.vrijeme_zavrsetka) return this.$t('auctionViewPage.notAvailable');
 
       const end = new Date(this.item.vrijeme_zavrsetka);
       const now = new Date();
       const diff = end - now;
 
-      if (diff <= 0) return "Aukcija završena";
+      if (diff <= 0) return this.$t('auctionViewPage.auctionEnded');
 
       const days = Math.floor(diff / (1000 * 60 * 60 * 24));
       const hours = Math.floor(
@@ -265,7 +265,7 @@ export default {
 
   methods: {
     formattedDate(dateString) {
-      if (!dateString) return "Nije definirano";
+      if (!dateString) return this.$t('auctionViewPage.notDefined');
 
       return new Date(dateString)
         .toLocaleString("hr-HR")
@@ -294,7 +294,7 @@ export default {
       if (!token || !this.odabranaCijena) {
         this.$q.notify({
           type: "warning",
-          message: "Morate biti prijavljeni i odabrati cijenu.",
+          message: this.$t('auctionViewPage.mustLogin'),
           position: "center",
           timeout: 2500,
         });
@@ -311,7 +311,7 @@ export default {
       if (selectedPrice <= this.item.trenutna_cijena) {
         this.$q.notify({
           type: "negative",
-          message: "Nova ponuda mora biti veća od trenutne cijene.",
+          message: this.$t('auctionViewPage.bidTooLow'),
           position: "center",
           timeout: 2500,
         });
@@ -354,7 +354,7 @@ export default {
 
           this.$q.notify({
             type: "negative",
-            message: "Greška kod postavljanja ponude.",
+            message: this.$t('auctionViewPage.bidError'),
             position: "center",
             timeout: 2500,
           });

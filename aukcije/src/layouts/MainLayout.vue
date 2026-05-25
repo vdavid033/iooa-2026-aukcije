@@ -14,17 +14,34 @@
 
         <!-- NASLOV -->
         <div class="q-ml-md text-weight-bold text-h6">
-          Aukcijska Platforma
+          {{ $t('common.appName') }}
         </div>
 
         <q-space />
         <!-- DESNA STRANA -->
         <div class="row items-center q-gutter-sm">
 
+          <!-- PREBACIVAC JEZIKA -->
+          <q-btn-toggle
+            v-model="lang"
+            unelevated
+            dense
+            no-caps
+            size="sm"
+            toggle-color="primary"
+            color="grey-3"
+            text-color="primary"
+            :options="[
+              { label: 'HR', value: 'hr-HR' },
+              { label: 'EN', value: 'en-US' }
+            ]"
+            @update:model-value="setLang"
+          />
+
           <!-- GUEST -->
           <template v-if="!isAuthenticated()">
-            <q-btn flat label="Registracija" to="/registracija" />
-            <q-btn color="primary" unelevated label="Prijava" to="/prijava" />
+            <q-btn flat :label="$t('menu.register')" to="/registracija" />
+            <q-btn color="primary" unelevated :label="$t('menu.login')" to="/prijava" />
           </template>
           
           <!-- DROPDOWN -->
@@ -56,7 +73,7 @@
                     <q-item-section avatar>
                       <q-icon name="home" color="primary" />
                     </q-item-section>
-                    <q-item-section>Početna</q-item-section>
+                    <q-item-section>{{ $t('menu.home') }}</q-item-section>
                   </q-item>
                 </router-link>
 
@@ -65,7 +82,7 @@
                     <q-item-section avatar>
                       <q-icon name="add_circle" color="primary" />
                     </q-item-section>
-                    <q-item-section>Dodaj aukciju</q-item-section>
+                    <q-item-section>{{ $t('menu.addAuction') }}</q-item-section>
                   </q-item>
                 </router-link>
 
@@ -74,7 +91,7 @@
                     <q-item-section avatar>
                       <q-icon name="person" color="primary" />
                     </q-item-section>
-                    <q-item-section>Moj profil</q-item-section>
+                    <q-item-section>{{ $t('menu.profile') }}</q-item-section>
                   </q-item>
                 </router-link>
 
@@ -86,7 +103,7 @@
                       <q-item-section avatar>
                         <q-icon name="admin_panel_settings" color="primary" />
                       </q-item-section>
-                      <q-item-section>Admin Dashboard</q-item-section>
+                      <q-item-section>{{ $t('menu.admin') }}</q-item-section>
                     </q-item>
                   </router-link>
                 </template>
@@ -104,7 +121,7 @@
                       <q-icon name="logout" color="negative" />
                     </q-item-section>
                     <q-item-section>
-                      <span class="text-negative">Odjava</span>
+                      <span class="text-negative">{{ $t('menu.logout') }}</span>
                     </q-item-section>
                   </q-item>
                 </template>
@@ -122,7 +139,7 @@
       <router-view />
 
       <div class="app-footer bg-white text-grey-8 text-center q-pa-md shadow-2">
-        © 2026 Aukcijska Platforma
+        © 2026 {{ $t('common.appName') }}
       </div>
     </q-page-container>
 
@@ -132,13 +149,13 @@
         <q-card-section class="row items-center">
           <q-avatar icon="warning" color="negative" text-color="white" />
           <span class="q-ml-sm">
-            Jeste li sigurni da želite se odjaviti?
+            {{ $t('menu.logoutConfirm') }}
           </span>
         </q-card-section>
 
         <q-card-actions align="right">
-          <q-btn flat label="Odustani" color="primary" v-close-popup />
-          <q-btn flat label="Odjavi se" color="negative" @click="logoutAndReload" />
+          <q-btn flat :label="$t('common.cancel')" color="primary" v-close-popup />
+          <q-btn flat :label="$t('menu.logout')" color="negative" @click="logoutAndReload" />
         </q-card-actions>
       </q-card>
     </q-dialog>
@@ -149,11 +166,20 @@
 <script>
 import { defineComponent, ref, computed } from "vue";
 import { jwtDecode } from "jwt-decode";
+import { useI18n } from "vue-i18n";
 
 export default defineComponent({
   name: "MainLayout",
 
   setup() {
+    const { locale } = useI18n({ useScope: "global" });
+    const lang = ref(localStorage.getItem("lang") || "hr-HR");
+    const setLang = (val) => {
+      lang.value = val;
+      locale.value = val;
+      localStorage.setItem("lang", val);
+    };
+
     const confirmLogoutDialog = ref(false);
     const menuOpen = ref(false);
     const token = ref(localStorage.getItem("token"));
@@ -197,6 +223,8 @@ export default defineComponent({
     };
 
     return {
+      lang,
+      setLang,
       confirmLogoutDialog,
       menuOpen,
       isAuthenticated,

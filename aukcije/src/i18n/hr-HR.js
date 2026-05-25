@@ -1,6 +1,7 @@
 export default {
   common: {
     hello: 'Pozdrav',
+    appName: 'Aukcijska Platforma',
     close: 'Zatvori',
     cancel: 'Odustani',
     back: 'Natrag',
@@ -35,6 +36,7 @@ export default {
 
   loginPage: {
     title: 'Prijava',
+    subtitle: 'Pristupite svom računu',
     email: 'Vaš email',
     password: 'Lozinka',
     submit: 'Prijava',
@@ -44,6 +46,7 @@ export default {
 
   registerPage: {
     title: 'Registracija',
+    subtitle: 'Kreirajte svoj račun',
     firstName: 'Vaše ime',
     lastName: 'Vaše prezime',
     email: 'Vaš email',
@@ -74,10 +77,44 @@ export default {
     sortPriceDesc: 'Cijena: veća prema manjoj',
     sortNameAsc: 'Naziv: A do Z',
     sortNameDesc: 'Naziv: Z do A',
-    sortExpiration: 'Vrijeme isteka'
+    sortExpiration: 'Vrijeme isteka',
+    subtitle: 'Najnovije i najpopularnije aukcije',
+    viewAll: 'Vidi sve',
+    showMore: 'Prikaži više',
+    auctions: 'aukcija',
+    bids: 'ponuda',
+    active: 'Aktivna',
+    viewAuction: 'Pogledaj aukciju'
+  },
+
+  allAuctionsPage: {
+    title: 'Sve aukcije',
+    subtitle: 'Pregled aktivnih i završenih aukcija',
+    searchPlaceholder: 'Pretraži aukcije',
+    statusLabel: 'Status aukcije',
+    sortBy: 'Sortiraj po',
+    statusAll: 'Sve aukcije',
+    statusActive: 'Aktivne aukcije',
+    statusFinished: 'Završene aukcije',
+    sortNewest: 'Najnovije',
+    sortPriceAsc: 'Cijena: manja prema većoj',
+    sortPriceDesc: 'Cijena: veća prema manjoj',
+    sortNameAsc: 'Naziv: A do Z',
+    sortNameDesc: 'Naziv: Z do A',
+    sortEndingSoon: 'Završava uskoro',
+    finished: 'Završena',
+    active: 'Aktivna',
+    startingPrice: 'Početna cijena',
+    currentPrice: 'Trenutna cijena',
+    endsAt: 'Završetak',
+    bids: 'ponuda',
+    viewAuction: 'Pogledaj aukciju',
+    noAuctions: 'Nema aukcija za prikaz.',
+    notDefined: 'Nije definirano'
   },
 
   createAuction: {
+
     title: 'Postavi aukciju',
     productName: 'Naziv proizvoda',
     enterName: 'Unesite naziv',
@@ -91,6 +128,8 @@ export default {
     description: 'Opis proizvoda',
     enterDescription: 'Unesite opis',
     uploadImage: 'Unesite sliku',
+    clickToSelect: 'Kliknite za odabir slika',
+    fileHint: 'PNG, JPG do 10MB',
 
     chooseFiles: 'Odaberi datoteke',
     noFileSelected: 'Nije odabrana niti jedna datoteka',
@@ -135,7 +174,18 @@ export default {
     noAuctionItems: 'Nemate niti jedan predmet na aukciji!',
     noBids: 'Nemate niti jednu ponudu!',
     confirmDelete: 'Jeste li sigurni da želite obrisati predmet?',
-    deleteSuccess: 'Brisanje uspješno!'
+    deleteSuccess: 'Brisanje uspješno!',
+    subtitle: 'Pregled vašeg profila',
+    firstName: 'Ime',
+    lastName: 'Prezime',
+    email: 'Email',
+    address: 'Adresa',
+    active: 'Aktivno',
+    finished: 'Završeno',
+    view: 'Pregled',
+    yourWonItems: 'Vaši osvojeni predmeti',
+    noWonItems: 'Niste još osvojili niti jedan predmet!',
+    finalPrice: 'Konačna cijena'
   },
 
   updateProfilePage: {
@@ -169,7 +219,23 @@ export default {
     bid: "Ponudi",
     makeBid: "Unesi ponudu",
     selectPrice: "Odaberi cijenu",
-    confirmBid: "Potvrdi ponudu"
+    confirmBid: "Potvrdi ponudu",
+    noImage: 'Nema slike',
+    auctionBadge: 'Aukcija',
+    timeLeft: 'Preostalo do kraja aukcije:',
+    nameUnavailable: 'Naziv nije dostupan',
+    descUnavailable: 'Opis nije dostupan.',
+    placeBid: 'Postavi ponudu',
+    newBidTitle: 'Postavi novu ponudu',
+    bidHint: 'Odaberi iznos veći od trenutne cijene.',
+    bidSuccess: 'Ponuda uspješno postavljena',
+    newCurrentPrice: 'Nova trenutna cijena:',
+    notAvailable: 'Nije dostupno',
+    auctionEnded: 'Aukcija završena',
+    notDefined: 'Nije definirano',
+    mustLogin: 'Morate biti prijavljeni i odabrati cijenu.',
+    bidTooLow: 'Nova ponuda mora biti veća od trenutne cijene.',
+    bidError: 'Greška kod postavljanja ponude.'
   },
 
   categoryPage: {
@@ -185,7 +251,13 @@ export default {
     sortPriceDesc: 'Cijena: veća prema manjoj',
     sortNameAsc: 'Naziv: A do Z',
     sortNameDesc: 'Naziv: Z do A',
-    sortExpiration: 'Vrijeme isteka'
+    sortExpiration: 'Vrijeme isteka',
+    title: 'Aukcije u kategoriji',
+    subtitle: 'Pregled aktivnih aukcija odabrane kategorije',
+    noItems: 'Nema aktivnih aukcija u ovoj kategoriji.',
+    endsLabel: 'Završava',
+    active: 'Aktivna',
+    viewAuction: 'Pogledaj aukciju'
   },
 
   adminPage: {
@@ -203,7 +275,35 @@ export default {
     backHome: 'Povratak'
   },
 
+  usersPage: {
+    title: 'Korisnici',
+    name: 'Ime',
+    surname: 'Prezime',
+    email: 'E-mail',
+    address: 'Adresa',
+    actions: 'Dodatne mogućnosti',
+    edit: 'Izmijeni',
+    delete: 'Obriši',
+    rowsPerPage: 'Broj prikazanih redova:',
+    confirmDelete: 'Jeste li sigurni da želite obrisati korisnika?'
+  },
+
+  converterPage: {
+    imageLink: 'Unesi link slike',
+    convert: 'Konvertiraj u Base64',
+    copy: 'Kopiraj u međuspremnik',
+    selectImageOrUrl: 'Molimo odaberite sliku ili unesite URL slike.',
+    urlError: 'Došlo je do pogreške prilikom dohvaćanja slike s URL-a.',
+    copySuccess: 'Tekst uspješno kopiran u međuspremnik!',
+    copyError: 'Kopiranje nije uspjelo.'
+  },
+
+  racuniPage: {
+    title: 'Računi'
+  },
+
   editCategoryPage: {
+
     title: 'Izmjena kategorije',
     name: 'Naziv',
     currentName: 'Trenutni naziv',

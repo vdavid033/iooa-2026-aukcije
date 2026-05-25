@@ -14,10 +14,10 @@
 
               <div>
                 <div class="text-h4 text-weight-bold text-primary">
-                  Korisnik {{ korisnik_trenutno.ime_korisnika }} {{ korisnik_trenutno.prezime_korisnika }}
+                  {{ $t('profilePage.user') }} {{ korisnik_trenutno.ime_korisnika }} {{ korisnik_trenutno.prezime_korisnika }}
                 </div>
                 <div class="text-subtitle2 text-grey-7">
-                  Pregled vašeg profila
+                  {{ $t('profilePage.subtitle') }}
                 </div>
               </div>
             </div>
@@ -28,7 +28,7 @@
               color="primary"
               unelevated
               icon="edit"
-              label="Izmjena podataka"
+              :label="$t('profilePage.editUserData')"
               @click="$router.push('/UpdateProfil')"
             />
           </div>
@@ -46,7 +46,7 @@
               <q-card-section class="row items-center q-gutter-sm">
                 <q-icon name="person" color="primary" />
                 <div>
-                  <div class="text-caption text-grey-6">Ime</div>
+                  <div class="text-caption text-grey-6">{{ $t('profilePage.firstName') }}</div>
                   <div class="text-weight-medium">{{ korisnik_trenutno.ime_korisnika }}</div>
                 </div>
               </q-card-section>
@@ -58,7 +58,7 @@
               <q-card-section class="row items-center q-gutter-sm">
                 <q-icon name="badge" color="primary" />
                 <div>
-                  <div class="text-caption text-grey-6">Prezime</div>
+                  <div class="text-caption text-grey-6">{{ $t('profilePage.lastName') }}</div>
                   <div class="text-weight-medium">{{ korisnik_trenutno.prezime_korisnika }}</div>
                 </div>
               </q-card-section>
@@ -70,7 +70,7 @@
               <q-card-section class="row items-center q-gutter-sm">
                 <q-icon name="mail" color="primary" />
                 <div>
-                  <div class="text-caption text-grey-6">Email</div>
+                  <div class="text-caption text-grey-6">{{ $t('profilePage.email') }}</div>
                   <div class="text-weight-medium ellipsis">
                     {{ korisnik_trenutno.email_korisnika }}
                   </div>
@@ -84,7 +84,7 @@
               <q-card-section class="row items-center q-gutter-sm">
                 <q-icon name="place" color="primary" />
                 <div>
-                  <div class="text-caption text-grey-6">Adresa</div>
+                  <div class="text-caption text-grey-6">{{ $t('profilePage.address') }}</div>
                   <div class="text-weight-medium">{{ korisnik_trenutno.adresa_korisnika }}</div>
                 </div>
               </q-card-section>
@@ -97,11 +97,11 @@
 
     <!-- PREDMETI -->
     <div class="section-head q-mb-md">
-      <h5>Vaši predmeti na aukciji</h5>
+      <h5>{{ $t('profilePage.yourAuctionItems') }}</h5>
     </div>
 
     <p v-if="vlastitiPredmeti.length === 0" class="text-grey">
-      Nemate niti jedan predmet koji je ili je bio na aukciji!
+      {{ $t('profilePage.noAuctionItems') }}
     </p>
 
     <div class="row q-col-gutter-md q-mb-xl">
@@ -121,39 +121,39 @@
           <q-card-section>
             <div class="row justify-between items-center">
               <div class="text-h6 text-primary">
-                {{ predmet.naziv_predmeta }}
+                {{ $pick(predmet.naziv_predmeta, predmet.naziv_predmeta_en) }}
               </div>
 
               <q-badge :color="provjeriDatum(predmet) ? 'green' : 'grey'">
-                {{ provjeriDatum(predmet) ? 'Aktivno' : 'Završeno' }}
+                {{ provjeriDatum(predmet) ? $t('profilePage.active') : $t('profilePage.finished') }}
               </q-badge>
             </div>
 
             <div class="q-mt-sm text-body2">
-              Početna cijena: {{ predmet.pocetna_cijena }}$
+              {{ $t('profilePage.startingPrice') }}: {{ predmet.pocetna_cijena }}$
             </div>
             <div class="text-body2">
-              Početak: {{ formattedDate(predmet.vrijeme_pocetka) }}
+              {{ $t('profilePage.startTime') }}: {{ formattedDate(predmet.vrijeme_pocetka) }}
             </div>
             <div class="text-body2">
-              Završetak: {{ formattedDate(predmet.vrijeme_zavrsetka) }}
+              {{ $t('profilePage.endTime') }}: {{ formattedDate(predmet.vrijeme_zavrsetka) }}
             </div>
             <div class="text-body2">
-              Preostalo: {{ predmet.preostalo_vrijeme }} h
+              {{ $t('profilePage.remainingTime') }}: {{ predmet.preostalo_vrijeme }} h
             </div>
             <div class="text-body2 text-weight-bold">
-              Trenutna: {{ predmet.trenutna_cijena }}$
+              {{ $t('profilePage.currentPrice') }}: {{ predmet.trenutna_cijena }}$
             </div>
           </q-card-section>
 
           <q-separator />
 
           <q-card-actions align="between">
-            <q-btn flat label="Pregled" @click="pregledPredmeta(predmet.id_predmeta)" />
+            <q-btn flat :label="$t('profilePage.view')" @click="pregledPredmeta(predmet.id_predmeta)" />
 
             <div v-if="provjeriDatum(predmet)">
-              <q-btn flat color="primary" label="Izmijeni" @click="izmijeniPredmet(predmet.id_predmeta)" />
-              <q-btn flat color="negative" label="Obriši" @click="obrisiPredmet(predmet.id_predmeta)" />
+              <q-btn flat color="primary" :label="$t('profilePage.edit')" @click="izmijeniPredmet(predmet.id_predmeta)" />
+              <q-btn flat color="negative" :label="$t('profilePage.delete')" @click="obrisiPredmet(predmet.id_predmeta)" />
             </div>
           </q-card-actions>
 
@@ -163,11 +163,11 @@
 
     <!-- PONUDE -->
     <div class="section-head q-mb-md">
-      <h5>Vaše ponude</h5>
+      <h5>{{ $t('profilePage.yourBids') }}</h5>
     </div>
 
     <p v-if="vlastitePonude.length === 0" class="text-grey">
-      Nemate niti jednu ponudu!
+      {{ $t('profilePage.noBids') }}
     </p>
 
     <div class="row q-col-gutter-md">
@@ -186,19 +186,19 @@
             />
 
             <div class="text-subtitle1 text-primary q-mt-sm">
-              {{ ponuda.naziv_predmeta }}
+              {{ $pick(ponuda.naziv_predmeta, ponuda.naziv_predmeta_en) }}
             </div>
 
             <div class="text-body2">
-              Opis: {{ ponuda.opis_predmeta }}
+              {{ $t('profilePage.description') }}: {{ $pick(ponuda.opis_predmeta, ponuda.opis_en) }}
             </div>
 
             <div class="text-body2">
-              Ponuda: {{ ponuda.vrijednost_ponude }}$
+              {{ $t('profilePage.bidValue') }}: {{ ponuda.vrijednost_ponude }}$
             </div>
 
             <div class="text-body2">
-              Vrijeme: {{ formattedDate(ponuda.vrijeme_ponude) }}
+              {{ $t('profilePage.bidTime') }}: {{ formattedDate(ponuda.vrijeme_ponude) }}
             </div>
           </q-card-section>
 
@@ -208,11 +208,11 @@
 
     <!-- OSVOJENI PREDMETI -->
     <div class="section-head q-mb-md q-mt-xl">
-      <h5>Vaši osvojeni predmeti</h5>
+      <h5>{{ $t('profilePage.yourWonItems') }}</h5>
     </div>
 
     <p v-if="vlastitiOsvojeniPredmeti.length === 0" class="text-grey">
-      Niste još osvojili niti jedan predmet!
+      {{ $t('profilePage.noWonItems') }}
     </p>
 
     <div class="row q-col-gutter-md">
@@ -231,17 +231,17 @@
 
           <q-card-section>
             <div class="text-h6 text-primary">
-              {{ osvojeniPredmet.naziv_predmeta }}
+              {{ $pick(osvojeniPredmet.naziv_predmeta, osvojeniPredmet.naziv_predmeta_en) }}
             </div>
 
             <div class="q-mt-sm text-body2">
-              {{ osvojeniPredmet.opis_predmeta }}
+              {{ $pick(osvojeniPredmet.opis_predmeta, osvojeniPredmet.opis_en) }}
             </div>
 
             <q-separator class="q-my-md" />
 
             <div class="text-body2 text-weight-bold text-positive">
-              Konačna cijena: {{ osvojeniPredmet.konacna_cijena }}$
+              {{ $t('profilePage.finalPrice') }}: {{ osvojeniPredmet.konacna_cijena }}$
             </div>
           </q-card-section>
 
@@ -363,7 +363,7 @@ export default {
       const token = localStorage.getItem("token");
       const headers = { Authorization: `Bearer ${token}` };
 
-      if (confirm("Jeste li sigurni?")) {
+      if (confirm(this.$t('profilePage.confirmDelete'))) {
         await axios.delete("http://localhost:3000/api/brisanjePredmeta/" + id, { headers });
         location.reload();
       }

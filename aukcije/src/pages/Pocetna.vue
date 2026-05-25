@@ -3,7 +3,7 @@
     <div class="q-pa-md">
 
       <!-- KATEGORIJE -->
-      <div class="text-h5 text-weight-bold q-mb-md">Kategorije</div>
+      <div class="text-h5 text-weight-bold q-mb-md">{{ $t('homePage.categories') }}</div>
 
       <div class="row q-col-gutter-md">
         <div
@@ -18,10 +18,10 @@
             <q-img :src="cat.slika || defaultImg" class="category-img">
               <div class="category-overlay">
                 <div class="text-subtitle1 text-weight-bold">
-                  {{ cat.naziv_kategorije }}
+                  {{ $pick(cat.naziv_kategorije, cat.naziv_kategorije_en) }}
                 </div>
                 <div class="text-caption">
-                  {{ cat.count || 0 }} aukcija
+                  {{ cat.count || 0 }} {{ $t('homePage.auctions') }}
                 </div>
               </div>
             </q-img>
@@ -36,7 +36,7 @@
         <q-btn
           color="primary"
           outline
-          label="Prikaži više"
+          :label="$t('homePage.showMore')"
           @click="prikaziViseKategorija"
         />
       </div>
@@ -45,14 +45,14 @@
       <div class="row items-center justify-between q-mt-xl q-mb-md">
         <div>
           <div class="text-h5 text-weight-bold">
-            Zadnje ili trenutne aukcije
+            {{ $t('homePage.latestAuctions') }}
           </div>
           <div class="text-grey">
-            Najnovije i najpopularnije aukcije
+            {{ $t('homePage.subtitle') }}
           </div>
         </div>
 
-        <q-btn color="primary" label="Vidi sve" to="/sve-aukcije" />
+        <q-btn color="primary" :label="$t('homePage.viewAll')" to="/sve-aukcije" />
       </div>
 
       <!-- SEARCH -->
@@ -61,7 +61,7 @@
           <q-input
             filled
             v-model="Pretrazivanje"
-            placeholder="Pretraži aukcije..."
+            :placeholder="$t('homePage.searchPlaceholder')"
             dense
           >
             <template v-slot:prepend>
@@ -76,7 +76,7 @@
             dense
             v-model="selectedsortianje"
             :options="sortiranje"
-            label="Sortiraj po"
+            :label="$t('homePage.sortBy')"
             emit-value
             map-options
             @update:model-value="sortiranjeOpcija"
@@ -99,33 +99,33 @@
 
             <q-card-section>
               <div class="text-subtitle1 text-weight-bold">
-                {{ item.naziv_predmeta }}
+                {{ $pick(item.naziv_predmeta, item.naziv_predmeta_en) }}
               </div>
 
               <div class="q-mt-sm">
                 <div class="row justify-between text-caption">
-                  <span>Početna:</span>
+                  <span>{{ $t('homePage.startingPrice') }}:</span>
                   <span>{{ item.pocetna_cijena }}€</span>
                 </div>
 
                 <div class="row justify-between text-weight-bold text-primary">
-                  <span>Trenutna:</span>
+                  <span>{{ $t('homePage.currentPrice') }}:</span>
                   <span>{{ item.trenutna_cijena }}€</span>
                 </div>
               </div>
 
               <div class="row justify-between items-center q-mt-sm">
                 <div class="text-caption">
-                  {{ item.bids || 0 }} ponuda
+                  {{ item.bids || 0 }} {{ $t('homePage.bids') }}
                 </div>
 
-                <q-badge color="green">Aktivna</q-badge>
+                <q-badge color="green">{{ $t('homePage.active') }}</q-badge>
               </div>
 
               <q-btn
                 flat
                 class="full-width q-mt-md"
-                label="Pogledaj aukciju"
+                :label="$t('homePage.viewAuction')"
                 color="primary"
               />
             </q-card-section>
@@ -151,14 +151,6 @@ export default {
       brojPrikazanihKategorija: 8,
       selectedsortianje: "",
       defaultImg: "https://via.placeholder.com/400",
-
-      sortiranje: [
-        { label: "Cijena: Niska - Visoka", value: "price-asc" },
-        { label: "Cijena: Visoka - Niska", value: "price-desc" },
-        { label: "Naziv A-Z", value: "name-asc" },
-        { label: "Naziv Z-A", value: "name-desc" },
-        { label: "Završava uskoro", value: "expiration" }
-      ]
     };
   },
 
@@ -174,6 +166,16 @@ export default {
   },
 
   computed: {
+    sortiranje() {
+      return [
+        { label: this.$t('homePage.sortPriceAsc'), value: "price-asc" },
+        { label: this.$t('homePage.sortPriceDesc'), value: "price-desc" },
+        { label: this.$t('homePage.sortNameAsc'), value: "name-asc" },
+        { label: this.$t('homePage.sortNameDesc'), value: "name-desc" },
+        { label: this.$t('homePage.sortExpiration'), value: "expiration" }
+      ];
+    },
+
     prikazaneKategorije() {
       return this.kategorija.slice(0, this.brojPrikazanihKategorija);
     },
