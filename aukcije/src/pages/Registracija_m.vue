@@ -1,107 +1,131 @@
 <template>
-  <q-page class="bg-blue window-height window-width row justify-center items-center">
-    <div class="column">
-      <div class="row">
-        <h5 class="text-h3 text-white q-my-md">{{ t('registerPage.title') }}</h5>
-      </div>
+  <q-page class="window-height window-width row justify-center items-center gradient-bg">
 
-      <div class="row">
-        <q-card square bordered class="q-pa-lg shadow-1">
-          <q-card-section>
-            <q-form class="q-gutter-md" @submit="provjera">
-              <q-input
-                square
-                filled
-                v-model="ime_korisnika"
-                type="text"
-                :label="t('registerPage.firstName')"
-              />
-              <q-input
-                square
-                filled
-                v-model="prezime_korisnika"
-                type="text"
-                :label="t('registerPage.lastName')"
-              />
-              <q-input
-                square
-                filled
-                v-model="email_korisnika"
-                type="email"
-                :label="t('registerPage.email')"
-              />
-              <q-input
-                square
-                filled
-                v-model="lozinka_korisnika"
-                type="password"
-                :label="t('registerPage.password')"
-              />
-              <q-input
-                square
-                filled
-                v-model="provjera_lozinke"
-                type="password"
-                :label="t('registerPage.repeatPassword')"
-              />
-              <q-input
-                square
-                filled
-                v-model="adresa_korisnika"
-                type="text"
-                :label="t('registerPage.address')"
-              />
+    <div class="column items-center">
+      
+      <q-card class="q-pa-xl shadow-10 rounded-card" style="width: 400px">
 
-              <div class="text-center">
-                <q-btn
-                  size="lg"
-                  type="submit"
-                  :label="t('registerPage.submit')"
-                  color="light-blue-7"
-                />
-              </div>
-            </q-form>
-          </q-card-section>
+        <div class="text-center q-mb-md">
+          <q-avatar size="70px" class="bg-primary text-white shadow-5">
+            <q-icon name="person" size="40px" />
+          </q-avatar>
+        </div>
 
-          <q-card-section class="text-center q-pa-none">
-            <router-link to="prijava" class="link-style">
-              <p class="text-grey-6">{{ t('registerPage.goToLogin') }}</p>
-            </router-link>
-          </q-card-section>
+        <div class="text-center q-mb-lg">
+          <div class="text-h5 text-weight-bold">Registracija</div>
+          <div class="text-grey">Kreirajte svoj račun</div>
+        </div>
 
-          <q-card-section class="text-center q-pa-none">
-            <router-link to="/" class="link-style">
-              <p class="text-grey-6">{{ t('registerPage.continueAsGuest') }}</p>
-            </router-link>
-          </q-card-section>
-        </q-card>
-      </div>
+        <q-form class="q-gutter-md" @submit="provjera">
+
+          <q-input filled v-model="ime_korisnika" label="Vaše ime">
+            <template v-slot:prepend>
+              <q-icon name="person" />
+            </template>
+          </q-input>
+
+          <q-input filled v-model="prezime_korisnika" label="Vaše prezime">
+            <template v-slot:prepend>
+              <q-icon name="person" />
+            </template>
+          </q-input>
+
+          <q-input filled v-model="email_korisnika" type="email" label="Vaš email">
+            <template v-slot:prepend>
+              <q-icon name="email" />
+            </template>
+          </q-input>
+
+          <q-input
+            filled
+            :type="showPassword ? 'text' : 'password'"
+            v-model="lozinka_korisnika"
+            label="Lozinka"
+          >
+            <template v-slot:prepend>
+              <q-icon name="lock" />
+            </template>
+
+            <template v-slot:append>
+              <q-icon
+                :name="showPassword ? 'visibility_off' : 'visibility'"
+                class="cursor-pointer"
+                @click="showPassword = !showPassword"
+              />
+            </template>
+          </q-input>
+
+          <q-input
+            filled
+            :type="showConfirmPassword ? 'text' : 'password'"
+            v-model="provjera_lozinke"
+            label="Ponovi lozinku"
+          >
+            <template v-slot:prepend>
+              <q-icon name="lock" />
+            </template>
+
+            <template v-slot:append>
+              <q-icon
+                :name="showConfirmPassword ? 'visibility_off' : 'visibility'"
+                class="cursor-pointer"
+                @click="showConfirmPassword = !showConfirmPassword"
+              />
+            </template>
+          </q-input>
+
+          <q-input filled v-model="adresa_korisnika" label="Adresa">
+            <template v-slot:prepend>
+              <q-icon name="place" />
+            </template>
+          </q-input>
+
+          <q-btn
+            class="full-width q-mt-md"
+            size="lg"
+            type="submit"
+            label="REGISTRACIJA"
+            color="primary"
+            unelevated
+          />
+
+        </q-form>
+
+        <div class="text-center q-mt-md">
+          <router-link to="prijava" class="text-primary">
+            Prijavi se
+          </router-link>
+        </div>
+
+        <div class="text-center">
+          <span class="text-grey">Nastavi kao gost</span>
+        </div>
+
+      </q-card>
     </div>
+
   </q-page>
 </template>
 
 <script>
 import axios from "axios";
-import { useI18n } from "vue-i18n";
 
 export default {
-  setup() {
-    const { t } = useI18n();
-    return { t };
-  },
-
   data() {
     return {
-      ime_korisnika: "",
-      prezime_korisnika: "",
-      email_korisnika: "",
-      lozinka_korisnika: "",
-      provjera_lozinke: "",
-      adresa_korisnika: "",
-    };
+      ime_korisnika: '',
+      prezime_korisnika: '',
+      email_korisnika: '',
+      lozinka_korisnika: '',
+      provjera_lozinke: '',
+      adresa_korisnika: '',
+      showPassword: false,
+      showConfirmPassword: false
+    }
   },
 
   methods: {
+
     async registracija() {
       const podaciZaReg = {
         ime: this.ime_korisnika,
@@ -109,53 +133,55 @@ export default {
         email: this.email_korisnika,
         lozinka: this.lozinka_korisnika,
         adresa: this.adresa_korisnika,
-      };
+      }
 
       try {
         const response = await axios.post(
           "http://localhost:3000/regaKorisnika",
           podaciZaReg
         );
+
         console.log(response.data);
-        this.showDialog = true;
 
         this.$q.notify({
-          color: "positive",
-          position: "top",
-          message: this.t("registerPage.success"),
-        });
+          color: 'positive',
+          position: 'top',
+          message: 'Registracija uspješna!'
+        })
+
       } catch (error) {
-        if (sqlState == "23000") {
+
+        if (error.response && error.response.data.sqlState === '23000') {
           this.$q.notify({
-            color: "negative",
-            position: "top",
-            message: this.t("registerPage.emailInUse"),
-            icon: "warning",
+            color: 'negative',
+            position: 'top',
+            message: 'E-mail već u upotrebi!',
+            icon: 'warning'
           });
         } else {
           this.$q.notify({
-            color: "negative",
-            position: "top",
-            message: this.t("registerPage.registrationError"),
-            icon: "warning",
+            color: 'negative',
+            position: 'top',
+            message: 'Greška pri registraciji!',
+            icon: 'warning'
           });
         }
+
         console.error(error);
       }
     },
 
     usporedba_lozinki() {
-      if (this.lozinka_korisnika != this.provjera_lozinke) {
+      if (this.lozinka_korisnika !== this.provjera_lozinke) {
         this.$q.notify({
-          color: "negative",
-          position: "top",
-          message: this.t("registerPage.passwordsMismatch"),
-          icon: "warning",
-        });
+          color: 'negative',
+          position: 'top',
+          message: 'Lozinke se ne podudaraju!',
+          icon: 'warning'
+        })
       } else {
-        this.registracija();
+        this.registracija()
       }
-      return;
     },
 
     provjera() {
@@ -168,22 +194,25 @@ export default {
         !this.adresa_korisnika
       ) {
         this.$q.notify({
-          color: "negative",
-          position: "top",
-          message: this.t("registerPage.requiredFields"),
-          icon: "warning",
-        });
+          color: 'negative',
+          position: 'top',
+          message: 'Niste popunili sva polja!',
+          icon: 'warning'
+        })
       } else {
-        this.usporedba_lozinki();
+        this.usporedba_lozinki()
       }
-      return;
-    },
-  },
-};
+    }
+  }
+}
 </script>
 
 <style>
-.q-pa-lg {
-  width: 360px;
+.gradient-bg {
+  background: linear-gradient(135deg, #3b82f6, #2563eb, #4f46e5);
+}
+
+.rounded-card {
+  border-radius: 20px;
 }
 </style>

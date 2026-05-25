@@ -1,208 +1,265 @@
 <template>
-  <q-card class="q-pa-sm q-gutter-sm" flat bordered>
-    <q-card-section>
-      <div class="text-h3 text-bold text-center text-blue-7 q-ml-sm">
-        {{ t("createAuction.title") }}
-      </div>
-    </q-card-section>
+  <q-page class="window-height window-width flex flex-center page-bg">
 
-    <q-separator color="red" />
+    <div class="page-wrapper">
 
-    <div class="q-ml-sm flex flex-start q-gutter-sm">
-      <div style="width: 500px">
-        <q-input
-          filled
-          type="text"
-          :label="t('createAuction.productName')"
-          v-model="naziv_predmeta"
-        />
+      <div class="text-center q-mb-lg">
+        <div class="title-text">
+          Postavi aukciju
+        </div>
       </div>
 
-      <div style="width: 500px">
-        <q-select
-          filled
-          emit-value
-          v-model="selectedKategorija"
-          :label="t('createAuction.category')"
-          :options="kategorije"
-          option-label="label"
-          option-value="value"
-          map-options
-        />
-      </div>
+      <q-card class="main-card q-pa-lg">
 
-      <div style="width: 500px">
-        <q-input
-          filled
-          type="number"
-          :label="t('createAuction.startPrice')"
-          v-model="pocetna_cijena"
-        />
-      </div>
-    </div>
+        <q-form class="q-gutter-lg form-inner" @submit.prevent="submitForm">
 
-    <div class="q-ml-sm flex flex-start q-gutter-sm">
-      <div style="width: 500px">
-        <q-input
-          filled
-          :model-value="formattedDate(vrijemePocetka)"
-          :label="t('createAuction.startDate')"
-          readonly
-        >
-          <template v-slot:prepend>
-            <q-icon name="event" class="cursor-pointer">
-              <q-popup-proxy cover>
-                <q-date
+          <div class="form-content">
+
+            <div>
+              <div class="label-text q-mb-sm">Naziv proizvoda</div>
+
+              <q-input
+                outlined
+                bg-color="white"
+                v-model="naziv_predmeta"
+                placeholder="npr. BMW 320d 2020"
+                class="custom-input"
+              />
+            </div>
+
+            <div class="row q-col-gutter-lg">
+
+              <div class="col-12 col-md-6">
+                <div class="label-text q-mb-sm">Kategorija</div>
+
+                <q-select
+                  outlined
+                  bg-color="white"
+                  v-model="selectedKategorija"
+                  :options="kategorije"
+                  option-label="label"
+                  option-value="value"
+                  emit-value
+                  map-options
+                  label="Odaberi kategoriju"
+                  class="custom-input"
+                />
+              </div>
+
+              <div class="col-12 col-md-6">
+                <div class="label-text q-mb-sm">Početna cijena (€)</div>
+
+                <q-input
+                  outlined
+                  bg-color="white"
+                  type="number"
+                  v-model="pocetna_cijena"
+                  placeholder="0.00"
+                  class="custom-input"
+                />
+              </div>
+
+            </div>
+
+            <div class="row q-col-gutter-lg">
+
+              <div class="col-12 col-md-6">
+                <div class="label-text q-mb-sm">
+                  Datum i vrijeme početka aukcije
+                </div>
+
+                <q-input
+                  outlined
+                  bg-color="white"
                   v-model="vrijemePocetka"
-                  mask="YYYY-MM-DD HH:mm"
-                />
-              </q-popup-proxy>
-            </q-icon>
-          </template>
+                  class="custom-input"
+                >
+                  <template v-slot:append>
+                    <q-icon name="event" class="cursor-pointer text-grey-7">
+                      <q-popup-proxy>
+                        <q-date
+                          v-model="vrijemePocetka"
+                          mask="YYYY-MM-DD HH:mm"
+                        />
+                      </q-popup-proxy>
+                    </q-icon>
+                  </template>
+                </q-input>
+              </div>
 
-          <template v-slot:append>
-            <q-icon name="access_time" class="cursor-pointer">
-              <q-popup-proxy cover>
-                <q-time
-                  v-model="vrijemePocetka"
-                  mask="YYYY-MM-DD HH:mm"
-                  :format24h="!isEnglish()"
-                />
-              </q-popup-proxy>
-            </q-icon>
-          </template>
-        </q-input>
-      </div>
+              <div class="col-12 col-md-6">
+                <div class="label-text q-mb-sm">
+                  Datum i vrijeme završetka aukcije
+                </div>
 
-      <div style="width: 500px">
-        <q-input
-          filled
-          :model-value="formattedDate(vrijemeZavrsetka)"
-          :label="t('createAuction.endDate')"
-          readonly
-        >
-          <template v-slot:prepend>
-            <q-icon name="event" class="cursor-pointer">
-              <q-popup-proxy cover>
-                <q-date
+                <q-input
+                  outlined
+                  bg-color="white"
                   v-model="vrijemeZavrsetka"
-                  mask="YYYY-MM-DD HH:mm"
-                />
-              </q-popup-proxy>
-            </q-icon>
-          </template>
+                  class="custom-input"
+                >
+                  <template v-slot:append>
+                    <q-icon name="event" class="cursor-pointer text-grey-7">
+                      <q-popup-proxy>
+                        <q-date
+                          v-model="vrijemeZavrsetka"
+                          mask="YYYY-MM-DD HH:mm"
+                        />
+                      </q-popup-proxy>
+                    </q-icon>
+                  </template>
+                </q-input>
+              </div>
 
-          <template v-slot:append>
-            <q-icon name="access_time" class="cursor-pointer">
-              <q-popup-proxy cover>
-                <q-time
-                  v-model="vrijemeZavrsetka"
-                  mask="YYYY-MM-DD HH:mm"
-                  :format24h="!isEnglish()"
-                />
-              </q-popup-proxy>
-            </q-icon>
-          </template>
-        </q-input>
-      </div>
+            </div>
 
-      <div style="width: 500px">
-        <q-input
-          filled
-          type="text"
-          :label="t('createAuction.description')"
-          v-model="opis_predmeta"
-        />
-      </div>
+            <div>
+              <div class="label-text q-mb-sm">Opis proizvoda</div>
+
+              <q-input
+                outlined
+                bg-color="white"
+                type="textarea"
+                rows="5"
+                v-model="opis_predmeta"
+                placeholder="Detaljno opišite proizvod..."
+                class="custom-input"
+              />
+            </div>
+
+            <div>
+              <div class="label-text q-mb-md">Unesite slike</div>
+
+              <div class="upload-box">
+
+                <div
+                  v-if="base64Images.length"
+                  class="row q-col-gutter-md q-mb-md"
+                >
+                  <div
+                    v-for="(img, index) in base64Images"
+                    :key="index"
+                    class="col-6 col-sm-4 col-md-3"
+                  >
+                    <div class="image-wrapper">
+
+                      <img :src="img" class="preview-image" />
+
+                      <q-btn
+                        dense
+                        round
+                        icon="close"
+                        color="negative"
+                        class="remove-btn"
+                        @click="removeImage(index)"
+                      />
+
+                    </div>
+                  </div>
+                </div>
+
+                <div class="upload-content">
+
+                  <q-icon name="upload" size="38px" class="upload-icon" />
+
+                  <div class="upload-title">
+                    Kliknite za odabir slika
+                  </div>
+
+                  <div class="upload-subtitle">
+                    PNG, JPG do 10MB
+                  </div>
+
+                  <input
+                    type="file"
+                    multiple
+                    accept="image/*"
+                    @change="onFileChange"
+                    class="file-input"
+                  />
+
+                </div>
+
+              </div>
+            </div>
+
+          </div>
+
+          <div class="row q-col-gutter-md q-pt-md">
+
+            <div class="col">
+              <q-btn
+                label="Postavi"
+                type="submit"
+                class="full-width submit-btn"
+                unelevated
+              />
+            </div>
+
+            <div class="col">
+              <q-btn
+                label="Otkaži"
+                class="full-width cancel-btn"
+                unelevated
+                @click="otkazi_gumb"
+              />
+            </div>
+
+          </div>
+
+        </q-form>
+
+        <q-dialog v-model="showDialog">
+          <q-card style="min-width: 300px">
+
+            <q-card-section class="text-center text-subtitle1">
+              Predmet uspješno dodan!
+            </q-card-section>
+
+            <q-card-actions align="center">
+              <q-btn
+                flat
+                label="OK"
+                color="primary"
+                v-close-popup
+                @click="closeAndReload"
+              />
+            </q-card-actions>
+
+          </q-card>
+        </q-dialog>
+
+      </q-card>
+
     </div>
 
-    <div>
-      <br />
-
-      <p class="q-pl-md">
-        {{ t("createAuction.uploadImage") }}
-      </p>
-
-      <div class="q-pl-md q-mt-md">
-        <q-file
-          v-model="files"
-          multiple
-          accept="image/*"
-          outlined
-          clearable
-          use-chips
-          color="primary"
-          style="max-width: 450px"
-          :label="t('common.selectFile')"
-          :hint="files.length ? '' : t('createAuction.noFileSelected')"
-          @update:model-value="onFileChange"
-        >
-          <template v-slot:prepend>
-            <q-icon name="cloud_upload" />
-          </template>
-        </q-file>
-      </div>
-
-      <q-separator class="q-mt-md" />
-
-      <div
-        v-if="base64Image"
-        class="q-pa-md"
-      >
-        <img
-          :src="base64Image"
-          style="
-            max-width: 300px;
-            border-radius: 10px;
-            border: 1px solid #ddd;
-          "
-        />
-      </div>
-    </div>
-
-    <div class="q-ml-sm flex justify-center q-gutter-sm">
-      <q-btn
-        :label="t('createAuction.submit')"
-        @click="submitForm"
-        color="green"
-      />
-
-      <q-btn
-        :label="t('createAuction.cancel')"
-        @click="otkazi_gumb"
-        color="red"
-      />
-    </div>
-  </q-card>
+  </q-page>
 </template>
 
 <script>
 import imageCompression from "browser-image-compression";
 import axios from "axios";
-import { useI18n } from "vue-i18n";
 
 export default {
-  setup() {
-    const { t, locale } = useI18n();
-    return { t, locale };
-  },
-
   data() {
     return {
       sifra_predmeta: null,
       naziv_predmeta: "",
       opis_predmeta: "",
       selectedKategorija: null,
+      selectedKorisnik: null,
       pocetna_cijena: "",
       slika: null,
       file: null,
       base64Image: null,
+      base64Text: null,
+      imageUrl: "",
+      showDialog: false,
       vrijemePocetka: null,
       vrijemeZavrsetka: null,
       decoded: null,
       insertedPredmetId_dohvat: null,
 
-      kategorijeRaw: [],
       kategorije: [],
       korisnik: [],
       files: [],
@@ -210,62 +267,34 @@ export default {
     };
   },
 
-  watch: {
-    locale() {
-      this.setKategorijeOptions();
-    },
-  },
-
   methods: {
-    isEnglish() {
-      return String(this.locale || "hr").startsWith("en");
+
+    async checkUserRole() {
+      if (!this.decoded || !(this.decoded.uloga === "admin" || this.decoded.uloga === "user")) {
+        this.$q.notify({
+          color: "negative",
+          position: "top",
+          message: "Niste prijavljeni, pristup odbijen",
+          icon: "warning",
+        });
+        this.$router.push("pocetna");
+      }
     },
 
-    formattedDate(dateString) {
-      if (!dateString) return "";
+    async onFileChange(e) {
+      this.files = Array.from(e.target.files);
 
-      const locale = this.isEnglish() ? "en-US" : "hr-HR";
-
-      return new Date(dateString).toLocaleString(locale, {
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-        hour: "numeric",
-        minute: "2-digit",
-        hour12: this.isEnglish(),
-      });
-    },
-
-    categoryName(kategorija) {
-      return this.isEnglish()
-        ? kategorija.naziv_kategorije_en || kategorija.naziv_kategorije
-        : kategorija.naziv_kategorije;
-    },
-
-    setKategorijeOptions() {
-      this.kategorije = this.kategorijeRaw.map((kategorija) => ({
-        label: this.categoryName(kategorija),
-        value: kategorija.id_kategorije,
-      }));
-    },
-
-    async onFileChange(files) {
-      this.files = files || [];
-
-      const allImages = this.files.every((file) => file.type.startsWith("image/"));
+      const allImages = this.files.every(file => file.type.startsWith("image/"));
 
       if (!allImages) {
         this.$q.notify({
           color: "negative",
           position: "top",
-          message: this.t("createAuction.onlyImages"),
+          message: "Dopuštene su samo slike.",
           icon: "warning",
         });
-
         this.files = [];
-        this.base64Images = [];
-        this.base64Image = null;
-        this.slika = null;
+        e.target.value = null;
         return;
       }
 
@@ -281,8 +310,6 @@ export default {
 
       try {
         this.base64Images = [];
-        this.base64Image = null;
-        this.slika = null;
 
         for (const file of this.files) {
           const compressedFile = await imageCompression(file, options);
@@ -290,7 +317,7 @@ export default {
 
           const promise = new Promise((resolve, reject) => {
             reader.onload = () => resolve(reader.result);
-            reader.onerror = (error) => reject(error);
+            reader.onerror = (err) => reject(err);
           });
 
           reader.readAsDataURL(compressedFile);
@@ -298,17 +325,24 @@ export default {
 
           this.base64Images.push(base64String);
           this.slika = base64String;
-          this.base64Image = base64String;
         }
       } catch (error) {
         console.error(error);
-        this.$q.notify({
-          color: "negative",
-          position: "top",
-          message: this.t("createAuction.imageCompressionError"),
-          icon: "warning",
-        });
+        alert("Došlo je do pogreške prilikom kompresije slika.");
       }
+    },
+
+    removeImage(index) {
+    this.base64Images.splice(index, 1);
+    this.files.splice(index, 1);
+  },
+
+    closeAndReload() {
+      this.showDialog = false;
+      this.$router.push({
+        path: "prikaz",
+        query: { id_predmeta: this.insertedPredmetId_dohvat }
+      });
     },
 
     otkazi_gumb() {
@@ -318,16 +352,21 @@ export default {
     },
 
     async submitForm() {
-      if (
-        !this.naziv_predmeta ||
-        !this.opis_predmeta ||
-        !this.pocetna_cijena ||
-        !this.selectedKategorija
-      ) {
+
+      const requiredFields = [
+        this.naziv_predmeta,
+        this.opis_predmeta,
+        this.pocetna_cijena,
+        this.selectedKategorija
+      ];
+
+      const hasEmptyFields = requiredFields.some(field => !field);
+
+      if (hasEmptyFields) {
         this.$q.notify({
           color: "negative",
           position: "top",
-          message: this.t("createAuction.requiredFields"),
+          message: "Niste ispunili sva polja",
           icon: "warning",
         });
         return;
@@ -337,17 +376,21 @@ export default {
         this.$q.notify({
           color: "negative",
           position: "top",
-          message: this.t("createAuction.selectImage"),
+          message: "Molimo odaberite barem jednu sliku.",
           icon: "warning",
         });
         return;
       }
 
-      if (this.vrijemePocetka > this.vrijemeZavrsetka) {
+      if (
+        this.vrijemePocetka &&
+        this.vrijemeZavrsetka &&
+        new Date(this.vrijemePocetka) >= new Date(this.vrijemeZavrsetka)
+      ) {
         this.$q.notify({
           color: "negative",
           position: "top",
-          message: this.t("createAuction.invalidAuctionDates"),
+          message: "Datum početka ne može biti nakon datuma završetka.",
           icon: "warning",
         });
         return;
@@ -370,30 +413,26 @@ export default {
 
       try {
         const token = localStorage.getItem("token");
+
         const headers = { Authorization: `Bearer ${token}` };
 
-        const response = await axios.post("http://localhost:3000/unosPredmeta", formData, {
-          headers: {
-            "Content-Type": "multipart/form-data",
-            ...headers,
-          },
-        });
+        const response = await axios.post(
+          "http://localhost:3000/unosPredmeta",
+          formData,
+          {
+            headers: {
+              "Content-Type": "multipart/form-data",
+              ...headers,
+            },
+          }
+        );
 
-        const insertedId =
-          response.data.insertedPredmetId ||
-          response.data.insertId ||
-          response.data.id_predmeta ||
-          response.data.data?.insertId;
-
-        if (!insertedId) {
-          console.error("Backend nije vratio ID predmeta:", response.data);
-          return;
+        if (response.data && response.data.insertedPredmetId) {
+          this.insertedPredmetId_dohvat = response.data.insertedPredmetId;
         }
 
-        this.$router.push({
-          path: "/prikaz",
-          query: { id_predmeta: insertedId },
-        });
+        this.showDialog = true;
+
       } catch (error) {
         console.error(error);
       }
@@ -402,14 +441,13 @@ export default {
 
   mounted() {
     function parseJwt(token) {
-      const base64Url = token.split(".")[1];
-      const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
-      const jsonPayload = decodeURIComponent(
+      var base64Url = token.split(".")[1];
+      var base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+
+      var jsonPayload = decodeURIComponent(
         atob(base64)
           .split("")
-          .map(function (c) {
-            return "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2);
-          })
+          .map(c => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
           .join("")
       );
 
@@ -420,23 +458,154 @@ export default {
 
     if (token) {
       const headers = { Authorization: `Bearer ${token}` };
+
       this.decoded = parseJwt(token);
 
       axios
         .get("http://localhost:3000/getUnosPredmeta", { headers })
         .then((response) => {
-          this.kategorijeRaw = response.data.kategorije;
-          this.setKategorijeOptions();
+          this.kategorije = response.data.kategorije.map(k => ({
+            label: k.naziv_kategorije,
+            value: k.id_kategorije,
+          }));
+
+          this.korisnik = response.data.korisnici.map(k => ({
+            label: k.ime_korisnika,
+            value: k.id_korisnika,
+          }));
         })
-        .catch((error) => {
-          console.error("Error fetching data:", error);
-        });
+        .catch(err => console.error(err));
     }
+
+    this.checkUserRole();
 
     const now = new Date();
     now.setHours(now.getHours() + 2);
+
     this.vrijemePocetka = now.toISOString().slice(0, 16).replace("T", " ");
     this.vrijemeZavrsetka = this.vrijemePocetka;
   },
 };
 </script>
+
+<style>
+.page-bg {
+  background: #edf2f7;
+  padding: 30px;
+}
+
+.page-wrapper {
+  width: 100%;
+  max-width: 900px;
+}
+
+.main-card {
+  width: 100%;
+  max-width: 820px;
+  margin: 0 auto;
+  border-radius: 22px;
+  background: white;
+  box-shadow: 0 10px 35px rgba(0, 0, 0, 0.08);
+}
+
+.title-text {
+  font-size: 34px;
+  font-weight: 700;
+  color: #183153;
+}
+
+.label-text {
+  font-size: 14px;
+  font-weight: 500;
+  color: #243b53;
+}
+
+.custom-input .q-field__control {
+  border-radius: 12px !important;
+}
+
+.custom-input textarea {
+  padding-top: 14px;
+}
+
+.upload-box {
+  border: 2px dashed #d7dee7;
+  border-radius: 18px;
+  padding: 30px 20px;
+  background: #fafcff;
+  position: relative;
+}
+
+.upload-content {
+  text-align: center;
+  position: relative;
+}
+
+.upload-icon {
+  color: #94a3b8;
+  margin-bottom: 10px;
+}
+
+.upload-title {
+  font-size: 16px;
+  color: #334155;
+  font-weight: 500;
+}
+
+.upload-subtitle {
+  color: #94a3b8;
+  margin-top: 5px;
+  font-size: 13px;
+}
+
+.file-input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.image-wrapper {
+  position: relative;
+}
+
+.preview-image {
+  width: 100%;
+  height: 110px;
+  object-fit: cover;
+  border-radius: 12px;
+}
+
+.remove-btn {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+}
+
+.submit-btn {
+  background: #00c73c;
+  color: white;
+  height: 50px;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.cancel-btn {
+  background: #ff1e2d;
+  color: white;
+  height: 50px;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.form-inner {
+  max-width: 760px;
+  margin: 0 auto;
+}
+
+.form-content {
+  padding: 0 24px;
+}
+</style>
