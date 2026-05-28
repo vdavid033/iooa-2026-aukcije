@@ -1645,6 +1645,13 @@ app.get("/api/pobjednik/:id_predmeta", authJwt.verifyTokenUser, (req, res) => {
 
 const obradeneAukcije = new Set();
 
+connection.query(
+  "SELECT DISTINCT id_predmeta FROM notifikacija WHERE poruka LIKE '%završila%'",
+  (err, rows) => {
+    if (!err) rows.forEach((r) => obradeneAukcije.add(r.id_predmeta));
+  }
+);
+
 function posaljiNotifikacije(notifikacije) {
   if (!notifikacije.length) return;
   connection.query(
@@ -1705,7 +1712,7 @@ function obradiZavrsenuAukciju(aukcija) {
 
       // FZ-2.4: Kreiraj transakciju
       connection.query(
-        "INSERT INTO transakcija (id_korisnika, id_predmeta, iznos_transakcije, vrijeme_transakcije) VALUES (?, ?, ?, NOW())",
+        "INSERT IGNORE INTO transakcija (id_korisnika, id_predmeta, iznos_transakcije, vrijeme_transakcije) VALUES (?, ?, ?, NOW())",
         [pobjednik.id_korisnika, aukcija.id_predmeta, pobjednik.vrijednost_ponude],
         (errT) => { if (errT) console.error("Greška pri kreiranju transakcije:", errT); }
       );
