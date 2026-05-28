@@ -372,6 +372,7 @@
 <script>
 import { ref } from "vue";
 import axios from "axios";
+import { jwtDecode } from "jwt-decode";
 import socket, { SOCKET_EVENTS } from "../socket";
 
 const BASE_URL = "http://localhost:3000";
@@ -497,7 +498,7 @@ export default {
     await this.dohvatiPredmet();
     await Promise.all([this.dohvatiPonude(), this.dohvatiTrenutnuCijenu()]);
     if (this.isAuthenticated) {
-      await this.dohvatiAutoBid();
+      await Promise.all([this.dohvatiAutoBid(), this.dohvatiStatusPracenja()]);
     }
     this.setupSocket();
   },
@@ -649,12 +650,46 @@ export default {
       }
     },
 
+    async dohvatiStatusPracenja() {
+      try {
+        const token = localStorage.getItem("token");
+        const decoded = jwtDecode(token);
+        const { data } = await axios.get(`${API_URL}/watchlist/${decoded.id}`, {
+          headers: this.getAuthHeaders(),
+        });
+        this.pratim = data.some(
+          (item) => Number(item.id_predmeta) === Number(this.id_predmeta),
+        );
+      } catch {
+        this.pratim = false;
+      }
+    },
+
     async togglePracenje() {
-      // TODO: integrate with lista_pracenja endpoint once available
-      this.$q.notify({
-        type: "info",
-        message: "Praćenje nije još implementirano.",
-      });
+      if (!this.isAuthenticated) return;
+
+      try {
+        if (this.pratim) {
+          await axios.delete(`${API_URL}/watchlist/${this.id_predmeta}`, {
+            headers: this.getAuthHeaders(),
+          });
+          this.pratim = false;
+          this.$q.notify({ type: "positive", message: "Aukcija uklonjena s liste praćenja." });
+        } else {
+          await axios.post(
+            `${API_URL}/watchlist`,
+            { id_predmeta: this.id_predmeta },
+            { headers: this.getAuthHeaders() },
+          );
+          this.pratim = true;
+          this.$q.notify({ type: "positive", message: "Aukcija dodana na listu praćenja." });
+        }
+      } catch (err) {
+        this.$q.notify({
+          type: "negative",
+          message: err.response?.data?.message || "Greška pri ažuriranju liste praćenja.",
+        });
+      }
     },
 
     setupSocket() {
