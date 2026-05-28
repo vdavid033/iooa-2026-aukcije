@@ -24,6 +24,8 @@
           filled
           v-model="selectedRole"
           :options="roleOptions"
+          emit-value
+          map-options
           label="Filtriraj po ulozi"
           clearable
           dense
@@ -48,23 +50,11 @@
       no-data-label="Nema korisnika za prikaz."
       class="user-table"
     >
-      <template v-slot:body-cell-ime_korisnika="props">
-        <div class="text-left" style="width: auto; min-width: 120px;">{{ props.row.ime_korisnika }}</div>
-      </template>
-      <template v-slot:body-cell-prezime_korisnika="props">
-        <div class="text-left" style="width: auto; min-width: 120px;">{{ props.row.prezime_korisnika }}</div>
-      </template>
-      <template v-slot:body-cell-email_korisnika="props">
-        <div class="text-left" style="max-width: 220px; word-break: break-word; white-space: normal;">{{ props.row.email_korisnika }}</div>
-      </template>
-      <template v-slot:body-cell-adresa_korisnika="props">
-        <div class="text-left" style="max-width: 220px; word-break: break-word; white-space: normal;">{{ props.row.adresa_korisnika }}</div>
-      </template>
       <template v-slot:body-cell-actions="props">
-        <div style="display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;">
-          <q-btn dense color="primary" label="Uredi" size="sm" @click="editUser(props.row.id_korisnika)" />
+        <q-td :props="props">
+          <q-btn dense color="primary" label="Uredi" size="sm" class="q-mr-xs" @click="editUser(props.row.id_korisnika)" />
           <q-btn dense color="negative" label="Obriši" size="sm" @click="deleteUser(props.row.id_korisnika)" />
-        </div>
+        </q-td>
       </template>
     </q-table>
   </q-page>
@@ -227,11 +217,9 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.user-table .q-table__grid {
-  min-width: 100%;
-}
-.user-table .q-td,
-.user-table .q-th {
+.user-table :deep(.q-table td) {
   white-space: normal;
+  word-break: break-word;
+  vertical-align: top;
 }
 </style>

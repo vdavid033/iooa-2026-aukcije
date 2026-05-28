@@ -44,7 +44,7 @@
             <div class="row items-center justify-between">
               <div>
                 <div class="text-h6 text-weight-bold">Transakcije</div>
-                <div class="text-subtitle2 text-grey-7">Posljednjih 30 dana: {{ stats.transactionsLast30Days }}</div>
+                <div class="text-subtitle2 text-grey-7">Posljednjih 30 dana: {{ stats.last30DaysTransactions }}</div>
               </div>
               <q-icon name="receipt_long" size="32px" color="orange" />
             </div>
@@ -63,7 +63,7 @@
               </div>
               <q-icon name="thumb_up" size="32px" color="teal" />
             </div>
-            <div class="text-h4 text-weight-bold q-mt-md">{{ stats.successfulTransactionRate }}%</div>
+            <div class="text-h4 text-weight-bold q-mt-md">{{ stats.successRate }}%</div>
           </q-card-section>
         </q-card>
       </div>
@@ -81,7 +81,7 @@
       <q-separator spaced />
 
       <q-card-section>
-        <q-tab-panels v-model="activeTab" animated>
+        <q-tab-panels v-model="activeTab">
           <q-tab-panel name="overview">
             <div class="text-body1 text-grey-7">Dobrodošli u admin panel. Odaberite karticu Aukcije ili Transakcije za pregled podataka.</div>
           </q-tab-panel>
@@ -112,9 +112,9 @@ const stats = reactive({
   activeAuctions: 0,
   totalRevenue: 0,
   monthlyRevenue: 0,
-  transactionsLast30Days: 0,
-  successfulTransactionRate: 0,
   totalTransactions: 0,
+  last30DaysTransactions: 0,
+  successRate: 0,
 });
 
 const getHeaders = () => {

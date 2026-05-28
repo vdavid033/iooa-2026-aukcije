@@ -48,29 +48,6 @@
       </div>
     </div>
 
-    <div class="row q-col-gutter-sm q-mb-lg">
-      <div class="col-12 col-md-6">
-        <q-card flat bordered class="q-pa-sm">
-          <q-card-section>
-            <div class="row items-center q-col-gutter-sm">
-              <div class="col-auto text-weight-bold">Datum završetka:</div>
-              <div class="col">
-                <q-date
-                  v-model="dateRange"
-                  range
-                  mask="YYYY-MM-DD"
-                  format="YYYY-MM-DD"
-                  locale="hr"
-                  minimal
-                  class="shadow-1"
-                />
-              </div>
-            </div>
-          </q-card-section>
-        </q-card>
-      </div>
-    </div>
-
     <q-table
       flat
       bordered
@@ -87,36 +64,43 @@
       class="shadow-1"
     >
       <template v-slot:body-cell-status_aukcije="props">
-        <q-badge
-          :label="statusLabel(props.value)"
-          :color="props.value === 'aktivna' ? 'positive' : 'grey-7'"
-          align="center"
-        />
+        <q-td :props="props">
+          <q-badge
+            :label="statusLabel(props.value)"
+            :color="props.value === 'aktivna' ? 'positive' : 'grey-7'"
+          />
+        </q-td>
       </template>
 
       <template v-slot:body-cell-trenutna_cijena="props">
-        {{ formatCurrency(props.value) }}
+        <q-td :props="props">
+          {{ formatCurrency(props.value) }}
+        </q-td>
       </template>
 
       <template v-slot:body-cell-vrijeme_zavrsetka="props">
-        {{ formatDate(props.value) }}
+        <q-td :props="props">
+          {{ formatDate(props.value) }}
+        </q-td>
       </template>
 
       <template v-slot:body-cell-actions="props">
-        <q-btn
-          dense
-          color="primary"
-          label="Detalji"
-          size="sm"
-          @click="showDetails(props.row)"
-        />
+        <q-td :props="props">
+          <q-btn
+            dense
+            color="primary"
+            label="Detalji"
+            size="sm"
+            @click="showDetails(props.row)"
+          />
+        </q-td>
       </template>
     </q-table>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, watch, onMounted, computed } from 'vue';
+import { ref, reactive, watch, onMounted } from 'vue';
 import { useQuasar } from 'quasar';
 import axios from 'axios';
 
@@ -126,7 +110,6 @@ const rows = ref([]);
 const loading = ref(false);
 const searchInput = ref('');
 const statusFilter = ref('all');
-const dateRange = ref([null, null]);
 const pagination = reactive({
   page: 1,
   rowsPerPage: 10,
@@ -148,9 +131,13 @@ const columns = [
   { name: 'actions', label: 'AKCIJE', field: 'actions', align: 'center' },
 ];
 
-const paginationLabel = computed(() => {
-  return `${pagination.rowsNumber} ukupno`; 
-});
+const paginationLabel = (firstRow, endRow, total) => `${total} ukupno`;
+
+const statusLabel = (value) => {
+  if (value === 'aktivna') return 'Aktivna';
+  if (value === 'završena') return 'Završena';
+  return value || '-';
+};
 
 const getHeaders = () => {
   const token = localStorage.getItem('token');
@@ -169,13 +156,6 @@ const buildParams = () => {
 
   if (statusFilter.value !== 'all') {
     params.status = statusFilter.value;
-  }
-
-  if (dateRange.value && dateRange.value[0]) {
-    params.date_from = dateRange.value[0];
-  }
-  if (dateRange.value && dateRange.value[1]) {
-    params.date_to = dateRange.value[1];
   }
 
   if (pagination.sortBy) {
@@ -329,14 +309,6 @@ watch(
   }
 );
 
-watch(
-  dateRange,
-  () => {
-    resetPageAndFetch();
-  },
-  { deep: true }
-);
-
 onMounted(() => {
   fetchAuctions();
 });
@@ -347,11 +319,13 @@ onMounted(() => {
   width: 100%;
 }
 
-.auctions-table .q-date {
-  max-width: 100%;
-}
-
 .auctions-table .q-btn-group {
   min-height: 40px;
+}
+
+.auctions-table :deep(.q-table td) {
+  white-space: normal;
+  word-break: break-word;
+  vertical-align: top;
 }
 </style>

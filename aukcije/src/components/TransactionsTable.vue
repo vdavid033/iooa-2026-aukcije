@@ -44,29 +44,6 @@
       </div>
     </div>
 
-    <div class="row q-col-gutter-sm q-mb-lg">
-      <div class="col-12 col-md-6">
-        <q-card flat bordered class="q-pa-sm">
-          <q-card-section>
-            <div class="row items-center q-col-gutter-sm">
-              <div class="col-auto text-weight-bold">Datum transakcije:</div>
-              <div class="col">
-                <q-date
-                  v-model="dateRange"
-                  range
-                  mask="YYYY-MM-DD"
-                  format="YYYY-MM-DD"
-                  locale="hr"
-                  minimal
-                  class="shadow-1"
-                />
-              </div>
-            </div>
-          </q-card-section>
-        </q-card>
-      </div>
-    </div>
-
     <q-table
       flat
       bordered
@@ -82,29 +59,36 @@
       class="shadow-1"
     >
       <template v-slot:body-cell-iznos_transakcije="props">
-        {{ formatCurrency(props.value) }}
+        <q-td :props="props">
+          {{ formatCurrency(props.value) }}
+        </q-td>
       </template>
 
       <template v-slot:body-cell-vrijeme_transakcije="props">
-        {{ formatDate(props.value) }}
+        <q-td :props="props">
+          {{ formatDate(props.value) }}
+        </q-td>
       </template>
 
       <template v-slot:body-cell-status="props">
-        <q-badge
-          :label="formatStatus(props.value)"
-          :color="props.value === 'završena' ? 'grey-7' : 'positive'"
-          align="center"
-        />
+        <q-td :props="props">
+          <q-badge
+            :label="formatStatus(props.value)"
+            :color="props.value === 'Završena' ? 'grey-7' : 'positive'"
+          />
+        </q-td>
       </template>
 
       <template v-slot:body-cell-actions="props">
-        <q-btn
-          dense
-          color="primary"
-          label="Detalji"
-          size="sm"
-          @click="showDetails(props.row)"
-        />
+        <q-td :props="props">
+          <q-btn
+            dense
+            color="primary"
+            label="Detalji"
+            size="sm"
+            @click="showDetails(props.row)"
+          />
+        </q-td>
       </template>
     </q-table>
   </div>
@@ -121,7 +105,6 @@ const rows = ref([]);
 const loading = ref(false);
 const searchInput = ref('');
 const statusFilter = ref('all');
-const dateRange = ref([null, null]);
 const statusList = ref([]);
 const pagination = reactive({
   page: 1,
@@ -174,13 +157,6 @@ const buildParams = () => {
     params.status = statusFilter.value;
   }
 
-  if (dateRange.value && dateRange.value[0]) {
-    params.date_from = dateRange.value[0];
-  }
-  if (dateRange.value && dateRange.value[1]) {
-    params.date_to = dateRange.value[1];
-  }
-
   return params;
 };
 
@@ -201,11 +177,12 @@ const fetchTransactions = async () => {
       new Set(rows.value.map((item) => item.status).filter(Boolean))
     );
   } catch (error) {
-    console.error('Greška pri dohvaćanju transakcija:', error);
+    const msg = error?.response?.data?.error || error?.message || 'Greška pri dohvaćanju transakcija.';
+    console.error('Greška pri dohvaćanju transakcija:', msg, error);
     $q.notify({
       color: 'negative',
       position: 'top',
-      message: 'Greška pri dohvaćanju transakcija.',
+      message: msg,
       icon: 'warning',
     });
   } finally {
@@ -275,6 +252,10 @@ const showDetails = (row) => {
   console.log('Transakcija detalji:', row);
 };
 
+const formatCurrency = (value) => {
+  return new Intl.NumberFormat('hr-HR', { style: 'currency', currency: 'HRK' }).format(value || 0);
+};
+
 const formatDate = (value) => {
   if (!value) return '-';
   return new Date(value).toLocaleDateString('hr-HR', {
@@ -312,14 +293,6 @@ watch(
   }
 );
 
-watch(
-  dateRange,
-  () => {
-    resetPageAndFetch();
-  },
-  { deep: true }
-);
-
 let searchTimer = null;
 
 onMounted(() => {
@@ -332,11 +305,13 @@ onMounted(() => {
   width: 100%;
 }
 
-.transactions-table .q-date {
-  max-width: 100%;
-}
-
 .transactions-table .q-btn-group {
   min-height: 40px;
+}
+
+.transactions-table :deep(.q-table td) {
+  white-space: normal;
+  word-break: break-word;
+  vertical-align: top;
 }
 </style>
