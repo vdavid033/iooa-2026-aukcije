@@ -1,219 +1,210 @@
 <template>
-  <q-card>
-    <div class="row justify-center q-pa-md">
-      <q-input
-        v-model="Pretrazivanje"
-        filled
-        :placeholder="t('homePage.searchPlaceholder')"
-        dense
-        class="q-input--width"
-      />
+  <q-page class="bg-grey-2">
+    <div class="q-pa-md">
 
-      <div style="width: 227px">
-        <q-select
-          filled
-          dense
-          lazy-rules
-          emit-value
-          v-model="selectedsortianje"
-          :label="t('homePage.sortBy')"
-          :options="sortiranje"
-          option-label="label"
-          option-value="value"
-          map-options
-          @update:model-value="sortiranjeOpcija"
-          class="custom-height"
+      <!-- KATEGORIJE -->
+      <div class="text-h5 text-weight-bold q-mb-md">{{ $t('homePage.categories') }}</div>
+
+      <div class="row q-col-gutter-md">
+        <div
+          v-for="cat in prikazaneKategorije"
+          :key="cat.id_kategorije"
+          class="col-6 col-sm-4 col-md-3"
+        >
+          <q-card
+            class="category-card"
+            @click="navigateToItem1(cat.id_kategorije)"
+          >
+            <q-img :src="cat.slika || defaultImg" class="category-img">
+              <div class="category-overlay">
+                <div class="text-subtitle1 text-weight-bold">
+                  {{ $pick(cat.naziv_kategorije, cat.naziv_kategorije_en) }}
+                </div>
+                <div class="text-caption">
+                  {{ cat.count || 0 }} {{ $t('homePage.auctions') }}
+                </div>
+              </div>
+            </q-img>
+          </q-card>
+        </div>
+      </div>
+
+      <div
+        v-if="brojPrikazanihKategorija < kategorija.length"
+        class="row justify-center q-mt-md"
+      >
+        <q-btn
+          color="primary"
+          outline
+          :label="$t('homePage.showMore')"
+          @click="prikaziViseKategorija"
         />
       </div>
-    </div>
 
-    <q-separator class="separator" />
+      <!-- AUKCIJE -->
+      <div class="row items-center justify-between q-mt-xl q-mb-md">
+        <div>
+          <div class="text-h5 text-weight-bold">
+            {{ $t('homePage.latestAuctions') }}
+          </div>
+          <div class="text-grey">
+            {{ $t('homePage.subtitle') }}
+          </div>
+        </div>
 
-    <q-item class="q-pa-sm text-bold text-blue-7" style="font-size: 30px">
-      {{ t("homePage.categories") }}
-    </q-item>
-
-    <div class="q-pa-sm row flex flex-center">
-      <div
-        v-for="item in kategorija"
-        :key="item.id_kategorije"
-        class="q-pa-md"
-        style="width: 400px"
-      >
-        <q-card @click="navigateToItem1(item.id_kategorije)">
-          <q-item-section>
-            <q-item class="q-pa-sm text-bold text-blue-7">
-              {{ categoryName(item) }}
-            </q-item>
-          </q-item-section>
-        </q-card>
+        <q-btn color="primary" :label="$t('homePage.viewAll')" to="/sve-aukcije" />
       </div>
-    </div>
 
-    <q-item class="q-pa-sm text-bold text-blue-7" style="font-size: 30px">
-      {{ t("homePage.latestAuctions") }}
-    </q-item>
+      <!-- SEARCH -->
+      <div class="row q-col-gutter-md q-mb-lg">
+        <div class="col">
+          <q-input
+            filled
+            v-model="Pretrazivanje"
+            :placeholder="$t('homePage.searchPlaceholder')"
+            dense
+          >
+            <template v-slot:prepend>
+              <q-icon name="search" />
+            </template>
+          </q-input>
+        </div>
 
-    <div class="q-pa-sm row flex flex-center">
-      <div
-        v-for="item in filteredItems"
-        :key="item.id_predmeta"
-        class="q-pa-md"
-        style="width: 400px"
-      >
-        <q-card @click="navigateToItem(item.id_predmeta)">
-          <q-img v-if="item.slika" :src="item.slika" no-native-menu />
-
-          <q-item-section>
-            <q-item class="q-pa-sm text-bold text-blue-7">
-              {{ itemName(item) }}
-            </q-item>
-
-            <q-item>
-              {{ t("homePage.startingPrice") }}: {{ item.pocetna_cijena }}$
-            </q-item>
-
-            <q-item>
-              {{ t("homePage.startTime") }}:
-              {{ formattedDate(item.vrijeme_pocetka) }}
-            </q-item>
-
-            <q-item>
-              {{ t("homePage.endTime") }}:
-              {{ formattedDate(item.vrijeme_zavrsetka) }}
-            </q-item>
-
-            <q-item>
-              {{ t("homePage.timeRemaining") }}:
-              {{ item.preostalo_vrijeme }} h
-            </q-item>
-
-            <q-item>
-              {{ t("homePage.currentPrice") }}: {{ item.trenutna_cijena }}$
-            </q-item>
-          </q-item-section>
-        </q-card>
+        <div class="col-3">
+          <q-select
+            filled
+            dense
+            v-model="selectedsortianje"
+            :options="sortiranje"
+            :label="$t('homePage.sortBy')"
+            emit-value
+            map-options
+            @update:model-value="sortiranjeOpcija"
+          />
+        </div>
       </div>
+
+      <div class="row q-col-gutter-md">
+        <div
+          v-for="item in filteredItems"
+          :key="item.id_predmeta"
+          class="col-12 col-sm-6 col-md-4"
+        >
+          <q-card class="auction-card" @click="navigateToItem(item.id_predmeta)">
+            <q-img :src="item.slika || defaultImg" style="height: 220px">
+              <div class="time-badge">
+                {{ item.preostalo_vrijeme }}
+              </div>
+            </q-img>
+
+            <q-card-section>
+              <div class="text-subtitle1 text-weight-bold">
+                {{ $pick(item.naziv_predmeta, item.naziv_predmeta_en) }}
+              </div>
+
+              <div class="q-mt-sm">
+                <div class="row justify-between text-caption">
+                  <span>{{ $t('homePage.startingPrice') }}:</span>
+                  <span>{{ item.pocetna_cijena }}€</span>
+                </div>
+
+                <div class="row justify-between text-weight-bold text-primary">
+                  <span>{{ $t('homePage.currentPrice') }}:</span>
+                  <span>{{ item.trenutna_cijena }}€</span>
+                </div>
+              </div>
+
+              <div class="row justify-between items-center q-mt-sm">
+                <div class="text-caption">
+                  {{ item.bids || 0 }} {{ $t('homePage.bids') }}
+                </div>
+
+                <q-badge color="green">{{ $t('homePage.active') }}</q-badge>
+              </div>
+
+              <q-btn
+                flat
+                class="full-width q-mt-md"
+                :label="$t('homePage.viewAuction')"
+                color="primary"
+              />
+            </q-card-section>
+          </q-card>
+        </div>
+      </div>
+
     </div>
-  </q-card>
+  </q-page>
 </template>
 
 <script>
 import axios from "axios";
-import { useI18n } from "vue-i18n";
 
 const baseUrl = "http://localhost:3000/api/";
 
 export default {
-  setup() {
-    const { t, locale } = useI18n();
-    return { t, locale };
-  },
-
   data() {
     return {
       Pretrazivanje: "",
       items: [],
       kategorija: [],
+      brojPrikazanihKategorija: 8,
       selectedsortianje: "",
+      defaultImg: "https://via.placeholder.com/400",
     };
   },
 
   mounted() {
-    this.fetchHomeData();
+    const token = localStorage.getItem("token");
+    const headers = { Authorization: `Bearer ${token}` };
+
+    axios.get(baseUrl + "all-predmet", { headers })
+      .then(res => this.items = res.data);
+
+    axios.get(baseUrl + "all-kategorija", { headers })
+      .then(res => this.kategorija = res.data);
   },
 
   computed: {
     sortiranje() {
       return [
-        { label: this.t("homePage.sortPriceAsc"), value: "price-asc" },
-        { label: this.t("homePage.sortPriceDesc"), value: "price-desc" },
-        { label: this.t("homePage.sortNameAsc"), value: "name-asc" },
-        { label: this.t("homePage.sortNameDesc"), value: "name-desc" },
-        { label: this.t("homePage.sortExpiration"), value: "expiration" },
+        { label: this.$t('homePage.sortPriceAsc'), value: "price-asc" },
+        { label: this.$t('homePage.sortPriceDesc'), value: "price-desc" },
+        { label: this.$t('homePage.sortNameAsc'), value: "name-asc" },
+        { label: this.$t('homePage.sortNameDesc'), value: "name-desc" },
+        { label: this.$t('homePage.sortExpiration'), value: "expiration" }
       ];
+    },
+
+    prikazaneKategorije() {
+      return this.kategorija.slice(0, this.brojPrikazanihKategorija);
     },
 
     filteredItems() {
       if (!this.Pretrazivanje) return this.items;
 
-      const searchLower = this.Pretrazivanje.toLowerCase();
-      const uniqueItemsMap = new Map();
-
-      this.items.forEach((item) => {
-        const name = this.itemName(item).toLowerCase();
-
-        if (!uniqueItemsMap.has(item.id_predmeta) && name.includes(searchLower)) {
-          uniqueItemsMap.set(item.id_predmeta, item);
-        }
-      });
-
-      return Array.from(uniqueItemsMap.values());
-    },
+      return this.items.filter(item =>
+        item.naziv_predmeta.toLowerCase()
+          .includes(this.Pretrazivanje.toLowerCase())
+      );
+    }
   },
 
   methods: {
-    // FIX ZA LOCALE
-    isEnglish() {
-      return String(this.locale?.value || this.locale || "hr").startsWith("en");
+    navigateToItem(id) {
+      this.$router.push({ path: "prikaz", query: { id_predmeta: id } });
     },
 
-    // FIX ZA EN NAZIV
-    itemName(item) {
-      const enName = String(item.naziv_predmeta_en || "").trim();
-
-      if (this.isEnglish() && enName) {
-        return enName;
-      }
-
-      return item.naziv_predmeta;
+    navigateToItem1(id) {
+      this.$router.push({ path: "kategorija", query: { id_kategorije: id } });
     },
 
-    categoryName(item) {
-      return this.isEnglish()
-        ? item.naziv_kategorije_en || item.naziv_kategorije
-        : item.naziv_kategorije;
+    prikaziViseKategorija() {
+      this.brojPrikazanihKategorija += 8;
     },
 
-    fetchHomeData() {
-      const token = localStorage.getItem("token");
-      const headers = { Authorization: `Bearer ${token}` };
-
-      axios
-        .get(baseUrl + "all-predmet", { headers })
-        .then((response) => {
-          console.log("DEBUG item:", response.data[0]); // provjera
-          this.items = response.data;
-        })
-        .catch((error) => {
-          console.error("Error fetching all-predmet:", error);
-        });
-
-      axios
-        .get(baseUrl + "all-kategorija", { headers })
-        .then((response) => {
-          this.kategorija = response.data;
-        })
-        .catch((error) => {
-          console.error("Error fetching all-kategorija:", error);
-        });
-    },
-
-    formattedDate(dateString) {
-      const currentLocale = this.isEnglish() ? "en-US" : "hr-HR";
-      return new Date(dateString).toLocaleString(currentLocale).replace(",", "");
-    },
-
-    navigateToItem(id_predmeta) {
-      this.$router.push({ path: "prikaz", query: { id_predmeta } });
-    },
-
-    navigateToItem1(id_kategorije) {
-      this.$router.push({ path: "kategorija", query: { id_kategorije } });
-    },
-
-    sortiranjeOpcija(selectedsortianje) {
-      switch (selectedsortianje) {
+    sortiranjeOpcija(val) {
+      switch (val) {
         case "price-asc":
           this.items.sort((a, b) => a.pocetna_cijena - b.pocetna_cijena);
           break;
@@ -222,38 +213,70 @@ export default {
           break;
         case "name-asc":
           this.items.sort((a, b) =>
-            this.itemName(a).localeCompare(this.itemName(b))
+            a.naziv_predmeta.localeCompare(b.naziv_predmeta)
           );
           break;
         case "name-desc":
           this.items.sort((a, b) =>
-            this.itemName(b).localeCompare(this.itemName(a))
+            b.naziv_predmeta.localeCompare(a.naziv_predmeta)
           );
           break;
         case "expiration":
-          this.items.sort(
-            (a, b) =>
-              new Date(a.vrijeme_zavrsetka) -
-              new Date(b.vrijeme_zavrsetka)
+          this.items.sort((a, b) =>
+            new Date(a.vrijeme_zavrsetka) - new Date(b.vrijeme_zavrsetka)
           );
           break;
       }
-    },
-  },
+    }
+  }
 };
 </script>
 
-<style>
-.q-img {
-  height: 300px;
-  max-width: 500px;
+<style scoped>
+.category-card {
+  overflow: hidden;
+  border-radius: 12px;
+  transition: 0.3s;
+  cursor: pointer;
 }
 
-.q-input--width {
-  width: 500px;
+.category-card:hover {
+  transform: translateY(-5px);
 }
 
-.separator {
-  background-color: #1976d2;
+.category-img {
+  height: 220px;
+}
+
+.category-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.38);
+  color: white;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+}
+
+.auction-card {
+  border-radius: 12px;
+  transition: 0.3s;
+}
+
+.auction-card:hover {
+  transform: translateY(-5px);
+}
+
+.time-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: red;
+  color: white;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 12px;
 }
 </style>

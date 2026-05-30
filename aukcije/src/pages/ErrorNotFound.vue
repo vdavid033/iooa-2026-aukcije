@@ -6,7 +6,7 @@
       <div style="font-size: 30vh">404</div>
 
       <div class="text-h2" style="opacity: 0.4">
-        {{ t('errorPage.message') }}
+        {{ $t('errorPage.message') }}
       </div>
 
       <q-btn
@@ -15,7 +15,7 @@
         text-color="blue"
         unelevated
         to="/"
-        :label="t('errorPage.backHome')"
+        :label="$t('errorPage.backHome')"
         no-caps
       />
     </div>
@@ -24,14 +24,8 @@
 
 <script>
 import { defineComponent } from "vue";
-import { useI18n } from "vue-i18n";
 
 export default defineComponent({
   name: "ErrorNotFound",
-
-  setup() {
-    const { t } = useI18n();
-    return { t };
-  },
 });
 </script>
