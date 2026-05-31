@@ -188,6 +188,27 @@ app.get("/api/get-predmet/:id", (req, res) => {
   );
 });
 
+app.get("/api/recenzije-prodavatelja/:id", (req, res) => {
+  const idProdavatelja = req.params.id;
+
+  connection.query(
+    `SELECT 
+        op.ocjena,
+        op.komentar,
+        DATE_FORMAT(op.datum_ocjene, "%Y-%m-%d %H:%i:%s") AS datum_ocjene
+      FROM ocjena_prodavatelja op
+      JOIN transakcija t ON op.id_transakcije = t.id_transakcije
+      JOIN predmet p ON t.id_predmeta = p.id_predmeta
+      WHERE p.id_korisnika = ?
+      ORDER BY op.datum_ocjene DESC`,
+    [idProdavatelja],
+    (error, results) => {
+      if (error) throw error;
+      res.send(results);
+    },
+  );
+});
+
 app.get("/api/get-kategorija-predmet/:id", (req, res) => {
   const { id } = req.params;
 

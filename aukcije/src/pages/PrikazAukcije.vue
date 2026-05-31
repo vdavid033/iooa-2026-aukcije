@@ -99,7 +99,7 @@
                   color="primary"
                   label="Prikaži recenzije"
                   class="q-mt-sm"
-                  @click="reviewsDialog = true"
+                  @click="prikaziRecenzijeProdavatelja"
                 />
               </div>
 
@@ -230,7 +230,30 @@
               Recenzije prodavatelja #{{ item.id_prodavatelja }}
             </div>
 
-            <div class="dialog-subtitle">Prodavatelj još nema recenzija.</div>
+            <div
+              v-if="recenzijeProdavatelja.length === 0"
+              class="dialog-subtitle"
+            >
+              Prodavatelj još nema recenzija.
+            </div>
+
+            <div v-else>
+              <div
+                v-for="recenzija in recenzijeProdavatelja"
+                :key="recenzija.datum_ocjene"
+                class="q-mt-md"
+              >
+                <div class="text-weight-bold">
+                  Ocjena: {{ recenzija.ocjena }} / 5
+                </div>
+                <div>
+                  {{ recenzija.komentar }}
+                </div>
+                <div class="text-caption text-grey">
+                  {{ recenzija.datum_ocjene }}
+                </div>
+              </div>
+            </div>
           </q-card-section>
 
           <q-card-actions align="right">
@@ -281,6 +304,7 @@ export default {
       showDialog: false,
       successDialog: false,
       reviewsDialog: false,
+      recenzijeProdavatelja: [],
       successPrice: 0,
       odabranaCijena: "",
       prices: [],
@@ -335,6 +359,19 @@ export default {
           `${(current * multiplier).toFixed(2)} $`,
         value: (current * multiplier).toFixed(2),
       }));
+    },
+
+    async prikaziRecenzijeProdavatelja() {
+      try {
+        const res = await axios.get(
+          baseUrl + "recenzije-prodavatelja/" + this.item.id_prodavatelja,
+        );
+
+        this.recenzijeProdavatelja = res.data;
+        this.reviewsDialog = true;
+      } catch (error) {
+        console.error("Greška pri dohvatu recenzija prodavatelja:", error);
+      }
     },
 
     potvrdiPonudu() {
