@@ -403,6 +403,32 @@ app.get("/api/get-predmet-trenutna-cijena/:id", (req, res) => {
   );
 });
 
+app.post("/api/ocjena-prodavatelja", authJwt.verifyTokenUser, (req, res) => {
+  const data = req.body;
+
+  connection.query(
+    `INSERT INTO ocjena_prodavatelja
+      (ocjena, komentar, id_transakcije)
+     VALUES (?, ?, ?)`,
+    [data.ocjena, data.komentar, data.id_transakcije],
+    (error, results) => {
+      if (error) {
+        console.error("Greška pri spremanju ocjene prodavatelja:", error);
+        return res.status(500).json({
+          error: true,
+          message: "Ocjena nije spremljena.",
+        });
+      }
+
+      res.json({
+        error: false,
+        message: "Ocjena je uspješno spremljena.",
+        data: results,
+      });
+    },
+  );
+});
+
 app.listen(port, () => {
   console.log("Server running at port: " + port);
 });
@@ -777,6 +803,8 @@ app.get("/api/osvojeni-predmeti/:id", authJwt.verifyTokenUser, (req, res) => {
   connection.query(
     `SELECT
     op.id_predmeta,
+    t.id_transakcije,
+    p.id_korisnika AS id_prodavatelja,
     op.naziv_predmeta,
     p.naziv_predmeta_en,
     p.opis_predmeta,
@@ -785,6 +813,7 @@ app.get("/api/osvojeni-predmeti/:id", authJwt.verifyTokenUser, (req, res) => {
     COALESCE(MAX(po.vrijednost_ponude), p.pocetna_cijena) AS konacna_cijena
 FROM osvojeni_predmeti op
 JOIN predmet p ON op.id_predmeta = p.id_predmeta
+LEFT JOIN transakcija t ON p.id_predmeta = t.id_predmeta
 LEFT JOIN ponuda po ON p.id_predmeta = po.id_predmeta
 WHERE op.id_korisnika = ?
 GROUP BY op.id_predmeta

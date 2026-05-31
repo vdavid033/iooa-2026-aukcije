@@ -1,11 +1,9 @@
 <template>
   <div class="profile-page q-pa-md">
-
     <!-- PROFIL -->
     <q-card class="profile-hero q-mb-xl">
       <q-card-section class="profile-hero__top">
         <div class="row items-center justify-between q-col-gutter-md">
-
           <div class="col-12 col-md-auto">
             <div class="row items-center q-gutter-md">
               <q-avatar size="110px" class="shadow-6">
@@ -14,10 +12,12 @@
 
               <div>
                 <div class="text-h4 text-weight-bold text-primary">
-                  {{ $t('profilePage.user') }} {{ korisnik_trenutno.ime_korisnika }} {{ korisnik_trenutno.prezime_korisnika }}
+                  {{ $t("profilePage.user") }}
+                  {{ korisnik_trenutno.ime_korisnika }}
+                  {{ korisnik_trenutno.prezime_korisnika }}
                 </div>
                 <div class="text-subtitle2 text-grey-7">
-                  {{ $t('profilePage.subtitle') }}
+                  {{ $t("profilePage.subtitle") }}
                 </div>
               </div>
             </div>
@@ -32,7 +32,6 @@
               @click="$router.push('/UpdateProfil')"
             />
           </div>
-
         </div>
       </q-card-section>
 
@@ -40,14 +39,17 @@
 
       <q-card-section>
         <div class="row q-col-gutter-md">
-
           <div class="col-12 col-sm-6 col-md-3">
             <q-card flat bordered class="info-tile">
               <q-card-section class="row items-center q-gutter-sm">
                 <q-icon name="person" color="primary" />
                 <div>
-                  <div class="text-caption text-grey-6">{{ $t('profilePage.firstName') }}</div>
-                  <div class="text-weight-medium">{{ korisnik_trenutno.ime_korisnika }}</div>
+                  <div class="text-caption text-grey-6">
+                    {{ $t("profilePage.firstName") }}
+                  </div>
+                  <div class="text-weight-medium">
+                    {{ korisnik_trenutno.ime_korisnika }}
+                  </div>
                 </div>
               </q-card-section>
             </q-card>
@@ -58,8 +60,12 @@
               <q-card-section class="row items-center q-gutter-sm">
                 <q-icon name="badge" color="primary" />
                 <div>
-                  <div class="text-caption text-grey-6">{{ $t('profilePage.lastName') }}</div>
-                  <div class="text-weight-medium">{{ korisnik_trenutno.prezime_korisnika }}</div>
+                  <div class="text-caption text-grey-6">
+                    {{ $t("profilePage.lastName") }}
+                  </div>
+                  <div class="text-weight-medium">
+                    {{ korisnik_trenutno.prezime_korisnika }}
+                  </div>
                 </div>
               </q-card-section>
             </q-card>
@@ -70,7 +76,9 @@
               <q-card-section class="row items-center q-gutter-sm">
                 <q-icon name="mail" color="primary" />
                 <div>
-                  <div class="text-caption text-grey-6">{{ $t('profilePage.email') }}</div>
+                  <div class="text-caption text-grey-6">
+                    {{ $t("profilePage.email") }}
+                  </div>
                   <div class="text-weight-medium ellipsis">
                     {{ korisnik_trenutno.email_korisnika }}
                   </div>
@@ -84,24 +92,27 @@
               <q-card-section class="row items-center q-gutter-sm">
                 <q-icon name="place" color="primary" />
                 <div>
-                  <div class="text-caption text-grey-6">{{ $t('profilePage.address') }}</div>
-                  <div class="text-weight-medium">{{ korisnik_trenutno.adresa_korisnika }}</div>
+                  <div class="text-caption text-grey-6">
+                    {{ $t("profilePage.address") }}
+                  </div>
+                  <div class="text-weight-medium">
+                    {{ korisnik_trenutno.adresa_korisnika }}
+                  </div>
                 </div>
               </q-card-section>
             </q-card>
           </div>
-
         </div>
       </q-card-section>
     </q-card>
 
     <!-- PREDMETI -->
     <div class="section-head q-mb-md">
-      <h5>{{ $t('profilePage.yourAuctionItems') }}</h5>
+      <h5>{{ $t("profilePage.yourAuctionItems") }}</h5>
     </div>
 
     <p v-if="vlastitiPredmeti.length === 0" class="text-grey">
-      {{ $t('profilePage.noAuctionItems') }}
+      {{ $t("profilePage.noAuctionItems") }}
     </p>
 
     <div class="row q-col-gutter-md q-mb-xl">
@@ -111,12 +122,7 @@
         class="col-12 col-sm-6 col-md-4"
       >
         <q-card class="auction-card">
-
-          <q-img
-            v-if="predmet.slika"
-            :src="predmet.slika"
-            ratio="4/3"
-          />
+          <q-img v-if="predmet.slika" :src="predmet.slika" ratio="4/3" />
 
           <q-card-section>
             <div class="row justify-between items-center">
@@ -125,49 +131,71 @@
               </div>
 
               <q-badge :color="provjeriDatum(predmet) ? 'green' : 'grey'">
-                {{ provjeriDatum(predmet) ? $t('profilePage.active') : $t('profilePage.finished') }}
+                {{
+                  provjeriDatum(predmet)
+                    ? $t("profilePage.active")
+                    : $t("profilePage.finished")
+                }}
               </q-badge>
             </div>
 
             <div class="q-mt-sm text-body2">
-              {{ $t('profilePage.startingPrice') }}: {{ predmet.pocetna_cijena }}$
+              {{ $t("profilePage.startingPrice") }}:
+              {{ predmet.pocetna_cijena }}$
             </div>
             <div class="text-body2">
-              {{ $t('profilePage.startTime') }}: {{ formattedDate(predmet.vrijeme_pocetka) }}
+              {{ $t("profilePage.startTime") }}:
+              {{ formattedDate(predmet.vrijeme_pocetka) }}
             </div>
             <div class="text-body2">
-              {{ $t('profilePage.endTime') }}: {{ formattedDate(predmet.vrijeme_zavrsetka) }}
+              {{ $t("profilePage.endTime") }}:
+              {{ formattedDate(predmet.vrijeme_zavrsetka) }}
             </div>
             <div class="text-body2">
-              {{ $t('profilePage.remainingTime') }}: {{ predmet.preostalo_vrijeme }} h
+              {{ $t("profilePage.remainingTime") }}:
+              {{ predmet.preostalo_vrijeme }} h
             </div>
             <div class="text-body2 text-weight-bold">
-              {{ $t('profilePage.currentPrice') }}: {{ predmet.trenutna_cijena }}$
+              {{ $t("profilePage.currentPrice") }}:
+              {{ predmet.trenutna_cijena }}$
             </div>
           </q-card-section>
 
           <q-separator />
 
           <q-card-actions align="between">
-            <q-btn flat :label="$t('profilePage.view')" @click="pregledPredmeta(predmet.id_predmeta)" />
+            <q-btn
+              flat
+              :label="$t('profilePage.view')"
+              @click="pregledPredmeta(predmet.id_predmeta)"
+            />
 
             <div v-if="provjeriDatum(predmet)">
-              <q-btn flat color="primary" :label="$t('profilePage.edit')" @click="izmijeniPredmet(predmet.id_predmeta)" />
-              <q-btn flat color="negative" :label="$t('profilePage.delete')" @click="obrisiPredmet(predmet.id_predmeta)" />
+              <q-btn
+                flat
+                color="primary"
+                :label="$t('profilePage.edit')"
+                @click="izmijeniPredmet(predmet.id_predmeta)"
+              />
+              <q-btn
+                flat
+                color="negative"
+                :label="$t('profilePage.delete')"
+                @click="obrisiPredmet(predmet.id_predmeta)"
+              />
             </div>
           </q-card-actions>
-
         </q-card>
       </div>
     </div>
 
     <!-- PONUDE -->
     <div class="section-head q-mb-md">
-      <h5>{{ $t('profilePage.yourBids') }}</h5>
+      <h5>{{ $t("profilePage.yourBids") }}</h5>
     </div>
 
     <p v-if="vlastitePonude.length === 0" class="text-grey">
-      {{ $t('profilePage.noBids') }}
+      {{ $t("profilePage.noBids") }}
     </p>
 
     <div class="row q-col-gutter-md">
@@ -177,12 +205,11 @@
         class="col-12 col-sm-6 col-md-4"
       >
         <q-card class="bid-card">
-
           <q-card-section>
             <q-img
               v-if="ponuda.slika"
               :src="ponuda.slika"
-              style="height:150px"
+              style="height: 150px"
             />
 
             <div class="text-subtitle1 text-primary q-mt-sm">
@@ -190,29 +217,30 @@
             </div>
 
             <div class="text-body2">
-              {{ $t('profilePage.description') }}: {{ $pick(ponuda.opis_predmeta, ponuda.opis_en) }}
+              {{ $t("profilePage.description") }}:
+              {{ $pick(ponuda.opis_predmeta, ponuda.opis_en) }}
             </div>
 
             <div class="text-body2">
-              {{ $t('profilePage.bidValue') }}: {{ ponuda.vrijednost_ponude }}$
+              {{ $t("profilePage.bidValue") }}: {{ ponuda.vrijednost_ponude }}$
             </div>
 
             <div class="text-body2">
-              {{ $t('profilePage.bidTime') }}: {{ formattedDate(ponuda.vrijeme_ponude) }}
+              {{ $t("profilePage.bidTime") }}:
+              {{ formattedDate(ponuda.vrijeme_ponude) }}
             </div>
           </q-card-section>
-
         </q-card>
       </div>
     </div>
 
     <!-- OSVOJENI PREDMETI -->
     <div class="section-head q-mb-md q-mt-xl">
-      <h5>{{ $t('profilePage.yourWonItems') }}</h5>
+      <h5>{{ $t("profilePage.yourWonItems") }}</h5>
     </div>
 
     <p v-if="vlastitiOsvojeniPredmeti.length === 0" class="text-grey">
-      {{ $t('profilePage.noWonItems') }}
+      {{ $t("profilePage.noWonItems") }}
     </p>
 
     <div class="row q-col-gutter-md">
@@ -222,33 +250,88 @@
         class="col-12 col-sm-6 col-md-4"
       >
         <q-card class="won-item-card">
-
           <q-img
             v-if="osvojeniPredmet.slika"
             :src="osvojeniPredmet.slika"
-            style="height:200px"
+            style="height: 200px"
           />
 
           <q-card-section>
             <div class="text-h6 text-primary">
-              {{ $pick(osvojeniPredmet.naziv_predmeta, osvojeniPredmet.naziv_predmeta_en) }}
+              {{
+                $pick(
+                  osvojeniPredmet.naziv_predmeta,
+                  osvojeniPredmet.naziv_predmeta_en,
+                )
+              }}
             </div>
 
             <div class="q-mt-sm text-body2">
-              {{ $pick(osvojeniPredmet.opis_predmeta, osvojeniPredmet.opis_en) }}
+              {{
+                $pick(osvojeniPredmet.opis_predmeta, osvojeniPredmet.opis_en)
+              }}
             </div>
 
             <q-separator class="q-my-md" />
 
             <div class="text-body2 text-weight-bold text-positive">
-              {{ $t('profilePage.finalPrice') }}: {{ osvojeniPredmet.konacna_cijena }}$
+              {{ $t("profilePage.finalPrice") }}:
+              {{ osvojeniPredmet.konacna_cijena }}$
             </div>
-          </q-card-section>
 
+            <q-btn
+              class="q-mt-md"
+              color="primary"
+              outline
+              icon="star"
+              label="Ocijeni prodavatelja"
+              @click="otvoriOcjenjivanje(osvojeniPredmet)"
+            />
+          </q-card-section>
         </q-card>
       </div>
     </div>
 
+    <q-dialog v-model="ocjenaDialog">
+      <q-card style="width: 430px; max-width: 90vw">
+        <q-card-section>
+          <div class="text-h6">
+            Ocijeni prodavatelja #{{ odabraniOsvojeniPredmet?.id_prodavatelja }}
+          </div>
+
+          <div class="text-body2 text-grey q-mt-sm">
+            Predmet: {{ odabraniOsvojeniPredmet?.naziv_predmeta }}
+          </div>
+        </q-card-section>
+
+        <q-card-section>
+          <q-select
+            outlined
+            v-model="ocjenaProdavatelja"
+            :options="[1, 2, 3, 4, 5]"
+            label="Ocjena prodavatelja"
+          />
+
+          <q-input
+            outlined
+            type="textarea"
+            v-model="komentarProdavatelja"
+            label="Komentar"
+            class="q-mt-md"
+          />
+        </q-card-section>
+
+        <q-card-actions align="right">
+          <q-btn flat label="Odustani" color="grey" v-close-popup />
+          <q-btn
+            unelevated
+            label="Spremi ocjenu"
+            color="primary"
+            @click="spremiOcjenuProdavatelja"
+          />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
   </div>
 </template>
 
@@ -296,12 +379,16 @@ export default {
         ime_korisnika: "",
         prezime_korisnika: "",
         email_korisnika: "",
-        adresa_korisnika: ""
+        adresa_korisnika: "",
       },
       vlastitiPredmeti: [],
       vlastitePonude: [],
       vlastitiOsvojeniPredmeti: [],
-    }
+      ocjenaDialog: false,
+      odabraniOsvojeniPredmet: null,
+      ocjenaProdavatelja: null,
+      komentarProdavatelja: "",
+    };
   },
 
   async mounted() {
@@ -316,7 +403,6 @@ export default {
       this.dohvatPredmeta(userId, headers);
       this.dohvatPonude(userId, headers);
       this.dohvatOsvojeniPredmeti(userId, headers);
-
     } catch (error) {
       console.error(error);
     }
@@ -324,26 +410,38 @@ export default {
 
   methods: {
     async dohvatPredmeta(userId, headers) {
-      const res = await axios.get("http://localhost:3000/api/vlastiti-predmeti/" + userId, { headers });
+      const res = await axios.get(
+        "http://localhost:3000/api/vlastiti-predmeti/" + userId,
+        { headers },
+      );
       this.vlastitiPredmeti = res.data;
     },
 
     async dohvatPonude(userId, headers) {
-      const res = await axios.get("http://localhost:3000/api/vlastita-ponuda-korisnik/" + userId, { headers });
+      const res = await axios.get(
+        "http://localhost:3000/api/vlastita-ponuda-korisnik/" + userId,
+        { headers },
+      );
       this.vlastitePonude = res.data;
     },
 
     async dohvatOsvojeniPredmeti(userId, headers) {
-      const res = await axios.get("http://localhost:3000/api/osvojeni-predmeti/" + userId, { headers });
+      const res = await axios.get(
+        "http://localhost:3000/api/osvojeni-predmeti/" + userId,
+        { headers },
+      );
+
       console.log("Puni osvojeni predmeti:", JSON.stringify(res.data, null, 2));
+
       res.data.forEach((p, i) => {
         console.log(`Predmet ${i}:`, {
           id_predmeta: p.id_predmeta,
           naziv_predmeta: p.naziv_predmeta,
           slika_length: p.slika ? p.slika.length : "NULL",
-          slika_start: p.slika ? p.slika.substring(0, 50) : "NULL"
+          slika_start: p.slika ? p.slika.substring(0, 50) : "NULL",
         });
       });
+
       this.vlastitiOsvojeniPredmeti = res.data;
     },
 
@@ -352,36 +450,77 @@ export default {
     },
 
     pregledPredmeta(id) {
-      this.$router.push({ path: "prikaz", query: { id_predmeta: id } });
+      this.$router.push({
+        path: "prikaz",
+        query: { id_predmeta: id },
+      });
     },
 
     izmijeniPredmet(id) {
-      this.$router.push({ path: "izmjena_predmeta", query: { id_predmeta: id } });
+      this.$router.push({
+        path: "izmjena_predmeta",
+        query: { id_predmeta: id },
+      });
     },
 
     async obrisiPredmet(id) {
       const token = localStorage.getItem("token");
       const headers = { Authorization: `Bearer ${token}` };
 
-      if (confirm(this.$t('profilePage.confirmDelete'))) {
-        await axios.delete("http://localhost:3000/api/brisanjePredmeta/" + id, { headers });
+      if (confirm(this.$t("profilePage.confirmDelete"))) {
+        await axios.delete("http://localhost:3000/api/brisanjePredmeta/" + id, {
+          headers,
+        });
         location.reload();
       }
     },
 
     getUserIdFromToken(token) {
-      const base64 = token.split('.')[1];
+      const base64 = token.split(".")[1];
       return JSON.parse(atob(base64)).id;
     },
 
     async fetchUserData(userId) {
-      const res = await axios.get(`http://localhost:3000/api/korisnikinfo1/${userId}`);
+      const res = await axios.get(
+        `http://localhost:3000/api/korisnikinfo1/${userId}`,
+      );
       return res.data[0];
     },
 
     provjeriDatum(predmet) {
       return new Date(predmet.vrijeme_pocetka) > new Date();
-    }
-  }
-}
+    },
+
+    otvoriOcjenjivanje(osvojeniPredmet) {
+      this.odabraniOsvojeniPredmet = osvojeniPredmet;
+      this.ocjenaProdavatelja = null;
+      this.komentarProdavatelja = "";
+      this.ocjenaDialog = true;
+    },
+
+    async spremiOcjenuProdavatelja() {
+      try {
+        const token = localStorage.getItem("token");
+        const headers = { Authorization: `Bearer ${token}` };
+
+        await axios.post(
+          "http://localhost:3000/api/ocjena-prodavatelja",
+          {
+            id_transakcije: this.odabraniOsvojeniPredmet.id_transakcije,
+            ocjena: this.ocjenaProdavatelja,
+            komentar: this.komentarProdavatelja,
+          },
+          { headers },
+        );
+
+        alert("Ocjena je uspješno spremljena.");
+
+        this.ocjenaDialog = false;
+      } catch (error) {
+        console.error(error);
+        alert("Greška pri spremanju ocjene.");
+      }
+    },
+  },
+};
 </script>
