@@ -88,12 +88,10 @@
                 <div class="section-label">Prodavatelj</div>
 
                 <div class="seller-line">
-                  korisnik #{{ item.id_prodavatelja }}
+                  Korisnik #{{ item.id_prodavatelja }}
                 </div>
 
-                <div class="seller-rating">
-                  Ocjena prodavatelja: nema ocjena
-                </div>
+                <div class="seller-rating">Ocjena: nema ocjena</div>
 
                 <q-btn
                   flat
@@ -101,6 +99,7 @@
                   color="primary"
                   label="Prikaži recenzije"
                   class="q-mt-sm"
+                  @click="reviewsDialog = true"
                 />
               </div>
 
@@ -223,6 +222,22 @@
           </div>
         </q-card>
       </q-dialog>
+
+      <q-dialog v-model="reviewsDialog">
+        <q-card class="reviews-dialog">
+          <q-card-section>
+            <div class="dialog-title">
+              Recenzije prodavatelja #{{ item.id_prodavatelja }}
+            </div>
+
+            <div class="dialog-subtitle">Prodavatelj još nema recenzija.</div>
+          </q-card-section>
+
+          <q-card-actions align="right">
+            <q-btn flat label="Zatvori" color="primary" v-close-popup />
+          </q-card-actions>
+        </q-card>
+      </q-dialog>
     </div>
   </q-page>
 </template>
@@ -265,6 +280,7 @@ export default {
       item: {},
       showDialog: false,
       successDialog: false,
+      reviewsDialog: false,
       successPrice: 0,
       odabranaCijena: "",
       prices: [],
@@ -759,5 +775,12 @@ export default {
   color: #2563eb;
   font-size: 15px;
   font-weight: 800;
+}
+
+.reviews-dialog {
+  width: 430px;
+  max-width: 90vw;
+  border-radius: 24px;
+  padding: 8px;
 }
 </style>
