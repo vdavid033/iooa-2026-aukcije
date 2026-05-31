@@ -1,14 +1,15 @@
 <template>
   <q-page class="auction-page">
     <div class="page-wrap">
-      <div class="auction-title">{{ $t('auctionViewPage.title') }}</div>
+      <div class="auction-title">{{ $t("auctionViewPage.title") }}</div>
 
       <q-card class="auction-card" flat>
         <div class="row q-col-gutter-lg">
-
           <div class="col-12 col-md-7">
             <div class="image-panel">
-              <template v-if="!showSingleImage && item.slike && item.slike.length > 1">
+              <template
+                v-if="!showSingleImage && item.slike && item.slike.length > 1"
+              >
                 <q-carousel
                   v-model="slide"
                   animated
@@ -42,19 +43,19 @@
                 />
 
                 <div v-else class="image-placeholder">
-                  {{ $t('auctionViewPage.noImage') }}
+                  {{ $t("auctionViewPage.noImage") }}
                 </div>
               </template>
 
               <div class="image-badge">
-                <span>{{ $t('auctionViewPage.auctionBadge') }}</span>
+                <span>{{ $t("auctionViewPage.auctionBadge") }}</span>
               </div>
             </div>
 
             <div class="auction-timer">
               <q-icon name="schedule" size="20px" color="primary" />
               <span>
-                {{ $t('auctionViewPage.timeLeft') }}
+                {{ $t("auctionViewPage.timeLeft") }}
                 <strong>{{ vrijemeDoKraja }}</strong>
               </span>
             </div>
@@ -62,25 +63,54 @@
 
           <div class="col-12 col-md-5">
             <div class="details-panel">
-
               <div class="product-box">
                 <div class="product-title">
-                  {{ $pick(item.naziv_predmeta, item.naziv_predmeta_en) || $t('auctionViewPage.nameUnavailable') }}
+                  {{
+                    $pick(item.naziv_predmeta, item.naziv_predmeta_en) ||
+                    $t("auctionViewPage.nameUnavailable")
+                  }}
                 </div>
               </div>
 
               <div class="description-box">
-                <div class="section-label">{{ $t('auctionViewPage.productDescription') }}</div>
-                <div class="description-text">
-                  {{ $pick(item.opis_predmeta, item.opis_en) || $t('auctionViewPage.descUnavailable') }}
+                <div class="section-label">
+                  {{ $t("auctionViewPage.productDescription") }}
                 </div>
+                <div class="description-text">
+                  {{
+                    $pick(item.opis_predmeta, item.opis_en) ||
+                    $t("auctionViewPage.descUnavailable")
+                  }}
+                </div>
+              </div>
+
+              <div class="seller-box">
+                <div class="section-label">Prodavatelj</div>
+
+                <div class="seller-line">
+                  korisnik #{{ item.id_prodavatelja }}
+                </div>
+
+                <div class="seller-rating">
+                  Ocjena prodavatelja: nema ocjena
+                </div>
+
+                <q-btn
+                  flat
+                  dense
+                  color="primary"
+                  label="Prikaži recenzije"
+                  class="q-mt-sm"
+                />
               </div>
 
               <div class="time-row">
                 <div class="time-box">
                   <q-icon name="event" color="primary" size="22px" />
                   <div>
-                    <div class="meta-label">{{ $t('auctionViewPage.startTime') }}</div>
+                    <div class="meta-label">
+                      {{ $t("auctionViewPage.startTime") }}
+                    </div>
                     <div class="meta-value">
                       {{ formattedDate(item.vrijeme_pocetka) }}
                     </div>
@@ -90,7 +120,9 @@
                 <div class="time-box">
                   <q-icon name="event_available" color="primary" size="22px" />
                   <div>
-                    <div class="meta-label">{{ $t('auctionViewPage.endTime') }}</div>
+                    <div class="meta-label">
+                      {{ $t("auctionViewPage.endTime") }}
+                    </div>
                     <div class="meta-value">
                       {{ formattedDate(item.vrijeme_zavrsetka) }}
                     </div>
@@ -101,14 +133,18 @@
               <div class="price-panel">
                 <div class="price-grid">
                   <div class="start-price-card">
-                    <div class="price-label">{{ $t('auctionViewPage.startPrice') }}</div>
+                    <div class="price-label">
+                      {{ $t("auctionViewPage.startPrice") }}
+                    </div>
                     <div class="start-price">
                       {{ formatPrice(item.pocetna_cijena) }}
                     </div>
                   </div>
 
                   <div class="current-price-card">
-                    <div class="price-label blue">{{ $t('auctionViewPage.currentPrice') }}</div>
+                    <div class="price-label blue">
+                      {{ $t("auctionViewPage.currentPrice") }}
+                    </div>
                     <div class="current-price">
                       {{ formatPrice(item.trenutna_cijena) }}
                     </div>
@@ -124,20 +160,20 @@
                   @click="showDialog = true"
                 />
               </div>
-
             </div>
           </div>
-
         </div>
       </q-card>
 
       <q-dialog v-model="showDialog">
         <q-card class="bid-dialog">
           <q-card-section>
-            <div class="dialog-title">{{ $t('auctionViewPage.newBidTitle') }}</div>
+            <div class="dialog-title">
+              {{ $t("auctionViewPage.newBidTitle") }}
+            </div>
 
             <div class="dialog-subtitle">
-              {{ $t('auctionViewPage.bidHint') }}
+              {{ $t("auctionViewPage.bidHint") }}
             </div>
           </q-card-section>
 
@@ -175,11 +211,11 @@
           <div class="success-icon">✓</div>
 
           <div class="success-title">
-            {{ $t('auctionViewPage.bidSuccess') }}
+            {{ $t("auctionViewPage.bidSuccess") }}
           </div>
 
           <div class="success-text">
-            {{ $t('auctionViewPage.newCurrentPrice') }}
+            {{ $t("auctionViewPage.newCurrentPrice") }}
           </div>
 
           <div class="success-price">
@@ -205,21 +241,20 @@ export default {
     },
 
     vrijemeDoKraja() {
-      if (!this.item.vrijeme_zavrsetka) return this.$t('auctionViewPage.notAvailable');
+      if (!this.item.vrijeme_zavrsetka)
+        return this.$t("auctionViewPage.notAvailable");
 
       const end = new Date(this.item.vrijeme_zavrsetka);
       const now = new Date();
       const diff = end - now;
 
-      if (diff <= 0) return this.$t('auctionViewPage.auctionEnded');
+      if (diff <= 0) return this.$t("auctionViewPage.auctionEnded");
 
       const days = Math.floor(diff / (1000 * 60 * 60 * 24));
       const hours = Math.floor(
-        (diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)
+        (diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60),
       );
-      const minutes = Math.floor(
-        (diff % (1000 * 60 * 60)) / (1000 * 60)
-      );
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
 
       return `${days}d ${hours}h ${minutes}m`;
     },
@@ -265,11 +300,9 @@ export default {
 
   methods: {
     formattedDate(dateString) {
-      if (!dateString) return this.$t('auctionViewPage.notDefined');
+      if (!dateString) return this.$t("auctionViewPage.notDefined");
 
-      return new Date(dateString)
-        .toLocaleString("hr-HR")
-        .replace(",", "");
+      return new Date(dateString).toLocaleString("hr-HR").replace(",", "");
     },
 
     formatPrice(price) {
@@ -294,7 +327,7 @@ export default {
       if (!token || !this.odabranaCijena) {
         this.$q.notify({
           type: "warning",
-          message: this.$t('auctionViewPage.mustLogin'),
+          message: this.$t("auctionViewPage.mustLogin"),
           position: "center",
           timeout: 2500,
         });
@@ -311,7 +344,7 @@ export default {
       if (selectedPrice <= this.item.trenutna_cijena) {
         this.$q.notify({
           type: "negative",
-          message: this.$t('auctionViewPage.bidTooLow'),
+          message: this.$t("auctionViewPage.bidTooLow"),
           position: "center",
           timeout: 2500,
         });
@@ -321,7 +354,9 @@ export default {
       const currentDate = new Date();
 
       const formattedTime =
-        `${currentDate.getFullYear()}-${currentDate.getMonth() + 1}-${currentDate.getDate()} ` +
+        `${currentDate.getFullYear()}-${
+          currentDate.getMonth() + 1
+        }-${currentDate.getDate()} ` +
         `${currentDate.getHours()}:${currentDate.getMinutes()}:${currentDate.getSeconds()}`;
 
       const podaciPonude = {
@@ -332,11 +367,9 @@ export default {
       };
 
       axios
-        .post(
-          "http://localhost:3000/unostrenutnaponuda",
-          podaciPonude,
-          { headers }
-        )
+        .post("http://localhost:3000/unostrenutnaponuda", podaciPonude, {
+          headers,
+        })
         .then(() => {
           this.item.trenutna_cijena = selectedPrice;
           this.successPrice = selectedPrice;
@@ -354,7 +387,7 @@ export default {
 
           this.$q.notify({
             type: "negative",
-            message: this.$t('auctionViewPage.bidError'),
+            message: this.$t("auctionViewPage.bidError"),
             position: "center",
             timeout: 2500,
           });
@@ -706,5 +739,25 @@ export default {
   .success-price {
     font-size: 28px;
   }
+}
+
+.seller-box {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 22px;
+  padding: 18px 22px;
+}
+
+.seller-line {
+  color: #0f172a;
+  font-size: 16px;
+  font-weight: 900;
+}
+
+.seller-rating {
+  margin-top: 4px;
+  color: #2563eb;
+  font-size: 15px;
+  font-weight: 800;
 }
 </style>
