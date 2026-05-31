@@ -193,6 +193,8 @@ app.get("/api/recenzije-prodavatelja/:id", (req, res) => {
 
   connection.query(
     `SELECT 
+        p.naziv_predmeta,
+        p.naziv_predmeta_en,
         op.ocjena,
         op.komentar,
         DATE_FORMAT(op.datum_ocjene, "%Y-%m-%d %H:%i:%s") AS datum_ocjene
@@ -202,9 +204,21 @@ app.get("/api/recenzije-prodavatelja/:id", (req, res) => {
       WHERE p.id_korisnika = ?
       ORDER BY op.datum_ocjene DESC`,
     [idProdavatelja],
-    (error, results) => {
+    (error, recenzije) => {
       if (error) throw error;
-      res.send(results);
+
+      const brojRecenzija = recenzije.length;
+      const prosjecnaOcjena =
+        brojRecenzija > 0
+          ? recenzije.reduce((sum, r) => sum + Number(r.ocjena), 0) /
+            brojRecenzija
+          : null;
+
+      res.send({
+        prosjecnaOcjena,
+        brojRecenzija,
+        recenzije,
+      });
     },
   );
 });
@@ -414,6 +428,14 @@ app.post("/api/ocjena-prodavatelja", authJwt.verifyTokenUser, (req, res) => {
     (error, results) => {
       if (error) {
         console.error("Greška pri spremanju ocjene prodavatelja:", error);
+
+        if (error.code === "ER_DUP_ENTRY") {
+          return res.status(409).json({
+            error: true,
+            message: "Ova transakcija je već ocijenjena.",
+          });
+        }
+
         return res.status(500).json({
           error: true,
           message: "Ocjena nije spremljena.",
@@ -805,6 +827,10 @@ app.get("/api/osvojeni-predmeti/:id", authJwt.verifyTokenUser, (req, res) => {
     op.id_predmeta,
     t.id_transakcije,
     p.id_korisnika AS id_prodavatelja,
+    CASE 
+      WHEN ocj.id_ocjene IS NULL THEN 0
+      ELSE 1
+    END AS je_ocijenjeno,
     op.naziv_predmeta,
     p.naziv_predmeta_en,
     p.opis_predmeta,
@@ -814,9 +840,10 @@ app.get("/api/osvojeni-predmeti/:id", authJwt.verifyTokenUser, (req, res) => {
 FROM osvojeni_predmeti op
 JOIN predmet p ON op.id_predmeta = p.id_predmeta
 LEFT JOIN transakcija t ON p.id_predmeta = t.id_predmeta
+LEFT JOIN ocjena_prodavatelja ocj ON t.id_transakcije = ocj.id_transakcije
 LEFT JOIN ponuda po ON p.id_predmeta = po.id_predmeta
 WHERE op.id_korisnika = ?
-GROUP BY op.id_predmeta
+GROUP BY op.id_predmeta, t.id_transakcije, p.id_korisnika, ocj.id_ocjene
 ORDER BY op.id_predmeta DESC;`,
     [req.params.id],
     (error, results) => {
@@ -952,7 +979,7 @@ connection.query("SELECT id_predmeta FROM osvojeni_predmeti", (err, rows) => {
 
 function obradiZavrsenuAukciju(aukcija) {
   connection.query(
-    "SELECT id_korisnika FROM ponuda WHERE id_predmeta = ? ORDER BY vrijednost_ponude DESC LIMIT 1",
+    "SELECT id_korisnika, vrijednost_ponude FROM ponuda WHERE id_predmeta = ? ORDER BY vrijednost_ponude DESC LIMIT 1",
     [aukcija.id_predmeta],
     (err, ponude) => {
       if (err) {
@@ -963,21 +990,63 @@ function obradiZavrsenuAukciju(aukcija) {
         );
         return;
       }
+
       if (!ponude.length) {
         console.log("Aukcija", aukcija.id_predmeta, "završila bez ponuda.");
         return;
       }
+
       const pobjednik = ponude[0];
+
       connection.query(
         "INSERT IGNORE INTO osvojeni_predmeti (id_predmeta, id_korisnika, naziv_predmeta) VALUES (?, ?, ?)",
         [aukcija.id_predmeta, pobjednik.id_korisnika, aukcija.naziv_predmeta],
         (errI) => {
-          if (errI)
+          if (errI) {
             console.error(
               "Greška pri upisu pobjednika za aukciju",
               aukcija.id_predmeta,
               errI,
             );
+            return;
+          }
+
+          connection.query(
+            "SELECT id_transakcije FROM transakcija WHERE id_predmeta = ? AND id_korisnika = ? LIMIT 1",
+            [aukcija.id_predmeta, pobjednik.id_korisnika],
+            (errT, transakcije) => {
+              if (errT) {
+                console.error(
+                  "Greška pri provjeri transakcije za aukciju",
+                  aukcija.id_predmeta,
+                  errT,
+                );
+                return;
+              }
+
+              if (transakcije.length > 0) {
+                return;
+              }
+
+              connection.query(
+                "INSERT INTO transakcija (iznos_transakcije, vrijeme_transakcije, id_korisnika, id_predmeta) VALUES (?, NOW(), ?, ?)",
+                [
+                  pobjednik.vrijednost_ponude,
+                  pobjednik.id_korisnika,
+                  aukcija.id_predmeta,
+                ],
+                (errTR) => {
+                  if (errTR) {
+                    console.error(
+                      "Greška pri upisu transakcije za aukciju",
+                      aukcija.id_predmeta,
+                      errTR,
+                    );
+                  }
+                },
+              );
+            },
+          );
         },
       );
     },

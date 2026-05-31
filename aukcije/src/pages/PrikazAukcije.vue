@@ -91,12 +91,23 @@
                   Korisnik #{{ item.id_prodavatelja }}
                 </div>
 
-                <div class="seller-rating">Ocjena: nema ocjena</div>
+                <div class="seller-rating">
+                  <span v-if="brojRecenzijaProdavatelja > 0">
+                    Ocjena prodavatelja:
+                    {{ Number(prosjecnaOcjenaProdavatelja).toFixed(1) }}/5 ({{
+                      brojRecenzijaProdavatelja
+                    }}
+                    recenzija)
+                  </span>
+
+                  <span v-else> Ocjena prodavatelja: nema ocjena </span>
+                </div>
 
                 <q-btn
-                  flat
-                  dense
+                  outline
+                  rounded
                   color="primary"
+                  icon="reviews"
                   label="Prikaži recenzije"
                   class="q-mt-sm"
                   @click="prikaziRecenzijeProdavatelja"
@@ -243,6 +254,11 @@
                 :key="recenzija.datum_ocjene"
                 class="q-mt-md"
               >
+                <div class="text-subtitle2 text-primary text-weight-bold">
+                  {{
+                    $pick(recenzija.naziv_predmeta, recenzija.naziv_predmeta_en)
+                  }}
+                </div>
                 <div class="text-weight-bold">
                   Ocjena: {{ recenzija.ocjena }} / 5
                 </div>
@@ -305,6 +321,8 @@ export default {
       successDialog: false,
       reviewsDialog: false,
       recenzijeProdavatelja: [],
+      prosjecnaOcjenaProdavatelja: null,
+      brojRecenzijaProdavatelja: 0,
       successPrice: 0,
       odabranaCijena: "",
       prices: [],
@@ -315,6 +333,7 @@ export default {
   mounted() {
     axios.get(baseUrl + "get-predmet/" + this.id_predmeta).then((response) => {
       this.item = response.data[0];
+      this.dohvatiRecenzijeProdavatelja();
       this.item.trenutna_cijena = this.item.pocetna_cijena;
 
       if (this.item.slike && this.item.slike.length > 0) {
@@ -361,17 +380,23 @@ export default {
       }));
     },
 
-    async prikaziRecenzijeProdavatelja() {
+    async dohvatiRecenzijeProdavatelja() {
       try {
         const res = await axios.get(
           baseUrl + "recenzije-prodavatelja/" + this.item.id_prodavatelja,
         );
 
-        this.recenzijeProdavatelja = res.data;
-        this.reviewsDialog = true;
+        this.prosjecnaOcjenaProdavatelja = res.data.prosjecnaOcjena;
+        this.brojRecenzijaProdavatelja = res.data.brojRecenzija;
+        this.recenzijeProdavatelja = res.data.recenzije;
       } catch (error) {
         console.error("Greška pri dohvatu recenzija prodavatelja:", error);
       }
+    },
+
+    async prikaziRecenzijeProdavatelja() {
+      await this.dohvatiRecenzijeProdavatelja();
+      this.reviewsDialog = true;
     },
 
     potvrdiPonudu() {

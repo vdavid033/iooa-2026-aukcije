@@ -280,6 +280,7 @@
             </div>
 
             <q-btn
+              v-if="!osvojeniPredmet.je_ocijenjeno"
               class="q-mt-md"
               color="primary"
               outline
@@ -287,14 +288,24 @@
               label="Ocijeni prodavatelja"
               @click="otvoriOcjenjivanje(osvojeniPredmet)"
             />
+
+            <q-btn
+              v-else
+              class="q-mt-md"
+              color="positive"
+              outline
+              icon="check"
+              label="Prodavatelj ocijenjen"
+              disable
+            />
           </q-card-section>
         </q-card>
       </div>
     </div>
 
     <q-dialog v-model="ocjenaDialog">
-      <q-card style="width: 430px; max-width: 90vw">
-        <q-card-section>
+      <q-card class="rating-dialog" style="width: 430px; max-width: 90vw">
+        <q-card-section class="q-pb-sm">
           <div class="text-h6">
             Ocijeni prodavatelja #{{ odabraniOsvojeniPredmet?.id_prodavatelja }}
           </div>
@@ -366,6 +377,11 @@
 .won-item-card:hover {
   transform: translateY(-4px);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+.rating-dialog {
+  border-radius: 20px;
+  overflow: hidden;
 }
 </style>
 
@@ -518,7 +534,11 @@ export default {
         this.ocjenaDialog = false;
       } catch (error) {
         console.error(error);
-        alert("Greška pri spremanju ocjene.");
+
+        const poruka =
+          error.response?.data?.message || "Greška pri spremanju ocjene.";
+
+        alert(poruka);
       }
     },
   },
