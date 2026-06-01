@@ -531,6 +531,7 @@ export default {
 
         alert("Ocjena je uspješno spremljena.");
 
+        this.odabraniOsvojeniPredmet.je_ocijenjeno = 1;
         this.ocjenaDialog = false;
       } catch (error) {
         console.error(error);
