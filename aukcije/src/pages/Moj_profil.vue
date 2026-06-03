@@ -285,7 +285,7 @@
               color="primary"
               outline
               icon="star"
-              label="Ocijeni prodavatelja"
+              :label="$t('profilePage.rateSeller')"
               @click="otvoriOcjenjivanje(osvojeniPredmet)"
             />
 
@@ -295,7 +295,7 @@
               color="positive"
               outline
               icon="check"
-              label="Prodavatelj ocijenjen"
+              :label="$t('profilePage.sellerRated')"
               disable
             />
           </q-card-section>
@@ -307,11 +307,19 @@
       <q-card class="rating-dialog" style="width: 430px; max-width: 90vw">
         <q-card-section class="q-pb-sm">
           <div class="text-h6">
-            Ocijeni prodavatelja #{{ odabraniOsvojeniPredmet?.id_prodavatelja }}
+            {{ $t("profilePage.rateSellerTitle") }} #{{
+              odabraniOsvojeniPredmet?.id_prodavatelja
+            }}
           </div>
 
           <div class="text-body2 text-grey q-mt-sm">
-            Predmet: {{ odabraniOsvojeniPredmet?.naziv_predmeta }}
+            {{ $t("auctionViewPage.item") }}:
+            {{
+              $pick(
+                odabraniOsvojeniPredmet?.naziv_predmeta,
+                odabraniOsvojeniPredmet?.naziv_predmeta_en,
+              )
+            }}
           </div>
         </q-card-section>
 
@@ -320,23 +328,23 @@
             outlined
             v-model="ocjenaProdavatelja"
             :options="[1, 2, 3, 4, 5]"
-            label="Ocjena prodavatelja"
+            :label="$t('profilePage.ratingSeller')"
           />
 
           <q-input
             outlined
             type="textarea"
             v-model="komentarProdavatelja"
-            label="Komentar"
+            :label="$t('profilePage.comment')"
             class="q-mt-md"
           />
         </q-card-section>
 
         <q-card-actions align="right">
-          <q-btn flat label="Odustani" color="grey" v-close-popup />
+          <q-btn flat :label="$t('common.cancel')" color="grey" v-close-popup />
           <q-btn
             unelevated
-            label="Spremi ocjenu"
+            :label="$t('profilePage.saveRating')"
             color="primary"
             @click="spremiOcjenuProdavatelja"
           />
@@ -529,7 +537,7 @@ export default {
           { headers },
         );
 
-        alert("Ocjena je uspješno spremljena.");
+        alert(this.$t("profilePage.ratingSaved"));
 
         this.odabraniOsvojeniPredmet.je_ocijenjeno = 1;
         this.ocjenaDialog = false;
@@ -537,7 +545,7 @@ export default {
         console.error(error);
 
         const poruka =
-          error.response?.data?.message || "Greška pri spremanju ocjene.";
+          error.response?.data?.message || this.$t("profilePage.ratingError");
 
         alert(poruka);
       }

@@ -85,22 +85,27 @@
               </div>
 
               <div class="seller-box">
-                <div class="section-label">Prodavatelj</div>
+                <div class="section-label">
+                  {{ $t("auctionViewPage.seller") }}
+                </div>
 
                 <div class="seller-line">
-                  Korisnik #{{ item.id_prodavatelja }}
+                  {{ $t("auctionViewPage.user") }} #{{ item.id_prodavatelja }}
                 </div>
 
                 <div class="seller-rating">
                   <span v-if="brojRecenzijaProdavatelja > 0">
-                    Ocjena prodavatelja:
+                    {{ $t("auctionViewPage.sellerRating") }}:
                     {{ Number(prosjecnaOcjenaProdavatelja).toFixed(1) }}/5 ({{
                       brojRecenzijaProdavatelja
                     }}
-                    recenzija)
+                    {{ $t("auctionViewPage.reviews") }})
                   </span>
 
-                  <span v-else> Ocjena prodavatelja: nema ocjena </span>
+                  <span v-else>
+                    {{ $t("auctionViewPage.sellerRating") }}:
+                    {{ $t("auctionViewPage.noSellerRatings") }}
+                  </span>
                 </div>
 
                 <q-btn
@@ -108,7 +113,7 @@
                   rounded
                   color="primary"
                   icon="reviews"
-                  label="Prikaži recenzije"
+                  :label="$t('auctionViewPage.showReviews')"
                   class="q-mt-sm"
                   @click="prikaziRecenzijeProdavatelja"
                 />
@@ -238,14 +243,16 @@
         <q-card class="reviews-dialog">
           <q-card-section>
             <div class="dialog-title">
-              Recenzije prodavatelja #{{ item.id_prodavatelja }}
+              {{ $t("auctionViewPage.sellerReviews") }} #{{
+                item.id_prodavatelja
+              }}
             </div>
 
             <div
               v-if="recenzijeProdavatelja.length === 0"
               class="dialog-subtitle"
             >
-              Prodavatelj još nema recenzija.
+              {{ $t("auctionViewPage.noReviews") }}
             </div>
 
             <div v-else>
@@ -260,7 +267,8 @@
                   }}
                 </div>
                 <div class="text-weight-bold">
-                  Ocjena: {{ recenzija.ocjena }} / 5
+                  {{ $t("auctionViewPage.sellerRating") }}:
+                  {{ recenzija.ocjena }} / 5
                 </div>
                 <div>
                   {{ recenzija.komentar }}
@@ -273,7 +281,12 @@
           </q-card-section>
 
           <q-card-actions align="right">
-            <q-btn flat label="Zatvori" color="primary" v-close-popup />
+            <q-btn
+              flat
+              :label="$t('common.close')"
+              color="primary"
+              v-close-popup
+            />
           </q-card-actions>
         </q-card>
       </q-dialog>
@@ -390,7 +403,7 @@ export default {
         this.brojRecenzijaProdavatelja = res.data.brojRecenzija;
         this.recenzijeProdavatelja = res.data.recenzije;
       } catch (error) {
-        console.error("Greška pri dohvatu recenzija prodavatelja:", error);
+        console.error("Error fetching seller reviews:", error);
       }
     },
 
