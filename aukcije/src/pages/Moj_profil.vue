@@ -106,6 +106,73 @@
       </q-card-section>
     </q-card>
 
+    <!-- SPREMLJENE AUKCIJE -->
+    <div class="section-head q-mb-md">
+      <h5>{{ $t("savedAuctions.title") }}</h5>
+    </div>
+
+    <p v-if="spremljeneAukcije.length === 0" class="text-grey">
+      {{ $t("savedAuctions.empty") }}
+    </p>
+
+    <div class="row q-col-gutter-md q-mb-xl">
+      <div
+        v-for="predmet in spremljeneAukcije"
+        :key="predmet.id_predmeta"
+        class="col-12 col-sm-6 col-md-4"
+      >
+        <q-card class="saved-item-card">
+          <q-img v-if="predmet.slika" :src="predmet.slika" ratio="4/3" />
+
+          <q-card-section>
+            <div class="row justify-between items-center">
+              <div class="text-h6 text-primary">
+                {{ $pick(predmet.naziv_predmeta, predmet.naziv_predmeta_en) }}
+              </div>
+              <q-badge color="green">
+                {{ $t("profilePage.active") }}
+              </q-badge>
+            </div>
+
+            <div class="q-mt-sm text-body2">
+              {{ $t("profilePage.startingPrice") }}:
+              {{ predmet.pocetna_cijena }}$
+            </div>
+            <div class="text-body2">
+              {{ $t("profilePage.endTime") }}:
+              {{ formattedDate(predmet.vrijeme_zavrsetka) }}
+            </div>
+            <div class="text-body2 text-weight-bold">
+              {{ $t("profilePage.currentPrice") }}:
+              {{ predmet.trenutna_cijena }}$
+            </div>
+          </q-card-section>
+
+          <q-separator />
+
+          <q-card-actions align="between">
+            <q-btn
+              flat
+              :label="$t('profilePage.view')"
+              @click="pregledPredmeta(predmet.id_predmeta)"
+            />
+            <q-btn
+              flat
+              round
+              color="negative"
+              icon="favorite"
+              :disable="
+                uklanjanjeSpremljenihIds.includes(Number(predmet.id_predmeta))
+              "
+              @click.stop="ukloniSpremljenuAukciju(predmet.id_predmeta)"
+            >
+              <q-tooltip>{{ $t("savedAuctions.remove") }}</q-tooltip>
+            </q-btn>
+          </q-card-actions>
+        </q-card>
+      </div>
+    </div>
+
     <!-- PREDMETI -->
     <div class="section-head q-mb-md">
       <h5>{{ $t("profilePage.yourAuctionItems") }}</h5>
@@ -374,6 +441,7 @@
 }
 
 .auction-card,
+.saved-item-card,
 .bid-card,
 .won-item-card {
   border-radius: 16px;
@@ -381,6 +449,7 @@
 }
 
 .auction-card:hover,
+.saved-item-card:hover,
 .bid-card:hover,
 .won-item-card:hover {
   transform: translateY(-4px);
@@ -405,6 +474,8 @@ export default {
         email_korisnika: "",
         adresa_korisnika: "",
       },
+      spremljeneAukcije: [],
+      uklanjanjeSpremljenihIds: [],
       vlastitiPredmeti: [],
       vlastitePonude: [],
       vlastitiOsvojeniPredmeti: [],
@@ -425,6 +496,7 @@ export default {
       this.korisnik_trenutno = userData;
 
       this.dohvatPredmeta(userId, headers);
+      this.dohvatSpremljeneAukcije(headers);
       this.dohvatPonude(userId, headers);
       this.dohvatOsvojeniPredmeti(userId, headers);
     } catch (error) {
@@ -433,6 +505,52 @@ export default {
   },
 
   methods: {
+    async dohvatSpremljeneAukcije(headers) {
+      try {
+        const res = await axios.get(
+          "http://localhost:3000/api/spremljene-aukcije",
+          { headers },
+        );
+        this.spremljeneAukcije = res.data;
+      } catch (error) {
+        console.error("Greška pri dohvatu spremljenih aukcija:", error);
+      }
+    },
+
+    async ukloniSpremljenuAukciju(id) {
+      const idPredmeta = Number(id);
+      if (this.uklanjanjeSpremljenihIds.includes(idPredmeta)) return;
+
+      const token = localStorage.getItem("token");
+      const headers = { Authorization: `Bearer ${token}` };
+      this.uklanjanjeSpremljenihIds.push(idPredmeta);
+
+      try {
+        await axios.delete(
+          "http://localhost:3000/api/spremljene-aukcije/" + idPredmeta,
+          { headers },
+        );
+        this.spremljeneAukcije = this.spremljeneAukcije.filter(
+          (predmet) => Number(predmet.id_predmeta) !== idPredmeta,
+        );
+        this.$q.notify({
+          type: "positive",
+          message: this.$t("savedAuctions.removed"),
+        });
+      } catch (error) {
+        console.error("Greška pri uklanjanju spremljene aukcije:", error);
+        this.$q.notify({
+          type: "negative",
+          message: this.$t("savedAuctions.error"),
+        });
+      } finally {
+        this.uklanjanjeSpremljenihIds =
+          this.uklanjanjeSpremljenihIds.filter(
+            (savedId) => savedId !== idPredmeta,
+          );
+      }
+    },
+
     async dohvatPredmeta(userId, headers) {
       const res = await axios.get(
         "http://localhost:3000/api/vlastiti-predmeti/" + userId,

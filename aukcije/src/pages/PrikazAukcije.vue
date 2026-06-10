@@ -50,6 +50,24 @@
               <div class="image-badge">
                 <span>{{ $t("auctionViewPage.auctionBadge") }}</span>
               </div>
+
+              <q-btn
+                class="save-button-detail"
+                round
+                flat
+                :color="aukcijaSpremljena ? 'negative' : 'grey-8'"
+                :icon="aukcijaSpremljena ? 'favorite' : 'favorite_border'"
+                :disable="spremanjeUTijeku"
+                @click.stop="promijeniSpremanje"
+              >
+                <q-tooltip>
+                  {{
+                    aukcijaSpremljena
+                      ? $t("savedAuctions.remove")
+                      : $t("savedAuctions.save")
+                  }}
+                </q-tooltip>
+              </q-btn>
             </div>
 
             <div class="auction-timer">
@@ -340,6 +358,8 @@ export default {
       odabranaCijena: "",
       prices: [],
       showSingleImage: false,
+      aukcijaSpremljena: false,
+      spremanjeUTijeku: false,
     };
   },
 
@@ -347,6 +367,7 @@ export default {
     axios.get(baseUrl + "get-predmet/" + this.id_predmeta).then((response) => {
       this.item = response.data[0];
       this.dohvatiRecenzijeProdavatelja();
+      this.dohvatiStatusSpremanja();
       this.item.trenutna_cijena = this.item.pocetna_cijena;
 
       if (this.item.slike && this.item.slike.length > 0) {
@@ -371,6 +392,80 @@ export default {
   },
 
   methods: {
+    async dohvatiStatusSpremanja() {
+      const token = localStorage.getItem("token");
+      if (!token) return;
+
+      try {
+        const response = await axios.get(baseUrl + "spremljene-aukcije", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        this.aukcijaSpremljena = response.data.some(
+          (item) => Number(item.id_predmeta) === Number(this.id_predmeta),
+        );
+      } catch (error) {
+        console.error("Greška pri dohvatu spremljenih aukcija:", error);
+      }
+    },
+
+    async promijeniSpremanje() {
+      const token = localStorage.getItem("token");
+
+      if (!token) {
+        this.$q.notify({
+          type: "warning",
+          message: this.$t("savedAuctions.loginRequired"),
+        });
+        return;
+      }
+
+      if (new Date(this.item.vrijeme_zavrsetka) <= new Date()) {
+        this.$q.notify({
+          type: "warning",
+          message: this.$t("savedAuctions.finished"),
+        });
+        return;
+      }
+
+      if (this.spremanjeUTijeku) return;
+      this.spremanjeUTijeku = true;
+
+      try {
+        const headers = { Authorization: `Bearer ${token}` };
+
+        if (this.aukcijaSpremljena) {
+          await axios.delete(
+            baseUrl + "spremljene-aukcije/" + this.id_predmeta,
+            { headers },
+          );
+          this.aukcijaSpremljena = false;
+          this.$q.notify({
+            type: "positive",
+            message: this.$t("savedAuctions.removed"),
+          });
+        } else {
+          await axios.post(
+            baseUrl + "spremljene-aukcije/" + this.id_predmeta,
+            {},
+            { headers },
+          );
+          this.aukcijaSpremljena = true;
+          this.$q.notify({
+            type: "positive",
+            message: this.$t("savedAuctions.saved"),
+          });
+        }
+      } catch (error) {
+        console.error("Greška pri promjeni spremljene aukcije:", error);
+        this.$q.notify({
+          type: "negative",
+          message: this.$t("savedAuctions.error"),
+        });
+      } finally {
+        this.spremanjeUTijeku = false;
+      }
+    },
+
     formattedDate(dateString) {
       if (!dateString) return this.$t("auctionViewPage.notDefined");
 
@@ -565,6 +660,14 @@ export default {
   font-size: 14px;
   font-weight: 800;
   backdrop-filter: blur(8px);
+}
+
+.save-button-detail {
+  position: absolute;
+  right: 22px;
+  top: 22px;
+  z-index: 2;
+  background: rgba(255, 255, 255, 0.92);
 }
 
 .badge-divider {

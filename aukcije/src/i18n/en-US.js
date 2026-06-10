@@ -9,6 +9,18 @@ export default {
     noFileSelected: "No file selected",
   },
 
+  savedAuctions: {
+    title: "Saved auctions",
+    empty: "You have no saved active auctions.",
+    save: "Save auction",
+    remove: "Remove from saved auctions",
+    saved: "Auction saved.",
+    removed: "Auction removed from saved auctions.",
+    loginRequired: "You must be logged in to save an auction.",
+    finished: "A finished auction cannot be saved.",
+    error: "An error occurred. Please try again.",
+  },
+
   menu: {
     title: "Menu",
     home: "Home",

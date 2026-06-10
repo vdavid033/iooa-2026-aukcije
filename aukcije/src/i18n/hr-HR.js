@@ -9,6 +9,18 @@ export default {
     noFileSelected: "Nije odabrana niti jedna datoteka",
   },
 
+  savedAuctions: {
+    title: "Spremljene aukcije",
+    empty: "Nemate spremljenih aktivnih aukcija.",
+    save: "Spremi aukciju",
+    remove: "Ukloni iz spremljenih",
+    saved: "Aukcija je spremljena.",
+    removed: "Aukcija je uklonjena iz spremljenih.",
+    loginRequired: "Morate biti prijavljeni za spremanje aukcije.",
+    finished: "Završenu aukciju nije moguće spremiti.",
+    error: "Došlo je do greške. Pokušajte ponovno.",
+  },
+
   menu: {
     title: "Mogućnosti",
     home: "Početna stranica",
