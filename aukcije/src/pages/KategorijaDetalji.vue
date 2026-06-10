@@ -1,12 +1,12 @@
 <template>
   <q-page style="margin-left: 2%; margin-right: 2%" window-height window-width>
     <div class="row">
-      <h5 class="text-h3 text-blue q-my-md">Ažuriranje kategorije</h5>
+      <h5 class="text-h3 text-blue q-my-md">{{ $t('editCategoryPage.title') }}</h5>
     </div>
     <q-form @submit="izmjenaKategorije()">
-      <q-input v-model="kategorija_novo.naziv_kategorije" label="Naziv:" outlined dense type="text" />
+      <q-input v-model="kategorija_novo.naziv_kategorije" :label="$t('editCategoryPage.name')" outlined dense type="text" />
       <p ref="p_naziv"></p>
-      <q-btn type="submit" label="Izmijeni" color="primary" class="q-mt-md" />
+      <q-btn type="submit" :label="$t('editCategoryPage.edit')" color="primary" class="q-mt-md" />
     </q-form>
   </q-page>
 </template>
@@ -48,7 +48,7 @@ export default {
 
     async ispisiPodatke() {
       try {
-        this.$refs.p_naziv.textContent = "Trenutni naziv: " + this.kateogrija_trenutno.naziv_kategorije;
+        this.$refs.p_naziv.textContent = this.$t('editCategoryPage.currentName') + ": " + this.kateogrija_trenutno.naziv_kategorije;
       } catch (error) {
         console.error("Greška pri upisivanju podataka", error);
       }
@@ -80,7 +80,7 @@ export default {
         this.$q.notify({
           color: "positive",
           position: "top",
-          message: "Izmjena podataka uspješna!",
+          message: this.$t('editCategoryPage.updateSuccess'),
         });
 
         await this.dohvatiKategoriju(this.kategorija_novo.id_kategorije, headers);
@@ -93,7 +93,7 @@ export default {
         this.$q.notify({
           color: "negative",
           position: "top",
-          message: "Izmjena podataka neuspješna.",
+          message: this.$t('editCategoryPage.updateFailed'),
         });
         console.error(error);
       }

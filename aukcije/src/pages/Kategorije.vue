@@ -1,17 +1,17 @@
 <template>
   <div class="q-pa-md">
-    <q-table flat bordered title="Kategorije" rows-per-page-label="Broj prikazanih redova:" :rows="kategorije" :col-props="colProps" :columns="stupci">
+    <q-table flat bordered :title="$t('categoriesPage.title')" :rows-per-page-label="$t('categoriesPage.rowsPerPage')" :rows="kategorije" :col-props="colProps" :columns="stupci">
       <template v-slot:body-cell-naziv_kategorije="props">
-        {{ props.row.naziv_kategorije }}
+        {{ $pick(props.row.naziv_kategorije, props.row.naziv_kategorije_en) }}
       </template>
       <template v-slot:body-cell-gumbovi="props">
         <q-btn-group spread>
-          <q-btn color="primary" label="Izmijeni" icon-right="edit" @click="odiNaDetalje(props.row.id_kategorije)" />
-          <q-btn color="red" label="Obriši" icon-right="delete" @click="deleteKategorija(props.row.id_kategorije)" />
+          <q-btn color="primary" :label="$t('categoriesPage.edit')" icon-right="edit" @click="odiNaDetalje(props.row.id_kategorije)" />
+          <q-btn color="red" :label="$t('categoriesPage.delete')" icon-right="delete" @click="deleteKategorija(props.row.id_kategorije)" />
         </q-btn-group>
       </template>
     </q-table>
-    <q-btn class="q-my-md" icon-right="add" color="primary" label="Dodaj novu kategoriju" @click="dodajKategoriju()" />
+    <q-btn class="q-my-md" icon-right="add" color="primary" :label="$t('categoriesPage.addNew')" @click="dodajKategoriju()" />
   </div>
 </template>
 
@@ -21,21 +21,6 @@ export default {
   data() {
     return {
       kategorije: [],
-      stupci: [
-        {
-          name: "Naziv",
-          required: true,
-          label: "Naziv kategorije",
-          align: "left",
-          field: "naziv_kategorije",
-          sortable: true,
-        },
-        {
-          name: "gumbovi",
-          label: "Dodatne mogućnosti",
-          align: "center",
-        },
-      ],
     };
   },
 
@@ -46,6 +31,15 @@ export default {
     // Set up the request headers to include the JWT token
     const headers = { Authorization: `Bearer ${token}` };
     this.dohvatiKategorije(headers);
+  },
+
+  computed: {
+    stupci() {
+      return [
+        { name: "Naziv", required: true, label: this.$t('categoriesPage.name'), align: "left", field: "naziv_kategorije", sortable: true },
+        { name: "gumbovi", label: this.$t('categoriesPage.actions'), align: "center" }
+      ];
+    }
   },
 
   methods: {
@@ -79,7 +73,7 @@ export default {
         this.$q.notify({
           color: "positive",
           position: "top",
-          message: "Kategorija uspješno obrisana.",
+          message: this.$t('categoriesPage.deleteSuccess'),
         });
         
         this.dohvatiKategorije({headers});
@@ -90,7 +84,7 @@ export default {
         this.$q.notify({
           color: "negative",
           position: "top",
-          message: "Greška pri brisanju kategorije!",
+          message: this.$t('categoriesPage.deleteError'),
           icon: "warning",
         });
       }

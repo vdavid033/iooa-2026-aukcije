@@ -1,65 +1,105 @@
 <template>
-  <div class="row justify-center q-pa-md">
-    <q-input
-      v-model="Pretrazivanje"
-      filled
-      placeholder="Pretraži aukcije"
-      dense
-      class="q-input--width"
-    />
-    <div style="width: 227px">
-      <q-select
-        filled
-        lazy-rules
-        emit-value
-        v-model="selectedsortianje"
-        label="Sortiraj po"
-        :options="sortiranje"
-        option-label="label"
-        option-value="value"
-        map-options
-        @update:model-value="sortiranjeOpcija"
-      />
-    </div>
-  </div>
-  <q-separator class="separator" />
-  <q-item
-    class="q-pa-sm text-bold text-blue-7"
-    style="font-size: 30px"
-  ></q-item>
-  <div class="q-pa-sm row flex flex-center">
-    <div
-      v-for="item in filteredItems"
-      :key="item.id_predmeta"
-      class="q-pa-md"
-      style="width: 400px"
-    >
-      <q-card @click="navigateToItem(item.id_predmeta)">
-        <q-img v-if="item.slika" :src="item.slika" no-native-menu />
-        <q-item-section>
-          <q-item class="q-pa-sm text-bold text-blue-7"
-            >{{ item.naziv_predmeta }}
-          </q-item>
-          <q-item>Početna cijena: {{ item.pocetna_cijena }}$</q-item>
-          <q-item
-            >Vrijeme pocetka: {{ formattedDate(item.vrijeme_pocetka) }}</q-item
+  <q-page class="bg-grey-2">
+    <div class="q-pa-md">
+
+      <div class="row items-center justify-between q-mb-md">
+        <div>
+          <div class="text-h5 text-weight-bold">
+            {{ $t('categoryPage.title') }}
+          </div>
+          <div class="text-grey">
+            {{ $t('categoryPage.subtitle') }}
+          </div>
+        </div>
+      </div>
+
+      <div class="row q-col-gutter-md q-mb-lg">
+        <div class="col">
+          <q-input
+            filled
+            v-model="Pretrazivanje"
+            :placeholder="$t('categoryPage.searchAuctions')"
+            dense
           >
-          <q-item
-            >Vrijeme zavrsetka:
-            {{ formattedDate(item.vrijeme_zavrsetka) }}</q-item
-          >
-          <q-item
-            >Preostalo vrijeme aukcije: {{ item.preostalo_vrijeme }} h
-          </q-item>
-          <q-item>Trenutna cijena: {{ item.trenutna_cijena }}$</q-item>
-        </q-item-section>
-      </q-card>
+            <template v-slot:prepend>
+              <q-icon name="search" />
+            </template>
+          </q-input>
+        </div>
+
+        <div class="col-12 col-sm-4 col-md-3">
+          <q-select
+            filled
+            dense
+            v-model="selectedsortianje"
+            :options="sortiranje"
+            :label="$t('categoryPage.sortBy')"
+            emit-value
+            map-options
+            @update:model-value="sortiranjeOpcija"
+          />
+        </div>
+      </div>
+
+      <div v-if="filteredItems.length === 0" class="text-center q-mt-xl text-grey">
+        {{ $t('categoryPage.noItems') }}
+      </div>
+
+      <div class="row q-col-gutter-md">
+        <div
+          v-for="item in filteredItems"
+          :key="item.id_predmeta"
+          class="col-12 col-sm-6 col-md-4"
+        >
+          <q-card class="auction-card" @click="navigateToItem(item.id_predmeta)">
+            <q-img :src="item.slika || defaultImg" style="height: 220px">
+              <div class="time-badge">
+                {{ item.preostalo_vrijeme }}
+              </div>
+            </q-img>
+
+            <q-card-section>
+              <div class="text-subtitle1 text-weight-bold">
+                {{ $pick(item.naziv_predmeta, item.naziv_predmeta_en) }}
+              </div>
+
+              <div class="q-mt-sm">
+                <div class="row justify-between text-caption">
+                  <span>{{ $t('categoryPage.startingPrice') }}:</span>
+                  <span>{{ item.pocetna_cijena }}€</span>
+                </div>
+
+                <div class="row justify-between text-weight-bold text-primary">
+                  <span>{{ $t('categoryPage.currentPrice') }}:</span>
+                  <span>{{ item.trenutna_cijena }}€</span>
+                </div>
+              </div>
+
+              <div class="row justify-between items-center q-mt-sm">
+                <div class="text-caption">
+                  {{ $t('categoryPage.endsLabel') }}: {{ formattedDate(item.vrijeme_zavrsetka) }}
+                </div>
+
+                <q-badge color="green">{{ $t('categoryPage.active') }}</q-badge>
+              </div>
+
+              <q-btn
+                flat
+                class="full-width q-mt-md"
+                :label="$t('categoryPage.viewAuction')"
+                color="primary"
+                @click.stop="navigateToItem(item.id_predmeta)"
+              />
+            </q-card-section>
+          </q-card>
+        </div>
+      </div>
+
     </div>
-  </div>
+  </q-page>
 </template>
 
 <script>
-import { ref } from "vue";
 import axios from "axios";
 import { jwtDecode } from "jwt-decode";
 import socket, { SOCKET_EVENTS } from "../socket";
@@ -67,45 +107,6 @@ import socket, { SOCKET_EVENTS } from "../socket";
 const baseUrl = "http://localhost:3000/api/";
 
 export default {
-  computed: {
-    id_kategorije() {
-      return this.$route.query.id_kategorije;
-    },
-    filteredItems() {
-      if (!this.Pretrazivanje) return this.items;
-
-      // Create a map to store unique attractions
-      const uniqueItemsMap = new Map();
-
-      // Filter items based on search query and ensure uniqueness
-      this.items.forEach((item) => {
-        // Check if the attraction is already in the map
-        if (
-          !uniqueItemsMap.has(item.id_predmeta) &&
-          item.naziv_predmeta
-            .toLowerCase()
-            .includes(this.Pretrazivanje.toLowerCase())
-        ) {
-          // If not, add it to the map
-          uniqueItemsMap.set(item.id_predmeta, item);
-        }
-      });
-
-      // Convert map values back to array
-      return Array.from(uniqueItemsMap.values());
-    },
-  },
-
-  setup() {
-    return {
-      date: ref("2023-03-27 12:44"),
-      date2: ref("2023-03-27 12:44"),
-      dialog: ref(false),
-      small: ref(false),
-      model: ref(null),
-    };
-  },
-
   data() {
     return {
       Pretrazivanje: "",
@@ -113,23 +114,38 @@ export default {
       joinedPredmeti: new Set(),
       cijenaAzuriranaHandler: null,
       selectedsortianje: "",
-      sortiranje: [
-        { label: "Cijena: manja prema većoj", value: "price-asc" },
-        { label: "Cijena: veća prema manjoj", value: "price-desc" },
-        { label: "Naziv: A do Z", value: "name-asc" },
-        { label: "Naziv: Z do A", value: "name-desc" },
-        { label: "Vrijeme isteka", value: "expiration" },
-      ],
+      defaultImg: "https://via.placeholder.com/400",
     };
   },
 
-  mounted() {
-    axios
-      .get(baseUrl + "get-kategorija-predmet/" + this.id_kategorije, {})
-      .then((response) => {
-        this.items = response.data;
-        this.setupSocket();
-      });
+  computed: {
+    sortiranje() {
+      return [
+        { label: this.$t('categoryPage.sortPriceAsc'), value: "price-asc" },
+        { label: this.$t('categoryPage.sortPriceDesc'), value: "price-desc" },
+        { label: this.$t('categoryPage.sortNameAsc'), value: "name-asc" },
+        { label: this.$t('categoryPage.sortNameDesc'), value: "name-desc" },
+        { label: this.$t('categoryPage.sortExpiration'), value: "expiration" }
+      ];
+    },
+
+    id_kategorije() {
+      return this.$route.query.id_kategorije;
+    },
+
+    filteredItems() {
+      if (!this.Pretrazivanje) return this.items;
+
+      return this.items.filter(item =>
+        item.naziv_predmeta.toLowerCase()
+          .includes(this.Pretrazivanje.toLowerCase())
+      );
+    }
+  },
+
+  async mounted() {
+    await this.dohvatiAukcijeKategorije();
+    this.setupSocket();
   },
 
   beforeUnmount() {
@@ -137,15 +153,29 @@ export default {
   },
 
   methods: {
-    isNegativeDatetime(datetimeStr) {
-      return datetimeStr.charAt(0) === "-";
+    async dohvatiAukcijeKategorije() {
+      try {
+        const res = await axios.get(
+          baseUrl + "get-kategorija-predmet/" + this.id_kategorije
+        );
+
+        this.items = res.data;
+      } catch (error) {
+        console.error("Greška pri dohvaćanju aukcija kategorije:", error);
+      }
     },
+
     formattedDate(dateString) {
       return new Date(dateString).toLocaleString("hr-HR").replace(",", "");
     },
-    navigateToItem(id_predmeta) {
-      this.$router.push({ path: "prikaz", query: { id_predmeta } });
+
+    navigateToItem(id) {
+      this.$router.push({
+        path: "prikaz",
+        query: { id_predmeta: id }
+      });
     },
+
     setupSocket() {
       this.cleanupSocket();
       if (!socket.connected) {
@@ -220,37 +250,45 @@ export default {
           break;
         case "name-asc":
           this.items.sort((a, b) =>
-            a.naziv_predmeta.localeCompare(b.naziv_predmeta),
+            a.naziv_predmeta.localeCompare(b.naziv_predmeta)
           );
           break;
         case "name-desc":
           this.items.sort((a, b) =>
-            b.naziv_predmeta.localeCompare(a.naziv_predmeta),
+            b.naziv_predmeta.localeCompare(a.naziv_predmeta)
           );
           break;
         case "expiration":
-          this.items.sort(
-            (a, b) =>
-              new Date(a.vrijeme_zavrsetka) - new Date(b.vrijeme_zavrsetka),
+          this.items.sort((a, b) =>
+            new Date(a.vrijeme_zavrsetka) - new Date(b.vrijeme_zavrsetka)
           );
           break;
       }
-    },
-  },
+    }
+  }
 };
 </script>
 
-<style>
-.q-img {
-  height: 300px;
-  max-width: 500px;
+<style scoped>
+.auction-card {
+  border-radius: 12px;
+  transition: 0.3s;
+  cursor: pointer;
+  overflow: hidden;
 }
 
-.q-input--width {
-  width: 500px;
+.auction-card:hover {
+  transform: translateY(-5px);
 }
 
-.separator {
-  background-color: #1976d2;
+.time-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: red;
+  color: white;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 12px;
 }
 </style>

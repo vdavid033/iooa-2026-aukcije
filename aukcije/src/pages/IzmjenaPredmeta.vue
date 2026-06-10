@@ -1,27 +1,27 @@
 <template>
   <q-page style="margin-left: 2%; margin-right: 2%" window-height window-width>
     <div class="row">
-      <h5 ref="h_predmet" class="text-h3 text-blue q-my-md">Naziv predmeta</h5>
+      <h5 ref="h_predmet" class="text-h3 text-blue q-my-md">{{ $t('editAuctionPage.item') }}</h5>
     </div>
     <q-form @submit="provjeraPolja">
-      <q-input v-model="predmet_novo.naziv_predmeta" label="Naziv" outlined dense type="text" />
+      <q-input v-model="predmet_novo.naziv_predmeta" :label="$t('editAuctionPage.name')" outlined dense type="text" />
       <p ref="p_naziv"></p>
-      <q-select v-model="predmet_novo.id_kategorije" :options="kategorije" label="Kategorija" outlined dense />
+      <q-select v-model="predmet_novo.id_kategorije" :options="kategorije" :label="$t('editAuctionPage.category')" outlined dense />
       <p ref="p_kategorija"></p>
-      <q-input v-model="predmet_novo.opis_predmeta" label="Opis" outlined dense type="text" />
+      <q-input v-model="predmet_novo.opis_predmeta" :label="$t('editAuctionPage.description')" outlined dense type="text" />
       <p ref="p_opis"></p>
-      <q-input v-model="predmet_novo.pocetna_cijena" label="Početna cijena" outlined dense type="text" />
+      <q-input v-model="predmet_novo.pocetna_cijena" :label="$t('editAuctionPage.startPrice')" outlined dense type="text" />
       <p ref="p_pocCijena"></p>
 
       <div class="q-ml-sm flex flex-start q-gutter-sm">
         <div style="width: 300px">
-          <q-input filled v-model="predmet_novo.vrijeme_pocetka" label="Datum i vrijeme početka aukcije">
+          <q-input filled v-model="predmet_novo.vrijeme_pocetka" :label="$t('editAuctionPage.startDate')">
             <template v-slot:prepend>
               <q-icon name="event" class="cursor-pointer">
                 <q-popup-proxy cover transition-show="scale" transition-hide="scale">
                   <q-date v-model="predmet_novo.vrijeme_pocetka" mask="YYYY-MM-DD HH:mm">
                     <div class="row items-center justify-end">
-                      <q-btn v-close-popup label="Close" color="primary" flat />
+                      <q-btn v-close-popup :label="$t('common.close')" color="primary" flat />
                     </div>
                   </q-date>
                 </q-popup-proxy>
@@ -33,7 +33,7 @@
                 <q-popup-proxy cover transition-show="scale" transition-hide="scale">
                   <q-time v-model="predmet_novo.vrijeme_pocetka" mask="YYYY-MM-DD HH:mm" format24h>
                     <div class="row items-center justify-end">
-                      <q-btn v-close-popup label="Close" color="primary" flat />
+                      <q-btn v-close-popup :label="$t('common.close')" color="primary" flat />
                     </div>
                   </q-time>
                 </q-popup-proxy>
@@ -43,13 +43,13 @@
         </div>
 
         <div style="width: 300px">
-          <q-input filled v-model="predmet_novo.vrijeme_zavrsetka" label="Datum i vrijeme završetka aukcije">
+          <q-input filled v-model="predmet_novo.vrijeme_zavrsetka" :label="$t('editAuctionPage.endDate')">
             <template v-slot:prepend>
               <q-icon name="event" class="cursor-pointer">
                 <q-popup-proxy cover transition-show="scale" transition-hide="scale">
                   <q-date v-model="predmet_novo.vrijeme_zavrsetka" mask="YYYY-MM-DD HH:mm">
                     <div class="row items-center justify-end">
-                      <q-btn v-close-popup label="Close" color="primary" flat />
+                      <q-btn v-close-popup :label="$t('common.close')" color="primary" flat />
                     </div>
                   </q-date>
                 </q-popup-proxy>
@@ -61,7 +61,7 @@
                 <q-popup-proxy cover transition-show="scale" transition-hide="scale">
                   <q-time v-model="predmet_novo.vrijeme_zavrsetka" mask="YYYY-MM-DD HH:mm" format24h>
                     <div class="row items-center justify-end">
-                      <q-btn v-close-popup label="Close" color="primary" flat />
+                      <q-btn v-close-popup :label="$t('common.close')" color="primary" flat />
                     </div>
                   </q-time>
                 </q-popup-proxy>
@@ -75,13 +75,13 @@
       <p ref="p_datumPoc"></p>
       <p ref="p_datumZavrs"></p>
 
-      <q-btn type="submit" label="Izmijeni" color="primary" class="q-mt-md" />
+      <q-btn type="submit" :label="$t('editAuctionPage.edit')" color="primary" class="q-mt-md" />
     </q-form>
 
     <div style="height:25px"></div>
     <q-separator />
 
-    <h5 class="text-h5 text-blue q-my-md">Upravljanje slikama</h5>
+    <h5 class="text-h5 text-blue q-my-md">{{ $t('editAuctionPage.imageManagement') }}</h5>
     <div style="width: 600px">
       <q-card-section class="q-pt-none">
         <template v-if="!showSingleImage && item.slike && item.slike.length > 1">
@@ -99,12 +99,12 @@
       </q-card-section>
     </div>
 
-    <q-btn type="submit" label="Obriši sliku" color="primary" class="q-my-md" @click="obrisiTrenutnuSliku()" />
-    <p>Ovaj gumb briše sliku koja je trenutno prikazana iznad.</p>
+    <q-btn type="submit" :label="$t('editAuctionPage.deleteImage')" color="primary" class="q-my-md" @click="obrisiTrenutnuSliku()" />
+    <p>{{ $t('editAuctionPage.deleteImageHint') }}</p>
 
     <div>
       <input class="" type="file" name="files" accept="image/*" @change="onFileChange" multiple />
-      <q-btn type="submit" label="Dodaj nove slike" color="primary" class="q-my-md" @click="dodajNoveSlike()" />
+      <q-btn type="submit" :label="$t('editAuctionPage.addImages')" color="primary" class="q-my-md" @click="dodajNoveSlike()" />
     </div>
 
   </q-page>
@@ -114,6 +114,7 @@
 import axios from "axios";
 import { ref } from "vue";
 import imageCompression from "browser-image-compression";
+import { pickLang } from "../boot/i18n";
 export default {
   computed: {
     id_predmeta() {
@@ -166,7 +167,7 @@ export default {
       try {
         const response = await axios.get("http://localhost:3000/api/all-kategorija/");
         this.kategorije = response.data.map((kategorija) => ({
-          label: kategorija.naziv_kategorije,
+          label: pickLang(kategorija.naziv_kategorije, kategorija.naziv_kategorije_en),
           key: kategorija.id_kategorije,
         }));
 
@@ -198,13 +199,13 @@ export default {
 
     async ispisiPodatke() {
       try {
-        this.$refs.p_naziv.textContent = "Trenutni naziv predmeta: " + this.item.naziv_predmeta;
-        this.$refs.p_opis.textContent = "Trenutni opis: " + this.item.opis_predmeta;
-        this.$refs.p_pocCijena.textContent = "Trenutna početna cijena: " + this.item.pocetna_cijena;
-        this.$refs.p_datumPoc.textContent = "Trenutni datum i vrijeme početka: " + this.formattedDate(this.item.vrijeme_pocetka);
-        this.$refs.p_datumZavrs.textContent = "Trenutni datum i vrijeme završetka: " + this.formattedDate(this.item.vrijeme_zavrsetka);
-        this.$refs.h_predmet.textContent = "Predmet " + this.item.naziv_predmeta;
-        this.$refs.p_kategorija.textContent = "Trenutna kategorija: " + this.kategorije.find(kategorija => kategorija.key === this.item.id_kategorije)['label'];
+        this.$refs.p_naziv.textContent = this.$t('editAuctionPage.currentName') + ": " + this.item.naziv_predmeta;
+        this.$refs.p_opis.textContent = this.$t('editAuctionPage.currentDescription') + ": " + this.item.opis_predmeta;
+        this.$refs.p_pocCijena.textContent = this.$t('editAuctionPage.currentStartPrice') + ": " + this.item.pocetna_cijena;
+        this.$refs.p_datumPoc.textContent = this.$t('editAuctionPage.currentStartDate') + ": " + this.formattedDate(this.item.vrijeme_pocetka);
+        this.$refs.p_datumZavrs.textContent = this.$t('editAuctionPage.currentEndDate') + ": " + this.formattedDate(this.item.vrijeme_zavrsetka);
+        this.$refs.h_predmet.textContent = this.$t('editAuctionPage.item') + " " + this.item.naziv_predmeta;
+        this.$refs.p_kategorija.textContent = this.$t('editAuctionPage.currentCategory') + ": " + this.kategorije.find(kategorija => kategorija.key === this.item.id_kategorije)['label'];
       } catch (error) {
         console.error("Greška pri upisivanju podataka", error);
       }
@@ -217,7 +218,7 @@ export default {
         this.$q.notify({
           color: "negative",
           position: "top",
-          message: "Nije napravljena niti jedna izmjena!",
+          message: this.$t('editAuctionPage.noChanges'),
           icon: "warning",
         });
       } else {
@@ -259,7 +260,7 @@ export default {
         this.$q.notify({
           color: "positive",
           position: "top",
-          message: "Izmjena podataka uspješna!",
+          message: this.$t('editAuctionPage.updateSuccess'),
         });
         await this.dohvatiPredmet(this.id_predmeta, headers);
         await this.ispisiPodatke(this.id_predmeta);
@@ -268,7 +269,7 @@ export default {
         this.$q.notify({
           color: "negative",
           position: "top",
-          message: "Izmjena podataka neuspješna.",
+          message: this.$t('editAuctionPage.updateFailed'),
         });
         console.log(error);
       }
@@ -288,14 +289,14 @@ export default {
         this.$q.notify({
           color: "positive",
           position: "top",
-          message: "Slika uspješno obrisana.",
+          message: this.$t('editAuctionPage.imageDeleteSuccess'),
         });
       }
       catch (error) {
         this.$q.notify({
           color: "negative",
           position: "top",
-          message: "Brisanje slike neuspješno.",
+          message: this.$t('editAuctionPage.imageDeleteFailed'),
         });
         console.log(error);
       }
@@ -323,7 +324,7 @@ export default {
         this.$q.notify({
           color: "positive",
           position: "top",
-          message: "Dodavanje slika/e uspješno.",
+          message: this.$t('editAuctionPage.addImagesSuccess'),
         });
 
 
@@ -332,7 +333,7 @@ export default {
         this.$q.notify({
           color: "negative",
           position: "top",
-          message: "Dodavanje slika/e neuspješno.",
+          message: this.$t('editAuctionPage.addImagesFailed'),
         });
         console.log(error);
       }
@@ -373,7 +374,7 @@ export default {
         }
       } catch (error) {
         console.error(error);
-        alert("Došlo je do pogreške prilikom kompresije slika.");
+        alert(this.$t('editAuctionPage.imageCompressionError'));
       }
     },
   },

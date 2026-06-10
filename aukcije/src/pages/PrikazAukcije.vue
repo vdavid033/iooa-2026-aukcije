@@ -1,372 +1,526 @@
 <template>
-  <q-card class="q-pa-sm q-gutter-sm" flat bordered>
-    <q-card-section>
-      <div class="text-h3 text-bold text-center text-blue-7 q-ml-sm">
-        Prikaz aukcije
-        <div class="q-ml-sm flex justify-end q-gutter-sm">
-          <q-btn
-            size="15px"
-            name="send"
-            rel="stylesheet"
-            to="/"
-            color="red"
-            label="Natrag"
-          />
-        </div>
-      </div>
-    </q-card-section>
-    <q-separator color="red" />
+  <q-page class="auction-page">
+    <div class="page-wrap">
+      <div class="auction-title">{{ $t("auctionViewPage.title") }}</div>
 
-    <div class="q-pa-sm col flex flex-start q-gutter-sm">
-      <div class="row flex flex-center">
-        <div style="width: 600px">
-          <q-card-section class="q-pt-none">
-            <template
-              v-if="!showSingleImage && item.slike && item.slike.length > 1"
-            >
-              <q-carousel
-                control-color="black"
-                animated
-                v-model="slide"
-                navigation
-                infinite
-                :autoplay="autoplay"
-                arrows
-                transition-prev="slide-right"
-                transition-next="slide-left"
-                @mouseenter="autoplay = false"
-                @mouseleave="autoplay = true"
+      <q-card class="auction-card" flat>
+        <div class="row q-col-gutter-lg">
+          <div class="col-12 col-md-7">
+            <div class="image-panel">
+              <template
+                v-if="!showSingleImage && item.slike && item.slike.length > 1"
               >
-                <q-carousel-slide
-                  :key="index"
-                  v-for="(image, index) in item.slike"
-                  :name="index + startingIndex"
+                <q-carousel
+                  v-model="slide"
+                  animated
+                  infinite
+                  arrows
+                  navigation
+                  height="100%"
+                  class="carousel-custom"
                 >
-                  <q-img :src="image" />
-                </q-carousel-slide>
-              </q-carousel>
-            </template>
-            <template v-else>
-              <q-img
-                v-if="showSingleImage"
-                :src="item.slike ? item.slike[0] : item.slika"
+                  <q-carousel-slide
+                    v-for="(image, index) in item.slike"
+                    :key="index"
+                    :name="index"
+                    class="q-pa-none"
+                  >
+                    <q-img
+                      :src="image"
+                      fit="cover"
+                      class="full-height shifted-image"
+                    />
+                  </q-carousel-slide>
+                </q-carousel>
+              </template>
+
+              <template v-else>
+                <q-img
+                  v-if="showSingleImage"
+                  :src="item.slika"
+                  fit="cover"
+                  class="single-image shifted-image"
+                />
+
+                <div v-else class="image-placeholder">
+                  {{ $t("auctionViewPage.noImage") }}
+                </div>
+              </template>
+
+              <div class="image-badge">
+                <span>{{ $t("auctionViewPage.auctionBadge") }}</span>
+              </div>
+            </div>
+
+            <div class="auction-timer">
+              <q-icon name="schedule" size="20px" color="primary" />
+              <span>
+                {{ $t("auctionViewPage.timeLeft") }}
+                <strong>{{ vrijemeDoKraja }}</strong>
+              </span>
+            </div>
+          </div>
+
+          <div class="col-12 col-md-5">
+            <div class="details-panel">
+              <div class="product-box">
+                <div class="product-title">
+                  {{
+                    $pick(item.naziv_predmeta, item.naziv_predmeta_en) ||
+                    $t("auctionViewPage.nameUnavailable")
+                  }}
+                </div>
+              </div>
+
+              <div class="description-box">
+                <div class="section-label">
+                  {{ $t("auctionViewPage.productDescription") }}
+                </div>
+                <div class="description-text">
+                  {{
+                    $pick(item.opis_predmeta, item.opis_en) ||
+                    $t("auctionViewPage.descUnavailable")
+                  }}
+                </div>
+              </div>
+
+              <div class="seller-box">
+                <div class="section-label">
+                  {{ $t("auctionViewPage.seller") }}
+                </div>
+
+                <div class="seller-line">
+                  {{ $t("auctionViewPage.user") }} #{{ item.id_prodavatelja }}
+                </div>
+
+                <div class="seller-rating">
+                  <span v-if="brojRecenzijaProdavatelja > 0">
+                    {{ $t("auctionViewPage.sellerRating") }}:
+                    {{ Number(prosjecnaOcjenaProdavatelja).toFixed(1) }}/5 ({{
+                      brojRecenzijaProdavatelja
+                    }}
+                    {{ $t("auctionViewPage.reviews") }})
+                  </span>
+
+                  <span v-else>
+                    {{ $t("auctionViewPage.sellerRating") }}:
+                    {{ $t("auctionViewPage.noSellerRatings") }}
+                  </span>
+                </div>
+
+                <q-btn
+                  outline
+                  rounded
+                  color="primary"
+                  icon="reviews"
+                  :label="$t('auctionViewPage.showReviews')"
+                  class="q-mt-sm"
+                  @click="prikaziRecenzijeProdavatelja"
+                />
+              </div>
+
+              <div class="time-row">
+                <div class="time-box">
+                  <q-icon name="event" color="primary" size="22px" />
+                  <div>
+                    <div class="meta-label">
+                      {{ $t("auctionViewPage.startTime") }}
+                    </div>
+                    <div class="meta-value">
+                      {{ formattedDate(item.vrijeme_pocetka) }}
+                    </div>
+                  </div>
+                </div>
+
+                <div class="time-box">
+                  <q-icon name="event_available" color="primary" size="22px" />
+                  <div>
+                    <div class="meta-label">
+                      {{ $t("auctionViewPage.endTime") }}
+                    </div>
+                    <div class="meta-value">
+                      {{ formattedDate(item.vrijeme_zavrsetka) }}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="price-panel">
+                <div class="price-grid">
+                  <div class="start-price-card">
+                    <div class="price-label">
+                      {{ $t("auctionViewPage.startPrice") }}
+                    </div>
+                    <div class="start-price">
+                      {{ formatPrice(item.pocetna_cijena) }}
+                    </div>
+                  </div>
+
+                  <div class="current-price-card">
+                    <div class="price-label blue">
+                      {{ $t("auctionViewPage.currentPrice") }}
+                    </div>
+                    <div class="current-price">
+                      {{ formatPrice(item.trenutna_cijena) }}
+                    </div>
+                  </div>
+                </div>
+
+                <q-btn
+                  class="bid-btn"
+                  :label="$t('auctionViewPage.placeBid')"
+                  icon="gavel"
+                  unelevated
+                  no-caps
+                  @click="showDialog = true"
+                />
+
+                <q-btn
+                  v-if="isAuthenticated"
+                  class="full-width q-mt-sm"
+                  :label="pratim ? 'Prekini praćenje' : 'Prati'"
+                  :color="pratim ? 'grey-7' : 'green'"
+                  :icon="pratim ? 'visibility_off' : 'visibility'"
+                  no-caps
+                  @click="togglePracenje"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </q-card>
+
+      <!-- ─── Auto-bid section ─────────────────────────────────────── -->
+      <div v-if="isAuthenticated" class="q-pa-md">
+        <q-card flat bordered>
+          <!-- Header -->
+          <q-card-section class="bg-blue-1 q-pb-sm">
+            <div class="row items-center q-gutter-sm">
+              <q-icon name="smart_toy" color="blue-7" size="sm" />
+              <span class="text-h6 text-blue-7">Auto-bid</span>
+              <q-chip
+                :color="statusBoja"
+                text-color="white"
+                :label="statusLabel"
+                size="sm"
+                data-testid="status-chip"
               />
-            </template>
+            </div>
+            <p class="text-caption text-grey-7 q-mt-xs q-mb-none">
+              Sustav će automatski licitirati u vaše ime do zadanog maksimalnog
+              iznosa.
+            </p>
           </q-card-section>
-        </div>
+
+          <q-separator />
+
+          <!-- Loading skeleton while fetching auto-bid status -->
+          <q-card-section v-if="autoBidStatusLoading" data-testid="auto-bid-status-loading">
+            <q-skeleton type="rect" height="48px" class="q-mb-sm" />
+            <q-skeleton type="rect" height="56px" />
+          </q-card-section>
+
+          <q-card-section v-else>
+            <!-- Not configured notice -->
+            <q-banner
+              v-if="!autoBidStatus"
+              class="bg-grey-2 q-mb-md"
+              rounded
+              data-testid="status-message"
+            >
+              <template v-slot:avatar>
+                <q-icon name="info" color="grey-6" />
+              </template>
+              Auto-bid još nije postavljen za ovu aukciju.
+            </q-banner>
+
+            <template v-else>
+              <!-- Limit reached notice -->
+              <q-banner
+                v-if="autoBidStatus.limit_dosegnut"
+                class="bg-orange-1 q-mb-md"
+                rounded
+                data-testid="limit-banner"
+              >
+                <template v-slot:avatar>
+                  <q-icon name="warning" color="orange-7" />
+                </template>
+                Auto-bid limit je dosegnut. Postavite novi, viši iznos kako bi
+                sustav nastavio licitirati u vaše ime.
+              </q-banner>
+
+              <!-- Active status message -->
+              <q-banner
+                v-else-if="autoBidStatus.aktivan"
+                class="bg-green-1 q-mb-md"
+                rounded
+                data-testid="status-message"
+              >
+                <template v-slot:avatar>
+                  <q-icon name="check_circle" color="positive" />
+                </template>
+                Auto-bid je aktivan.
+              </q-banner>
+
+              <!-- Disabled status message -->
+              <q-banner
+                v-else
+                class="bg-grey-2 q-mb-md"
+                rounded
+                data-testid="status-message"
+              >
+                <template v-slot:avatar>
+                  <q-icon name="pause_circle" color="grey-7" />
+                </template>
+                Auto-bid je ugašen. Unesite novi iznos kako biste ga aktivirali.
+              </q-banner>
+
+              <!-- Current configured amount (own data only — never shows other users' amounts) -->
+              <div class="q-mb-sm text-body2 text-grey-8" data-testid="auto-bid-limit">
+                <q-icon name="info" size="xs" color="grey-6" />
+                Vaš aktivni Auto-bid limit:
+                <strong>{{ Number(autoBidStatus.maksimalni_iznos).toFixed(2) }} €</strong>
+              </div>
+            </template>
+
+            <div class="row q-col-gutter-md items-start">
+              <!-- Amount input -->
+              <div class="col-12 col-sm-6 col-md-5">
+                <q-input
+                  v-model.number="autoBidForm.maksimalni_iznos"
+                  outlined
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  label="Maksimalni Auto-bid iznos"
+                  hint="Sustav će automatski licitirati do ovog iznosa."
+                  :error="!!autoBidError"
+                  :error-message="autoBidError"
+                  :disable="autoBidLoading"
+                  prefix="€"
+                  data-testid="auto-bid-input"
+                />
+              </div>
+
+              <!-- Action buttons -->
+              <div class="col-12 col-sm-auto self-start q-pt-sm">
+                <div class="row q-gutter-sm">
+                  <q-btn
+                    class="col-12 col-sm-auto"
+                    color="primary"
+                    icon="save"
+                    :label="autoBidButtonLabel"
+                    :loading="autoBidLoading"
+                    :disable="autoBidLoading"
+                    @click="spremiAutoBid"
+                    data-testid="save-auto-bid-btn"
+                  />
+                  <q-btn
+                    v-if="autoBidStatus && autoBidStatus.aktivan"
+                    class="col-12 col-sm-auto"
+                    flat
+                    color="negative"
+                    icon="pause_circle"
+                    label="Ugasi Auto-bid"
+                    :loading="autoBidLoading"
+                    :disable="autoBidLoading"
+                    @click="onemoguciAutoBid"
+                    data-testid="disable-auto-bid-btn"
+                  />
+                </div>
+              </div>
+            </div>
+          </q-card-section>
+        </q-card>
       </div>
 
-      <div class="q-ml-sm col flex flex-start q-gutter-sm">
-        <div class="q-ml-sm flex flex-start q-gutter-sm">
-          <div style="width: 80%">
-            <q-field filled label="Naziv proizvoda" stack-label>
-              <template v-slot:control>
-                <div class="self-center full-width no-outline" tabindex="0">
-                  {{ item.naziv_predmeta }}
-                </div>
-              </template>
-            </q-field>
-          </div>
-          <div style="width: 80%">
-            <q-field filled label="Opis proizvoda" stack-label>
-              <template v-slot:control>
-                <div class="self-center full-width no-outline" tabindex="0">
-                  {{ item.opis_predmeta }}
-                </div>
-              </template>
-            </q-field>
-          </div>
-          <div style="width: 39.5%">
-            <q-field filled label="Početno vrijeme aukcije" stack-label>
-              <template v-slot:control>
-                <div class="self-center full-width no-outline" tabindex="0">
-                  {{ formattedDate(item.vrijeme_pocetka) }}
-                </div>
-              </template>
-            </q-field>
-          </div>
-          <div style="width: 39.5%">
-            <q-field filled label="Završno vrijeme aukcije" stack-label>
-              <template v-slot:control>
-                <div class="self-center full-width no-outline" tabindex="0">
-                  {{ formattedDate(item.vrijeme_zavrsetka) }}
-                </div>
-              </template>
-            </q-field>
-          </div>
-          <div style="width: 39.5%">
-            <q-field filled label="Početna cijena proizvoda" stack-label>
-              <template v-slot:control>
-                <div class="self-center full-width no-outline" tabindex="0">
-                  {{ item.pocetna_cijena + "$" }}
-                </div>
-              </template>
-            </q-field>
-          </div>
-          <div style="width: 39.5%">
-            <q-field filled label="Trenutna cijena" stack-label>
-              <template v-slot:control>
-                <div class="self-center full-width no-outline" tabindex="0">
-                  {{ item.trenutna_cijena + "$" }}
-                </div>
-              </template>
-            </q-field>
-          </div>
-        </div>
-      </div>
-    </div>
-  </q-card>
-
-  <!-- Manual bid + watch buttons -->
-  <div class="q-pa-md flex flex-center q-gutter-sm">
-    <q-btn label="Ponuda" color="primary" @click="showDialog = true" />
-    <q-btn
-      v-if="isAuthenticated"
-      :label="pratim ? 'Prekini praćenje' : 'Prati'"
-      :color="pratim ? 'grey-7' : 'green'"
-      :icon="pratim ? 'visibility_off' : 'visibility'"
-      @click="togglePracenje"
-    />
-  </div>
-
-  <q-dialog v-model="showDialog">
-    <q-card style="width: 300px">
-      <q-card-section>
-        <div class="text-h6">Ponudi</div>
-      </q-card-section>
-      <q-card-section class="q-pt-none">
-        <q-select
-          outlined
-          v-model="odabranaCijena"
-          :options="prices"
-          label="Odaberi cijenu"
-        />
-      </q-card-section>
-      <q-card-actions align="right" class="bg-white text-teal">
-        <q-btn flat label="Odustani" color="primary" v-close-popup />
-        <q-btn flat label="Potvrdi ponudu" @click="potvrdiPonudu" />
-      </q-card-actions>
-    </q-card>
-  </q-dialog>
-
-  <!-- ─── Auto-bid section ─────────────────────────────────────── -->
-  <div v-if="isAuthenticated" class="q-pa-md">
-    <q-card flat bordered>
-      <!-- Header -->
-      <q-card-section class="bg-blue-1 q-pb-sm">
-        <div class="row items-center q-gutter-sm">
-          <q-icon name="smart_toy" color="blue-7" size="sm" />
-          <span class="text-h6 text-blue-7">Auto-bid</span>
-          <q-chip
-            :color="statusBoja"
-            text-color="white"
-            :label="statusLabel"
-            size="sm"
-            data-testid="status-chip"
-          />
-        </div>
-        <p class="text-caption text-grey-7 q-mt-xs q-mb-none">
-          Sustav će automatski licitirati u vaše ime do zadanog maksimalnog
-          iznosa.
-        </p>
-      </q-card-section>
-
-      <q-separator />
-
-      <!-- Loading skeleton while fetching auto-bid status -->
-      <q-card-section v-if="autoBidStatusLoading" data-testid="auto-bid-status-loading">
-        <q-skeleton type="rect" height="48px" class="q-mb-sm" />
-        <q-skeleton type="rect" height="56px" />
-      </q-card-section>
-
-      <q-card-section v-else>
-        <!-- Not configured notice -->
-        <q-banner
-          v-if="!autoBidStatus"
-          class="bg-grey-2 q-mb-md"
-          rounded
-          data-testid="status-message"
-        >
+      <!-- Not-logged-in notice (shown instead of auto-bid section) -->
+      <div v-else class="q-pa-md">
+        <q-banner class="bg-grey-2" rounded>
           <template v-slot:avatar>
-            <q-icon name="info" color="grey-6" />
+            <q-icon name="login" color="grey-7" />
           </template>
-          Auto-bid još nije postavljen za ovu aukciju.
+          Prijavite se kako biste mogli postaviti automatsko licitiranje (Auto-bid).
         </q-banner>
+      </div>
+      <!-- ─────────────────────────────────────────────────────────── -->
 
-        <template v-else>
-          <!-- Limit reached notice -->
-          <q-banner
-            v-if="autoBidStatus.limit_dosegnut"
-            class="bg-orange-1 q-mb-md"
-            rounded
-            data-testid="limit-banner"
+      <!-- Bid history -->
+      <div class="q-pa-md">
+        <q-card flat bordered>
+          <q-card-section class="row items-center justify-between q-gutter-sm">
+            <div>
+              <div class="text-h5 text-bold text-blue-7">Povijest ponuda</div>
+              <div class="text-caption text-grey-7">
+                Ponude su prikazane kronološki, od najstarije prema najnovijoj.
+              </div>
+            </div>
+            <q-chip
+              v-if="ponude.length"
+              color="blue-1"
+              text-color="blue-8"
+              icon="history"
+              :label="`${ponude.length} ponuda`"
+            />
+          </q-card-section>
+
+          <q-separator />
+
+          <q-card-section
+            v-if="!ponude.length"
+            class="text-grey-7"
+            data-testid="povijest-ponuda-empty"
           >
-            <template v-slot:avatar>
-              <q-icon name="warning" color="orange-7" />
-            </template>
-            Auto-bid limit je dosegnut. Postavite novi, viši iznos kako bi
-            sustav nastavio licitirati u vaše ime.
-          </q-banner>
+            Još nema ponuda za ovaj predmet.
+          </q-card-section>
 
-          <!-- Active status message -->
-          <q-banner
-            v-else-if="autoBidStatus.aktivan"
-            class="bg-green-1 q-mb-md"
-            rounded
-            data-testid="status-message"
-          >
-            <template v-slot:avatar>
-              <q-icon name="check_circle" color="positive" />
-            </template>
-            Auto-bid je aktivan.
-          </q-banner>
+          <q-list v-else separator data-testid="povijest-ponuda-list">
+            <q-item
+              v-for="ponuda in ponude"
+              :key="ponuda.id_ponude"
+              :class="isNajnovijaPonuda(ponuda) ? 'bg-green-1' : ''"
+              :data-testid="isNajnovijaPonuda(ponuda) ? 'najnovija-ponuda' : 'ponuda-red'"
+            >
+              <q-item-section avatar>
+                <q-avatar color="blue-1" text-color="blue-8" icon="person" />
+              </q-item-section>
 
-          <!-- Disabled status message -->
-          <q-banner
-            v-else
-            class="bg-grey-2 q-mb-md"
-            rounded
-            data-testid="status-message"
-          >
-            <template v-slot:avatar>
-              <q-icon name="pause_circle" color="grey-7" />
-            </template>
-            Auto-bid je ugašen. Unesite novi iznos kako biste ga aktivirali.
-          </q-banner>
+              <q-item-section>
+                <q-item-label class="text-weight-medium">
+                  {{ getNazivPonuditelja(ponuda) }}
+                </q-item-label>
+                <q-item-label caption>
+                  {{ formatVrijemePonude(ponuda.vrijeme_ponude) }}
+                </q-item-label>
+              </q-item-section>
 
-          <!-- Current configured amount (own data only — never shows other users' amounts) -->
-          <div class="q-mb-sm text-body2 text-grey-8" data-testid="auto-bid-limit">
-            <q-icon name="info" size="xs" color="grey-6" />
-            Vaš aktivni Auto-bid limit:
-            <strong>{{ Number(autoBidStatus.maksimalni_iznos).toFixed(2) }} €</strong>
-          </div>
-        </template>
+              <q-item-section side top>
+                <div class="text-subtitle1 text-weight-bold">
+                  {{ formatIznosPonude(ponuda.vrijednost_ponude) }}
+                </div>
+                <q-badge
+                  v-if="isNajnovijaPonuda(ponuda)"
+                  color="positive"
+                  label="Najnovija"
+                />
+              </q-item-section>
+            </q-item>
+          </q-list>
+        </q-card>
+      </div>
 
-        <div class="row q-col-gutter-md items-start">
-          <!-- Amount input -->
-          <div class="col-12 col-sm-6 col-md-5">
-            <q-input
-              v-model.number="autoBidForm.maksimalni_iznos"
+      <q-dialog v-model="showDialog">
+        <q-card class="bid-dialog">
+          <q-card-section>
+            <div class="dialog-title">
+              {{ $t("auctionViewPage.newBidTitle") }}
+            </div>
+
+            <div class="dialog-subtitle">
+              {{ $t("auctionViewPage.bidHint") }}
+            </div>
+          </q-card-section>
+
+          <q-card-section>
+            <q-select
               outlined
-              type="number"
-              min="0"
-              step="0.01"
-              label="Maksimalni Auto-bid iznos"
-              hint="Sustav će automatski licitirati do ovog iznosa."
-              :error="!!autoBidError"
-              :error-message="autoBidError"
-              :disable="autoBidLoading"
-              prefix="€"
-              data-testid="auto-bid-input"
+              v-model="odabranaCijena"
+              :options="prices"
+              :label="$t('auctionViewPage.selectPrice')"
             />
-          </div>
+          </q-card-section>
 
-          <!-- Action buttons -->
-          <div class="col-12 col-sm-auto self-start q-pt-sm">
-            <div class="row q-gutter-sm">
-              <q-btn
-                class="col-12 col-sm-auto"
-                color="primary"
-                icon="save"
-                :label="autoBidButtonLabel"
-                :loading="autoBidLoading"
-                :disable="autoBidLoading"
-                @click="spremiAutoBid"
-                data-testid="save-auto-bid-btn"
-              />
-              <q-btn
-                v-if="autoBidStatus && autoBidStatus.aktivan"
-                class="col-12 col-sm-auto"
-                flat
-                color="negative"
-                icon="pause_circle"
-                label="Ugasi Auto-bid"
-                :loading="autoBidLoading"
-                :disable="autoBidLoading"
-                @click="onemoguciAutoBid"
-                data-testid="disable-auto-bid-btn"
-              />
-            </div>
-          </div>
-        </div>
-      </q-card-section>
-    </q-card>
-  </div>
-
-  <!-- Not-logged-in notice (shown instead of auto-bid section) -->
-  <div v-else class="q-pa-md">
-    <q-banner class="bg-grey-2" rounded>
-      <template v-slot:avatar>
-        <q-icon name="login" color="grey-7" />
-      </template>
-      Prijavite se kako biste mogli postaviti automatsko licitiranje (Auto-bid).
-    </q-banner>
-  </div>
-  <!-- ─────────────────────────────────────────────────────────── -->
-
-  <!-- Bid history -->
-  <div class="q-pa-md">
-    <q-card flat bordered>
-      <q-card-section class="row items-center justify-between q-gutter-sm">
-        <div>
-          <div class="text-h5 text-bold text-blue-7">Povijest ponuda</div>
-          <div class="text-caption text-grey-7">
-            Ponude su prikazane kronološki, od najstarije prema najnovijoj.
-          </div>
-        </div>
-        <q-chip
-          v-if="ponude.length"
-          color="blue-1"
-          text-color="blue-8"
-          icon="history"
-          :label="`${ponude.length} ponuda`"
-        />
-      </q-card-section>
-
-      <q-separator />
-
-      <q-card-section
-        v-if="!ponude.length"
-        class="text-grey-7"
-        data-testid="povijest-ponuda-empty"
-      >
-        Još nema ponuda za ovaj predmet.
-      </q-card-section>
-
-      <q-list v-else separator data-testid="povijest-ponuda-list">
-        <q-item
-          v-for="ponuda in ponude"
-          :key="ponuda.id_ponude"
-          :class="isNajnovijaPonuda(ponuda) ? 'bg-green-1' : ''"
-          :data-testid="isNajnovijaPonuda(ponuda) ? 'najnovija-ponuda' : 'ponuda-red'"
-        >
-          <q-item-section avatar>
-            <q-avatar color="blue-1" text-color="blue-8" icon="person" />
-          </q-item-section>
-
-          <q-item-section>
-            <q-item-label class="text-weight-medium">
-              {{ getNazivPonuditelja(ponuda) }}
-            </q-item-label>
-            <q-item-label caption>
-              {{ formatVrijemePonude(ponuda.vrijeme_ponude) }}
-            </q-item-label>
-          </q-item-section>
-
-          <q-item-section side top>
-            <div class="text-subtitle1 text-weight-bold">
-              {{ formatIznosPonude(ponuda.vrijednost_ponude) }}
-            </div>
-            <q-badge
-              v-if="isNajnovijaPonuda(ponuda)"
-              color="positive"
-              label="Najnovija"
+          <q-card-actions align="right">
+            <q-btn
+              flat
+              :label="$t('common.cancel')"
+              color="grey-7"
+              v-close-popup
+              no-caps
             />
-          </q-item-section>
-        </q-item>
-      </q-list>
-    </q-card>
-  </div>
+
+            <q-btn
+              unelevated
+              :label="$t('auctionViewPage.confirmBid')"
+              color="primary"
+              no-caps
+              @click="potvrdiPonudu"
+            />
+          </q-card-actions>
+        </q-card>
+      </q-dialog>
+
+      <q-dialog v-model="successDialog" seamless>
+        <q-card class="success-dialog">
+          <div class="success-icon">✓</div>
+
+          <div class="success-title">
+            {{ $t("auctionViewPage.bidSuccess") }}
+          </div>
+
+          <div class="success-text">
+            {{ $t("auctionViewPage.newCurrentPrice") }}
+          </div>
+
+          <div class="success-price">
+            {{ formatPrice(successPrice) }}
+          </div>
+        </q-card>
+      </q-dialog>
+
+      <q-dialog v-model="reviewsDialog">
+        <q-card class="reviews-dialog">
+          <q-card-section>
+            <div class="dialog-title">
+              {{ $t("auctionViewPage.sellerReviews") }} #{{
+                item.id_prodavatelja
+              }}
+            </div>
+
+            <div
+              v-if="recenzijeProdavatelja.length === 0"
+              class="dialog-subtitle"
+            >
+              {{ $t("auctionViewPage.noReviews") }}
+            </div>
+
+            <div v-else>
+              <div
+                v-for="recenzija in recenzijeProdavatelja"
+                :key="recenzija.datum_ocjene"
+                class="q-mt-md"
+              >
+                <div class="text-subtitle2 text-primary text-weight-bold">
+                  {{
+                    $pick(recenzija.naziv_predmeta, recenzija.naziv_predmeta_en)
+                  }}
+                </div>
+                <div class="text-weight-bold">
+                  {{ $t("auctionViewPage.sellerRating") }}:
+                  {{ recenzija.ocjena }} / 5
+                </div>
+                <div>
+                  {{ recenzija.komentar }}
+                </div>
+                <div class="text-caption text-grey">
+                  {{ recenzija.datum_ocjene }}
+                </div>
+              </div>
+            </div>
+          </q-card-section>
+
+          <q-card-actions align="right">
+            <q-btn
+              flat
+              :label="$t('common.close')"
+              color="primary"
+              v-close-popup
+            />
+          </q-card-actions>
+        </q-card>
+      </q-dialog>
+    </div>
+  </q-page>
 </template>
 
 <script>
@@ -443,8 +597,7 @@ export default {
 
   setup() {
     return {
-      slide: ref(2),
-      autoplay: ref(false),
+      slide: ref(0),
     };
   },
 
@@ -452,6 +605,26 @@ export default {
     id_predmeta() {
       return this.$route.query.id_predmeta;
     },
+
+    vrijemeDoKraja() {
+      if (!this.item.vrijeme_zavrsetka)
+        return this.$t("auctionViewPage.notAvailable");
+
+      const end = new Date(this.item.vrijeme_zavrsetka);
+      const now = new Date();
+      const diff = end - now;
+
+      if (diff <= 0) return this.$t("auctionViewPage.auctionEnded");
+
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const hours = Math.floor(
+        (diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60),
+      );
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+
+      return `${days}d ${hours}h ${minutes}m`;
+    },
+
     startingIndex() {
       return 2;
     },
@@ -478,6 +651,12 @@ export default {
     return {
       item: {},
       showDialog: false,
+      successDialog: false,
+      reviewsDialog: false,
+      recenzijeProdavatelja: [],
+      prosjecnaOcjenaProdavatelja: null,
+      brojRecenzijaProdavatelja: 0,
+      successPrice: 0,
       odabranaCijena: "",
       prices: [],
       autoBidStatus: null,
@@ -496,7 +675,11 @@ export default {
 
   async mounted() {
     await this.dohvatiPredmet();
-    await Promise.all([this.dohvatiPonude(), this.dohvatiTrenutnuCijenu()]);
+    await Promise.all([
+      this.dohvatiPonude(),
+      this.dohvatiTrenutnuCijenu(),
+      this.dohvatiRecenzijeProdavatelja(),
+    ]);
     if (this.isAuthenticated) {
       await Promise.all([this.dohvatiAutoBid(), this.dohvatiStatusPracenja()]);
     }
@@ -511,6 +694,11 @@ export default {
     formattedDate(dateString) {
       if (!dateString) return "";
       return new Date(dateString).toLocaleString("hr-HR").replace(",", "");
+    },
+
+    formatPrice(price) {
+      if (!price) return "0 $";
+      return Number(price).toLocaleString("en-US") + " $";
     },
 
     getAuthHeaders() {
@@ -570,6 +758,26 @@ export default {
       } catch (err) {
         console.error("Greška pri dohvaćanju predmeta:", err);
       }
+    },
+
+    async dohvatiRecenzijeProdavatelja() {
+      if (!this.item.id_prodavatelja) return;
+      try {
+        const res = await axios.get(
+          `${API_URL}/recenzije-prodavatelja/${this.item.id_prodavatelja}`,
+        );
+
+        this.prosjecnaOcjenaProdavatelja = res.data.prosjecnaOcjena;
+        this.brojRecenzijaProdavatelja = res.data.brojRecenzija;
+        this.recenzijeProdavatelja = res.data.recenzije;
+      } catch (error) {
+        console.error("Error fetching seller reviews:", error);
+      }
+    },
+
+    async prikaziRecenzijeProdavatelja() {
+      await this.dohvatiRecenzijeProdavatelja();
+      this.reviewsDialog = true;
     },
 
     async dohvatiPonude(options = {}) {
@@ -640,7 +848,14 @@ export default {
         this.generirajCijene();
         await this.dohvatiPonude();
         if (this.isAuthenticated) await this.dohvatiAutoBid();
+        this.odabranaCijena = "";
         this.showDialog = false;
+
+        this.successPrice = data.currentPrice;
+        this.successDialog = true;
+        setTimeout(() => {
+          this.successDialog = false;
+        }, 2800);
       } catch (err) {
         console.error("Greška pri unosu ponude:", err);
         this.$q.notify({
@@ -837,3 +1052,369 @@ export default {
   },
 };
 </script>
+
+<style scoped>
+.auction-page {
+  min-height: 100vh;
+  background: linear-gradient(180deg, #eaf2ff 0%, #f8fafc 100%);
+  padding: 40px 28px;
+}
+
+.page-wrap {
+  max-width: 1260px;
+  margin: 0 auto;
+}
+
+.auction-title {
+  text-align: center;
+  font-size: 42px;
+  font-weight: 900;
+  color: #0f172a;
+  margin-bottom: 26px;
+  letter-spacing: -0.03em;
+}
+
+.auction-card {
+  background: #ffffff;
+  border-radius: 34px;
+  padding: 30px;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.12);
+}
+
+.image-panel {
+  position: relative;
+  width: 100%;
+  height: 500px;
+  overflow: hidden;
+  border-radius: 28px;
+  background: #eef2f7;
+  box-shadow: inset 0 0 0 1px rgba(226, 232, 240, 0.85);
+}
+
+.single-image {
+  width: 100%;
+  height: 100%;
+}
+
+.carousel-custom {
+  height: 100%;
+}
+
+.image-placeholder {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #94a3b8;
+  font-size: 30px;
+  font-weight: 800;
+}
+
+.image-badge {
+  position: absolute;
+  left: 22px;
+  top: 22px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(15, 23, 42, 0.86);
+  color: white;
+  padding: 10px 18px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 800;
+  backdrop-filter: blur(8px);
+}
+
+.badge-divider {
+  opacity: 0.65;
+}
+
+.auction-timer {
+  margin-top: 16px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 20px;
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 16px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.auction-timer strong {
+  color: #2563eb;
+  font-weight: 950;
+}
+
+.details-panel {
+  min-height: 572px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.product-box,
+.description-box,
+.time-box,
+.price-panel {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 22px;
+}
+
+.product-box {
+  padding: 24px 28px;
+}
+
+.product-title {
+  font-size: 34px;
+  font-weight: 900;
+  color: #0f172a;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+}
+
+.description-box {
+  padding: 22px 24px;
+}
+
+.section-label,
+.meta-label,
+.price-label {
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 950;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 6px;
+}
+
+.description-text {
+  color: #111827;
+  font-size: 17px;
+  line-height: 1.35;
+  font-weight: 700;
+}
+
+.time-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 13px;
+}
+
+.time-box {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 22px 18px;
+  min-height: 110px;
+  width: 100%;
+}
+
+.meta-value {
+  color: #0f172a;
+  font-size: 15px;
+  font-weight: 900;
+  line-height: 1.25;
+}
+
+.price-panel {
+  margin-top: auto;
+  padding: 18px;
+  background: linear-gradient(135deg, #eff6ff 0%, #ffffff 100%);
+  border: 2px solid #bfdbfe;
+}
+
+.price-grid {
+  display: grid;
+  grid-template-columns: 0.75fr 1.8fr;
+  gap: 13px;
+  margin-bottom: 16px;
+}
+
+.start-price-card,
+.current-price-card {
+  background: #ffffff;
+  border-radius: 18px;
+  padding: 14px 16px;
+}
+
+.start-price-card {
+  border: 1px solid #e2e8f0;
+}
+
+.current-price-card {
+  border: 2px solid #3b82f6;
+}
+
+.price-label.blue {
+  color: #2563eb;
+}
+
+.start-price {
+  font-size: 20px;
+  color: #0f172a;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.current-price {
+  font-size: clamp(22px, 1.75vw, 29px);
+  color: #2563eb;
+  font-weight: 950;
+  line-height: 1.05;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bid-btn {
+  width: 100%;
+  height: 58px;
+  border-radius: 18px;
+  background: linear-gradient(90deg, #3b82f6, #2563eb);
+  color: white;
+  font-size: 18px;
+  font-weight: 900;
+  box-shadow: 0 16px 30px rgba(37, 99, 235, 0.25);
+}
+
+.bid-dialog {
+  width: 440px;
+  border-radius: 26px;
+  padding: 8px;
+}
+
+.dialog-title {
+  font-size: 24px;
+  font-weight: 900;
+  color: #0f172a;
+}
+
+.dialog-subtitle {
+  color: #64748b;
+  font-size: 15px;
+  margin-top: 5px;
+}
+
+.success-dialog {
+  width: 430px;
+  border-radius: 34px;
+  padding: 34px 32px;
+  text-align: center;
+  box-shadow: 0 28px 70px rgba(15, 23, 42, 0.28);
+}
+
+.success-icon {
+  width: 88px;
+  height: 88px;
+  margin: 0 auto 22px auto;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #2563eb, #3b82f6);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 46px;
+  font-weight: 950;
+  box-shadow: 0 16px 34px rgba(37, 99, 235, 0.36);
+}
+
+.success-title {
+  font-size: 25px;
+  font-weight: 900;
+  color: #0f172a;
+  margin-bottom: 10px;
+}
+
+.success-text {
+  font-size: 15px;
+  font-weight: 600;
+  color: #64748b;
+  margin-bottom: 10px;
+}
+
+.success-price {
+  font-size: 36px;
+  font-weight: 950;
+  color: #2563eb;
+  white-space: nowrap;
+}
+
+@media (max-width: 1024px) {
+  .image-panel,
+  .details-panel {
+    height: auto;
+  }
+
+  .image-panel {
+    height: 420px;
+  }
+
+  .time-row,
+  .price-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .auction-page {
+    padding: 20px;
+  }
+
+  .auction-title {
+    font-size: 32px;
+  }
+
+  .auction-card {
+    padding: 20px;
+    border-radius: 26px;
+  }
+
+  .image-panel {
+    height: 300px;
+  }
+
+  .product-title {
+    font-size: 28px;
+  }
+
+  .success-dialog {
+    width: 92vw;
+  }
+
+  .success-price {
+    font-size: 28px;
+  }
+}
+
+.seller-box {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 22px;
+  padding: 18px 22px;
+}
+
+.seller-line {
+  color: #0f172a;
+  font-size: 16px;
+  font-weight: 900;
+}
+
+.seller-rating {
+  margin-top: 4px;
+  color: #2563eb;
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.reviews-dialog {
+  width: 430px;
+  max-width: 90vw;
+  border-radius: 24px;
+  padding: 8px;
+}
+</style>

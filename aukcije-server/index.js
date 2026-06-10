@@ -481,6 +481,8 @@ app.get("/api/all-predmet", (req, res) => {
         p.id_predmeta,
         p.opis_predmeta,
         p.naziv_predmeta,
+        p.naziv_predmeta_en,
+        p.opis_en,
         p.pocetna_cijena,
         p.vrijeme_pocetka,
         p.vrijeme_zavrsetka,
@@ -512,26 +514,57 @@ app.get("/api/all-predmet", (req, res) => {
 app.get("/api/get-predmet/:id", async (req, res) => {
   const { id } = req.params;
 
-  try {
-    const results = await queryAsync(
-      `SELECT p.naziv_predmeta, p.id_predmeta, p.pocetna_cijena, p.vrijeme_pocetka, p.vrijeme_zavrsetka, TIME_FORMAT( SEC_TO_TIME(TIMESTAMPDIFF(SECOND, p.vrijeme_pocetka, p.vrijeme_zavrsetka)), '%H:%i:%s' ) AS preostalo_vrijeme, p.opis_predmeta, COALESCE(MAX(po.vrijednost_ponude), p.pocetna_cijena) AS vrijednost_ponude, GROUP_CONCAT(DISTINCT s.slika SEPARATOR '|||') AS slike
-      FROM predmet p
-      LEFT JOIN ponuda po ON p.id_predmeta = po.id_predmeta
-      LEFT JOIN slika s ON p.id_predmeta = s.id_predmeta
-      WHERE p.id_predmeta = ?
-      GROUP BY p.id_predmeta`,
-      [id],
-    );
+  connection.query(
+    `SELECT p.naziv_predmeta, p.id_predmeta, p.id_korisnika AS id_prodavatelja, p.pocetna_cijena, p.vrijeme_pocetka, p.vrijeme_zavrsetka, TIME_FORMAT( SEC_TO_TIME(TIMESTAMPDIFF(SECOND, p.vrijeme_pocetka, p.vrijeme_zavrsetka)), '%H:%i:%s' ) AS preostalo_vrijeme, p.opis_predmeta, p.naziv_predmeta_en, p.opis_en, COALESCE(MAX(po.vrijednost_ponude), p.pocetna_cijena) AS vrijednost_ponude, GROUP_CONCAT(DISTINCT s.slika SEPARATOR '|||') AS slike
+    FROM predmet p 
+    LEFT JOIN ponuda po ON p.id_predmeta = po.id_predmeta 
+    LEFT JOIN slika s ON p.id_predmeta = s.id_predmeta 
+    WHERE p.id_predmeta = ? 
+    GROUP BY p.id_predmeta`,
+    [id],
+    (error, results) => {
+      if (error) throw error;
+      if (results.length > 0 && results[0].slike) {
+        results[0].slike = results[0].slike.split("|||");
+      }
+      res.send(results);
+    },
+  );
+});
 
-    if (results.length > 0 && results[0].slike) {
-      results[0].slike = results[0].slike.split("|||");
-    }
+app.get("/api/recenzije-prodavatelja/:id", (req, res) => {
+  const idProdavatelja = req.params.id;
 
-    res.send(results);
-  } catch (error) {
-    console.error("GreĹˇka pri dohvaÄ‡anju predmeta:", error);
-    res.status(500).send({ message: "GreĹˇka pri dohvaÄ‡anju predmeta." });
-  }
+  connection.query(
+    `SELECT 
+        p.naziv_predmeta,
+        p.naziv_predmeta_en,
+        op.ocjena,
+        op.komentar,
+        DATE_FORMAT(op.datum_ocjene, "%Y-%m-%d %H:%i:%s") AS datum_ocjene
+      FROM ocjena_prodavatelja op
+      JOIN transakcija t ON op.id_transakcije = t.id_transakcije
+      JOIN predmet p ON t.id_predmeta = p.id_predmeta
+      WHERE p.id_korisnika = ?
+      ORDER BY op.datum_ocjene DESC`,
+    [idProdavatelja],
+    (error, recenzije) => {
+      if (error) throw error;
+
+      const brojRecenzija = recenzije.length;
+      const prosjecnaOcjena =
+        brojRecenzija > 0
+          ? recenzije.reduce((sum, r) => sum + Number(r.ocjena), 0) /
+            brojRecenzija
+          : null;
+
+      res.send({
+        prosjecnaOcjena,
+        brojRecenzija,
+        recenzije,
+      });
+    },
+  );
 });
 
 app.get(
@@ -744,6 +777,8 @@ app.get("/api/get-kategorija-predmet/:id", (req, res) => {
     p.id_predmeta,
     p.opis_predmeta,
     p.naziv_predmeta,
+    p.naziv_predmeta_en,
+    p.opis_en,
     p.pocetna_cijena,
     p.vrijeme_pocetka,
     p.vrijeme_zavrsetka,
@@ -773,8 +808,32 @@ ORDER BY preostalo_vrijeme DESC;
 });
 
 app.get("/api/all-kategorija", (req, res) => {
-  connection.query("SELECT * FROM kategorija", (error, results) => {
-    if (error) throw error;
+  const query = `
+    SELECT 
+      k.id_kategorije,
+      k.naziv_kategorije,
+      k.naziv_kategorije_en,
+      k.slika,
+
+      COUNT(p.id_predmeta) AS count
+
+    FROM kategorija k
+
+    LEFT JOIN predmet p 
+      ON k.id_kategorije = p.id_kategorije
+      AND p.vrijeme_zavrsetka > NOW()
+
+    GROUP BY k.id_kategorije
+
+    ORDER BY k.naziv_kategorije ASC
+  `;
+
+  connection.query(query, (error, results) => {
+    if (error) {
+      console.log(error);
+      return res.status(500).send(error);
+    }
+
     res.send(results);
   });
 });
@@ -987,7 +1046,7 @@ app.post("/api/unos-slike", authJwt.verifyTokenUser, function (req, res) {
         console.error(error);
         return res.status(500).send({
           error: true,
-          message: "Dogodila se greĹˇka prilikom dodavanja teksta.",
+          message: "Dogodila se greška prilikom dodavanja teksta.",
         });
       }
       return res.send({
@@ -1030,6 +1089,40 @@ app.get("/api/get-predmet-trenutna-cijena/:id", (req, res) => {
   );
 });
 
+app.post("/api/ocjena-prodavatelja", authJwt.verifyTokenUser, (req, res) => {
+  const data = req.body;
+
+  connection.query(
+    `INSERT INTO ocjena_prodavatelja
+      (ocjena, komentar, id_transakcije)
+     VALUES (?, ?, ?)`,
+    [data.ocjena, data.komentar, data.id_transakcije],
+    (error, results) => {
+      if (error) {
+        console.error("Greška pri spremanju ocjene prodavatelja:", error);
+
+        if (error.code === "ER_DUP_ENTRY") {
+          return res.status(409).json({
+            error: true,
+            message: "Ova transakcija je već ocijenjena.",
+          });
+        }
+
+        return res.status(500).json({
+          error: true,
+          message: "Ocjena nije spremljena.",
+        });
+      }
+
+      res.json({
+        error: false,
+        message: "Ocjena je uspješno spremljena.",
+        data: results,
+      });
+    },
+  );
+});
+
 server.listen(port, () => {
   console.log("Server running at port: " + port);
 });
@@ -1055,17 +1148,17 @@ app.post("/regaKorisnika", function (request, response) {
       [korisnik],
       function (error, results, fields) {
         if (error) {
-          console.error("Registracija korisnika neuspjeĹˇna.", error);
+          console.error("Registracija korisnika neuspješna.", error);
           return response.status(500).json({
             error: true,
-            message: "Registracija korisnika neuspjeĹˇna.",
+            message: "Registracija korisnika neuspješna.",
           });
         }
         console.log("data", data);
         return response.send({
           error: false,
           data: results,
-          message: "UspjeĹˇna registracija!",
+          message: "Uspješna registracija!",
         });
       },
     );
@@ -1335,7 +1428,7 @@ app.post("/api/dodajKategoriju", authJwt.verifyTokenAdmin, (req, res) => {
       return res.send({
         error: false,
         data: results,
-        message: "Kategorija uneĹˇena uspjeĹˇno.",
+        message: "Kategorija unešena uspješno.",
       });
     },
   );
@@ -1352,15 +1445,15 @@ app.delete(
       [idKat],
       (error, results) => {
         if (error) {
-          console.error("NeuspjeĹˇno brisanje.");
+          console.error("Neuspješno brisanje.");
           return res
             .status(500)
-            .json({ error: true, message: "NeuspjeĹˇno brisanje " + idKat });
+            .json({ error: true, message: "Neuspješno brisanje " + idKat });
         }
-        console.log("Brisanje uspjeĹˇno.");
+        console.log("Brisanje uspješno.");
         return res.send({
           error: false,
-          message: "Kategorija uspjeĹˇno obrisana.",
+          message: "Kategorija uspješno obrisana.",
         });
       },
     );
@@ -1373,6 +1466,8 @@ app.get("/api/vlastiti-predmeti/:id", authJwt.verifyTokenUser, (req, res) => {
     p.id_predmeta,
     p.opis_predmeta,
     p.naziv_predmeta,
+    p.naziv_predmeta_en,
+    p.opis_en,
     p.pocetna_cijena,
     p.vrijeme_pocetka,
     p.vrijeme_zavrsetka,
@@ -1399,18 +1494,50 @@ ORDER BY preostalo_vrijeme DESC;`,
   );
 });
 
+app.get("/api/osvojeni-predmeti/:id", authJwt.verifyTokenUser, (req, res) => {
+  connection.query(
+    `SELECT
+    op.id_predmeta,
+    t.id_transakcije,
+    p.id_korisnika AS id_prodavatelja,
+    CASE 
+      WHEN ocj.id_ocjene IS NULL THEN 0
+      ELSE 1
+    END AS je_ocijenjeno,
+    op.naziv_predmeta,
+    p.naziv_predmeta_en,
+    p.opis_predmeta,
+    p.opis_en,
+    (SELECT slika FROM slika WHERE id_predmeta = p.id_predmeta LIMIT 1) AS slika,
+    COALESCE(MAX(po.vrijednost_ponude), p.pocetna_cijena) AS konacna_cijena
+FROM osvojeni_predmeti op
+JOIN predmet p ON op.id_predmeta = p.id_predmeta
+LEFT JOIN transakcija t ON p.id_predmeta = t.id_predmeta
+LEFT JOIN ocjena_prodavatelja ocj ON t.id_transakcije = ocj.id_transakcije
+LEFT JOIN ponuda po ON p.id_predmeta = po.id_predmeta
+WHERE op.id_korisnika = ?
+GROUP BY op.id_predmeta, t.id_transakcije, p.id_korisnika, ocj.id_ocjene
+ORDER BY op.id_predmeta DESC;`,
+    [req.params.id],
+    (error, results) => {
+      if (error) throw error;
+      res.send(results);
+    },
+  );
+});
+
 app.delete("/api/brisanjePredmeta/:id", authJwt.verifyTokenUser, (req, res) => {
   connection.query(
     "DELETE FROM predmet WHERE id_predmeta = ?",
     [req.params.id],
     (error, results) => {
       if (error) {
-        console.error("NeuspjeĹˇno brisanje.");
+        console.error("Neuspješno brisanje.");
         return res
           .status(500)
-          .json({ error: true, message: "NeuspjeĹˇno brisanje " + error });
+          .json({ error: true, message: "Neuspješno brisanje " + error });
       }
-      console.log("Brisanje uspjeĹˇno.");
+      console.log("Brisanje uspješno.");
       return res.send({ error: false, message: "." });
     },
   );
@@ -1478,10 +1605,10 @@ app.delete("/api/brisanjeSlike/:id", authJwt.verifyTokenUser, (req, res) => {
     [req.params.id],
     (error, results) => {
       if (error) {
-        console.error("NeuspjeĹˇno brisanje.");
+        console.error("Neuspješno brisanje.");
         return res
           .status(500)
-          .json({ error: true, message: "NeuspjeĹˇno brisanje " + error });
+          .json({ error: true, message: "Neuspješno brisanje " + error });
       }
       return res.send({ error: false, message: "." });
     },
@@ -1709,6 +1836,13 @@ function obradiZavrsenuAukciju(aukcija) {
       }
 
       const pobjednik = pobjednici[0];
+
+      // Zabilježi osvojeni predmet (lista osvojenih aukcija)
+      connection.query(
+        "INSERT IGNORE INTO osvojeni_predmeti (id_predmeta, id_korisnika, naziv_predmeta) VALUES (?, ?, ?)",
+        [aukcija.id_predmeta, pobjednik.id_korisnika, aukcija.naziv_predmeta],
+        (errO) => { if (errO) console.error("Greška pri upisu osvojenog predmeta:", errO); }
+      );
 
       // FZ-2.4: Kreiraj transakciju
       connection.query(

@@ -2,13 +2,13 @@
   <q-card class="q-pa-sm flex justify-center">
     <div class="q-pa-xl q-gutter-xl">
       <input type="file" @change="onFileChange" />
-      <q-input label="Unesi link slike" type="text" v-model="imageUrl" />
-      <q-btn @click="convertImage">Konvertiraj u Base64</q-btn>
+      <q-input :label="$t('converterPage.imageLink')" type="text" v-model="imageUrl" />
+      <q-btn @click="convertImage">{{ $t('converterPage.convert') }}</q-btn>
       <q-separator></q-separator>
       <div v-if="base64Image">
         <img :src="base64Image" />
         <q-separator></q-separator>
-        <q-btn class="flex-flex-center" label="Kopiraj u međuspremnik" @click="copyToClipboard" />
+        <q-btn class="flex-flex-center" :label="$t('converterPage.copy')" @click="copyToClipboard" />
         <div class="q-pa-sm" style="max-width: 700px; overflow-wrap: break-word">
           data:image/jpg;base64,{{ base64Text }}
         </div>
@@ -33,7 +33,7 @@ export default {
     },
     async convertImage() {
       if (!this.file && !this.imageUrl) {
-        return alert("Molimo odaberite sliku ili unesite URL slike.");
+        return alert(this.$t('converterPage.selectImageOrUrl'));
       }
 
       if (this.imageUrl) {
@@ -55,7 +55,7 @@ export default {
         } catch (error) {
           console.error(error);
           return alert(
-            "Došlo je do pogreške prilikom dohvaćanja slike s URL-a."
+            this.$t('converterPage.urlError')
           );
         }
       } else {
@@ -78,10 +78,10 @@ export default {
         await navigator.clipboard.writeText(
           "data:image/jpg;base64," + this.base64Text
         );
-        alert("Tekst uspješno kopiran u međuspremnik!");
+        alert(this.$t('converterPage.copySuccess'));
       } catch (err) {
         console.error(err);
-        alert("Kopiranje nije uspjelo.");
+        alert(this.$t('converterPage.copyError'));
       }
     },
   },

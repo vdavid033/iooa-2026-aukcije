@@ -59,6 +59,8 @@ function createWrapper() {
         $q: { notify: mockNotify },
         $route: { query: { id_kategorije: "3" } },
         $router: { push: vi.fn() },
+        $t: (key) => key,
+        $pick: (hr) => hr,
       },
       stubs: [
         "q-card",
@@ -110,7 +112,7 @@ describe("PrikazPredmetaKategorije realtime cijena", () => {
     await wrapper.vm.$nextTick();
 
     expect(wrapper.vm.items[0].trenutna_cijena).toBe(150);
-    expect(wrapper.text()).toContain("Trenutna cijena: 150$");
+    expect(wrapper.text()).toContain("150€");
   });
 
   it("ignores cijena_azurirana for items that are not displayed", async () => {

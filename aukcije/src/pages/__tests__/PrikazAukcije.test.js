@@ -51,6 +51,8 @@ function createWrapper(dataOverrides = {}) {
       mocks: {
         $q: { notify: mockNotify },
         $route: { query: { id_predmeta: "1" } },
+        $t: (key) => key,
+        $pick: (hr) => hr,
       },
     },
     data() {
