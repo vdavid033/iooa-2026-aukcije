@@ -2,6 +2,15 @@
 
 Aukcije
 
+## Tim Kirci
+
+Članovi tima: Tomislav Mihelić, Patrik Dukić, Fran Diminić, Dino Abdulahović, Andrej Gašparović
+
+Zadaci tima: 1. Pretraživanje po ključnoj riječi
+             2. Administratorsko sučelje
+
+## Tim Tim1
+
 Članovi tima: 1. Ćiković Natalia 2. Ferstner Augustin 3. Pleše Antonio 4. Poljak Borna 5. Radoš Antonio 6. Resanović Filip
 
 Zadaci tima:

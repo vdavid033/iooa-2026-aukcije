@@ -56,18 +56,30 @@
       </div>
 
       <!-- SEARCH -->
-      <div class="row q-col-gutter-md q-mb-lg">
+      <div class="row q-col-gutter-md q-mb-lg items-start">
         <div class="col">
           <q-input
             filled
             v-model="Pretrazivanje"
             :placeholder="$t('homePage.searchPlaceholder')"
             dense
+            @keyup.enter="pretraziAukcije"
           >
             <template v-slot:prepend>
               <q-icon name="search" />
             </template>
           </q-input>
+          <div v-if="porukaPretrage" class="text-negative q-mt-xs">
+            {{ porukaPretrage }}
+          </div>
+        </div>
+
+        <div class="col-auto">
+          <q-btn color="primary" icon="search" :loading="ucitavanjePretrage" @click="pretraziAukcije" />
+        </div>
+
+        <div class="col-auto" v-if="pretragaAktivna">
+          <q-btn flat color="primary" :label="$t('homePage.viewAll')" @click="resetirajPretragu" />
         </div>
 
         <div class="col-3">
@@ -82,6 +94,10 @@
             @update:model-value="sortiranjeOpcija"
           />
         </div>
+      </div>
+
+      <div v-if="pretragaAktivna && filteredItems.length === 0 && !ucitavanjePretrage" class="q-pa-md text-center text-grey-8">
+        Nema aukcija koje odgovaraju unesenoj ključnoj riječi.
       </div>
 
       <div class="row q-col-gutter-md">
@@ -150,19 +166,16 @@ export default {
       kategorija: [],
       brojPrikazanihKategorija: 8,
       selectedsortianje: "",
+      pretragaAktivna: false,
+      porukaPretrage: "",
+      ucitavanjePretrage: false,
       defaultImg: "https://via.placeholder.com/400",
     };
   },
 
   mounted() {
-    const token = localStorage.getItem("token");
-    const headers = { Authorization: `Bearer ${token}` };
-
-    axios.get(baseUrl + "all-predmet", { headers })
-      .then(res => this.items = res.data);
-
-    axios.get(baseUrl + "all-kategorija", { headers })
-      .then(res => this.kategorija = res.data);
+    this.dohvatiSveAukcije();
+    this.dohvatiKategorije();
   },
 
   computed: {
@@ -181,7 +194,7 @@ export default {
     },
 
     filteredItems() {
-      if (!this.Pretrazivanje) return this.items;
+      if (this.pretragaAktivna || !this.Pretrazivanje) return this.items;
 
       return this.items.filter(item =>
         item.naziv_predmeta.toLowerCase()
@@ -191,20 +204,90 @@ export default {
   },
 
   methods: {
-    navigateToItem(id) {
-      this.$router.push({ path: "prikaz", query: { id_predmeta: id } });
+    navigateToItem(id_predmeta) {
+      this.$router.push({ path: "prikaz", query: { id_predmeta } });
     },
 
-    navigateToItem1(id) {
-      this.$router.push({ path: "kategorija", query: { id_kategorije: id } });
+    navigateToItem1(id_kategorije) {
+      this.$router.push({ path: "kategorija", query: { id_kategorije } });
     },
 
     prikaziViseKategorija() {
       this.brojPrikazanihKategorija += 8;
     },
 
-    sortiranjeOpcija(val) {
-      switch (val) {
+    dohvatiSveAukcije() {
+      const token = localStorage.getItem("token");
+      const headers = { Authorization: `Bearer ${token}` };
+
+      axios
+        .get(baseUrl + "all-predmet", { headers })
+        .then((response) => {
+          this.items = response.data;
+          this.primijeniTrenutnoSortiranje();
+        })
+        .catch((error) => {
+          console.error("Error fetching all-predmet:", error);
+        });
+    },
+
+    dohvatiKategorije() {
+      const token = localStorage.getItem("token");
+      const headers = { Authorization: `Bearer ${token}` };
+
+      axios
+        .get(baseUrl + "all-kategorija", { headers })
+        .then((response) => {
+          this.kategorija = response.data;
+        })
+        .catch((error) => {
+          console.error("Error fetching all-kategorija:", error);
+        });
+    },
+
+    pretraziAukcije() {
+      const keyword = this.Pretrazivanje.trim();
+      this.porukaPretrage = "";
+
+      if (!keyword) {
+        this.porukaPretrage = "Unesite ključnu riječ za pretraživanje.";
+        return;
+      }
+
+      this.ucitavanjePretrage = true;
+
+      axios
+        .get(baseUrl + "pretrazi-predmet", {
+          params: { keyword },
+        })
+        .then((response) => {
+          this.items = response.data;
+          this.pretragaAktivna = true;
+          this.primijeniTrenutnoSortiranje();
+        })
+        .catch((error) => {
+          console.error("Greška kod pretrage aukcija:", error);
+          this.porukaPretrage = "Došlo je do greške kod pretrage aukcija.";
+        })
+        .finally(() => {
+          this.ucitavanjePretrage = false;
+        });
+    },
+
+    resetirajPretragu() {
+      this.Pretrazivanje = "";
+      this.porukaPretrage = "";
+      this.pretragaAktivna = false;
+      this.dohvatiSveAukcije();
+    },
+
+    sortiranjeOpcija(selectedsortianje) {
+      this.selectedsortianje = selectedsortianje;
+      this.primijeniTrenutnoSortiranje();
+    },
+
+    primijeniTrenutnoSortiranje() {
+      switch (this.selectedsortianje) {
         case "price-asc":
           this.items.sort((a, b) => a.pocetna_cijena - b.pocetna_cijena);
           break;
