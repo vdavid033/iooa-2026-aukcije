@@ -929,7 +929,7 @@ export default {
       }
       if (!this.odabranaCijena) return;
 
-      const selectedPrice = parseFloat(this.odabranaCijena.value);
+      const selectedPrice = parseFloat(this.odabranaCijena);
       if (selectedPrice <= this.item.trenutna_cijena) return;
 
       try {
