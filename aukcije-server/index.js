@@ -87,6 +87,11 @@ io.on("connection", (socket) => {
 
     socket.leave(REALTIME_ROOMS.predmet(id_predmeta));
   });
+
+  socket.on("pridruzi_se_korisniku", (id_korisnika) => {
+    if (!id_korisnika) return;
+    socket.join(`korisnik_${id_korisnika}`);
+  });
 });
 // Parser za JSON podatke
 app.use(bodyParser.json());
@@ -1058,6 +1063,39 @@ app.post(
 
       emitCijenaAzurirana(io, realtimePayload);
 
+      // Notifikacije za pratitelje i ostale ponuđače (ne šalje se ponuđaču koji je upravo licitirao)
+      const ponuducId = finalBid.id_korisnika;
+      connection.query(
+        "SELECT naziv_predmeta FROM predmet WHERE id_predmeta = ?",
+        [id_predmeta],
+        (errP, predmetResult) => {
+          if (errP || !predmetResult.length) return;
+          const naziv = predmetResult[0].naziv_predmeta;
+          const poruka = `Nova ponuda ${finalPrice}$ na aukciji "${naziv}"`;
+
+          // Pratitelji
+          connection.query(
+            "SELECT id_korisnika FROM lista_pracenja WHERE id_predmeta = ? AND id_korisnika != ?",
+            [id_predmeta, ponuducId],
+            (errW, pratitelji) => {
+              // Ostali ponuđači (koji su ranije licitirali, a nisu na listi pratitelja da ne dobiju duplu notif)
+              connection.query(
+                "SELECT DISTINCT id_korisnika FROM ponuda WHERE id_predmeta = ? AND id_korisnika != ?",
+                [id_predmeta, ponuducId],
+                (errB, ostaliPonudaci) => {
+                  const korisnici = new Set();
+                  (pratitelji || []).forEach((w) => korisnici.add(w.id_korisnika));
+                  (ostaliPonudaci || []).forEach((b) => korisnici.add(b.id_korisnika));
+                  if (!korisnici.size) return;
+                  const rows = [...korisnici].map((id) => [id, Number(id_predmeta), poruka]);
+                  posaljiNotifikacije(rows);
+                }
+              );
+            }
+          );
+        }
+      );
+
       return response.send({
         error: false,
         data: {
@@ -2025,6 +2063,13 @@ function posaljiNotifikacije(notifikacije) {
     [notifikacije],
     (err) => {
       if (err) return;
+      notifikacije.forEach(([id_korisnika, id_predmeta, poruka]) => {
+        io.to(`korisnik_${id_korisnika}`).emit("nova_notifikacija", {
+          poruka,
+          id_predmeta,
+          datum_kreiranja: new Date(),
+        });
+      });
     }
   );
 }
