@@ -1639,6 +1639,115 @@ ORDER BY preostalo_vrijeme DESC;`,
   );
 });
 
+app.get("/api/spremljene-aukcije", authJwt.verifyTokenUser, (req, res) => {
+  connection.query(
+    `SELECT
+      p.id_predmeta,
+      p.opis_predmeta,
+      p.naziv_predmeta,
+      p.naziv_predmeta_en,
+      p.opis_en,
+      p.pocetna_cijena,
+      p.vrijeme_pocetka,
+      p.vrijeme_zavrsetka,
+      CONCAT(
+        FLOOR(TIMESTAMPDIFF(SECOND, NOW(), p.vrijeme_zavrsetka) / (24 * 3600)),
+        ' dana, ',
+        TIME_FORMAT(
+          SEC_TO_TIME(TIMESTAMPDIFF(SECOND, NOW(), p.vrijeme_zavrsetka) % (24 * 3600)),
+          '%H:%i:%s'
+        )
+      ) AS preostalo_vrijeme,
+      (SELECT slika FROM slika WHERE id_predmeta = p.id_predmeta LIMIT 1) AS slika,
+      COALESCE(MAX(po.vrijednost_ponude), p.pocetna_cijena) AS trenutna_cijena
+    FROM spremljena_aukcija sa
+    JOIN predmet p ON sa.id_predmeta = p.id_predmeta
+    LEFT JOIN ponuda po ON p.id_predmeta = po.id_predmeta
+    WHERE sa.id_korisnika = ? AND p.vrijeme_zavrsetka > NOW()
+    GROUP BY p.id_predmeta, sa.datum_spremanja
+    ORDER BY sa.datum_spremanja DESC`,
+    [req.userId],
+    (error, results) => {
+      if (error) {
+        console.error("Greška pri dohvatu spremljenih aukcija:", error);
+        return res.status(500).send({
+          error: true,
+          message: "Greška pri dohvatu spremljenih aukcija.",
+        });
+      }
+
+      res.send(results);
+    },
+  );
+});
+
+app.post(
+  "/api/spremljene-aukcije/:idPredmeta",
+  authJwt.verifyTokenUser,
+  (req, res) => {
+    connection.query(
+      `INSERT INTO spremljena_aukcija (id_korisnika, id_predmeta)
+       SELECT ?, p.id_predmeta
+       FROM predmet p
+       WHERE p.id_predmeta = ? AND p.vrijeme_zavrsetka > NOW()`,
+      [req.userId, req.params.idPredmeta],
+      (error, results) => {
+        if (error && error.code === "ER_DUP_ENTRY") {
+          return res.send({
+            error: false,
+            message: "Aukcija je već spremljena.",
+          });
+        }
+
+        if (error) {
+          console.error("Greška pri spremanju aukcije:", error);
+          return res.status(500).send({
+            error: true,
+            message: "Greška pri spremanju aukcije.",
+          });
+        }
+
+        if (results.affectedRows === 0) {
+          return res.status(400).send({
+            error: true,
+            message: "Moguće je spremiti samo aktivnu aukciju.",
+          });
+        }
+
+        res.status(201).send({
+          error: false,
+          message: "Aukcija je spremljena.",
+        });
+      },
+    );
+  },
+);
+
+app.delete(
+  "/api/spremljene-aukcije/:idPredmeta",
+  authJwt.verifyTokenUser,
+  (req, res) => {
+    connection.query(
+      "DELETE FROM spremljena_aukcija WHERE id_korisnika = ? AND id_predmeta = ?",
+      [req.userId, req.params.idPredmeta],
+      (error) => {
+        if (error) {
+          console.error("Greška pri uklanjanju spremljene aukcije:", error);
+          return res.status(500).send({
+            error: true,
+            message: "Greška pri uklanjanju spremljene aukcije.",
+          });
+        }
+
+        res.send({
+          error: false,
+          message: "Aukcija je uklonjena iz spremljenih.",
+        });
+      },
+    );
+  },
+);
+
 app.get("/api/osvojeni-predmeti/:id", authJwt.verifyTokenUser, (req, res) => {
   connection.query(
     `SELECT
@@ -1673,17 +1782,31 @@ ORDER BY op.id_predmeta DESC;`,
 
 app.delete("/api/brisanjePredmeta/:id", authJwt.verifyTokenUser, (req, res) => {
   connection.query(
-    "DELETE FROM predmet WHERE id_predmeta = ?",
+    "DELETE FROM spremljena_aukcija WHERE id_predmeta = ?",
     [req.params.id],
-    (error, results) => {
+    (error) => {
       if (error) {
         console.error("Neuspješno brisanje.");
         return res
           .status(500)
           .json({ error: true, message: "Neuspješno brisanje " + error });
       }
-      console.log("Brisanje uspješno.");
-      return res.send({ error: false, message: "." });
+
+      connection.query(
+        "DELETE FROM predmet WHERE id_predmeta = ?",
+        [req.params.id],
+        (deleteError) => {
+          if (deleteError) {
+            console.error("Neuspješno brisanje.");
+            return res.status(500).json({
+              error: true,
+              message: "Neuspješno brisanje " + deleteError,
+            });
+          }
+          console.log("Brisanje uspješno.");
+          return res.send({ error: false, message: "." });
+        },
+      );
     },
   );
 });

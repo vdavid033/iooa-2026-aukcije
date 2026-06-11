@@ -53,6 +53,29 @@
         >
           <q-card class="auction-card" @click="navigateToItem(item.id_predmeta)">
             <q-img :src="item.slika || defaultImg" style="height: 220px">
+              <q-btn
+                class="save-button"
+                round
+                dense
+                flat
+                :color="jeSpremljena(item.id_predmeta) ? 'negative' : 'grey-8'"
+                :icon="
+                  jeSpremljena(item.id_predmeta)
+                    ? 'favorite'
+                    : 'favorite_border'
+                "
+                :disable="spremanjeIds.includes(Number(item.id_predmeta))"
+                @click.stop="promijeniSpremanje(item)"
+              >
+                <q-tooltip>
+                  {{
+                    jeSpremljena(item.id_predmeta)
+                      ? $t("savedAuctions.remove")
+                      : $t("savedAuctions.save")
+                  }}
+                </q-tooltip>
+              </q-btn>
+
               <div class="time-badge">
                 {{ item.preostalo_vrijeme }}
               </div>
@@ -115,6 +138,8 @@ export default {
       cijenaAzuriranaHandler: null,
       selectedsortianje: "",
       defaultImg: "https://via.placeholder.com/400",
+      spremljeniIds: [],
+      spremanjeIds: [],
     };
   },
 
@@ -145,6 +170,7 @@ export default {
 
   async mounted() {
     await this.dohvatiAukcijeKategorije();
+    this.dohvatiSpremljeneAukcije();
     this.setupSocket();
   },
 
@@ -153,6 +179,88 @@ export default {
   },
 
   methods: {
+    async dohvatiSpremljeneAukcije() {
+      const token = localStorage.getItem("token");
+      if (!token) return;
+
+      try {
+        const response = await axios.get(baseUrl + "spremljene-aukcije", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        this.spremljeniIds = response.data.map((item) =>
+          Number(item.id_predmeta),
+        );
+      } catch (error) {
+        console.error("Greška pri dohvatu spremljenih aukcija:", error);
+      }
+    },
+
+    jeSpremljena(idPredmeta) {
+      return this.spremljeniIds.includes(Number(idPredmeta));
+    },
+
+    async promijeniSpremanje(item) {
+      const token = localStorage.getItem("token");
+      const idPredmeta = Number(item.id_predmeta);
+
+      if (!token) {
+        this.$q.notify({
+          type: "warning",
+          message: this.$t("savedAuctions.loginRequired"),
+        });
+        return;
+      }
+
+      if (new Date(item.vrijeme_zavrsetka) <= new Date()) {
+        this.$q.notify({
+          type: "warning",
+          message: this.$t("savedAuctions.finished"),
+        });
+        return;
+      }
+
+      if (this.spremanjeIds.includes(idPredmeta)) return;
+      this.spremanjeIds.push(idPredmeta);
+
+      try {
+        const headers = { Authorization: `Bearer ${token}` };
+
+        if (this.jeSpremljena(idPredmeta)) {
+          await axios.delete(baseUrl + "spremljene-aukcije/" + idPredmeta, {
+            headers,
+          });
+          this.spremljeniIds = this.spremljeniIds.filter(
+            (id) => id !== idPredmeta,
+          );
+          this.$q.notify({
+            type: "positive",
+            message: this.$t("savedAuctions.removed"),
+          });
+        } else {
+          await axios.post(
+            baseUrl + "spremljene-aukcije/" + idPredmeta,
+            {},
+            { headers },
+          );
+          this.spremljeniIds.push(idPredmeta);
+          this.$q.notify({
+            type: "positive",
+            message: this.$t("savedAuctions.saved"),
+          });
+        }
+      } catch (error) {
+        console.error("Greška pri promjeni spremljene aukcije:", error);
+        this.$q.notify({
+          type: "negative",
+          message: this.$t("savedAuctions.error"),
+        });
+      } finally {
+        this.spremanjeIds = this.spremanjeIds.filter(
+          (id) => id !== idPredmeta,
+        );
+      }
+    },
+
     async dohvatiAukcijeKategorije() {
       try {
         const res = await axios.get(
@@ -279,6 +387,14 @@ export default {
 
 .auction-card:hover {
   transform: translateY(-5px);
+}
+
+.save-button {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 2;
+  background: rgba(255, 255, 255, 0.92);
 }
 
 .time-badge {

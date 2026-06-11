@@ -18,6 +18,16 @@ Dodati mogućnost ažuriranja cijene pojedinog predmeta u realnom vremenu (WebSo
 
     Dodati mogućnost da kad se zatvori aukcija, korisnik koji je ponudio najviše dobiva obavijest i podatke o kontaktu za transakciju.
 
+## Tim 3, 2, 1.. prodano!
+
+projekt - Aukcije, IOOA 2026
+
+Sastav tima (Ime, Prezime, Git račun):
+Monia Kopjar, monia7777, (Prijevod na engleski (u bazi isto))
+Anamarija Ivanušić, AIvanusic, (Ocjene i recenzije prodavatelja)
+Darko Trbović, dtr-ri, (Komunikacija nakon završetka aukcije)
+Antonio Semialjac, AntonioSemi (dodavanje spremanja aukcija)
+
 ## Korisničke priče
 
 | Broj zahtjeva | Naziv                                                 | Uloga                        | Funkcionalnost                                                                                                                              | Cilj                                                                                                                            | Status                  | Student           |
