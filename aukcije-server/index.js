@@ -1125,7 +1125,7 @@ app.get("/api/vlastita-ponuda-korisnik/:id", (req, res) => {
   const { id } = req.params;
 
   connection.query(
-    `SELECT p., pr., s.*
+    `SELECT p.*, pr.*, s.*
     FROM ponuda p
     JOIN predmet pr ON p.id_predmeta = pr.id_predmeta
     LEFT JOIN slika s ON pr.id_predmeta = s.id_predmeta
