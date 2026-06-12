@@ -1,117 +1,466 @@
 <template>
-  <div>
-    <!-- podaci o korisniku -->
-    <div class="user-info">
-      <div class="user-info-header">
-        <div class="row">
-          <h5 ref="h_korisnik" class="text-h3 text-blue q-my-md">Korisnik {{ korisnik_trenutno.ime_korisnika }} {{
-            korisnik_trenutno.prezime_korisnika }}</h5>
-        </div>
-        <div>
-          <p>Trenutno ime: {{ korisnik_trenutno.ime_korisnika }}</p>
-          <p>Trenutno prezime: {{ korisnik_trenutno.prezime_korisnika }}</p>
-          <p>Trenutni email: {{ korisnik_trenutno.email_korisnika }}</p>
-          <p>Trenutna adresa: {{ korisnik_trenutno.adresa_korisnika }}</p>
-        </div>
+  <div class="profile-page q-pa-md">
+    <!-- PROFIL -->
+    <q-card class="profile-hero q-mb-xl">
+      <q-card-section class="profile-hero__top">
+        <div class="row items-center justify-between q-col-gutter-md">
+          <div class="col-12 col-md-auto">
+            <div class="row items-center q-gutter-md">
+              <q-avatar size="110px" class="shadow-6">
+                <img src="~assets/profilna.png" alt="Profilna slika" />
+              </q-avatar>
 
-      </div>
-      <div class="user-info-image">
-        <img src="~assets\profilna.png" alt="Profilna slika">
-      </div>
+              <div>
+                <div class="text-h4 text-weight-bold text-primary">
+                  {{ $t("profilePage.user") }}
+                  {{ korisnik_trenutno.ime_korisnika }}
+                  {{ korisnik_trenutno.prezime_korisnika }}
+                </div>
+                <div class="text-subtitle2 text-grey-7">
+                  {{ $t("profilePage.subtitle") }}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-12 col-md-auto">
+            <q-btn
+              color="primary"
+              unelevated
+              icon="edit"
+              :label="$t('profilePage.editUserData')"
+              @click="$router.push('/UpdateProfil')"
+            />
+          </div>
+        </div>
+      </q-card-section>
+
+      <q-separator />
+
+      <q-card-section>
+        <div class="row q-col-gutter-md">
+          <div class="col-12 col-sm-6 col-md-3">
+            <q-card flat bordered class="info-tile">
+              <q-card-section class="row items-center q-gutter-sm">
+                <q-icon name="person" color="primary" />
+                <div>
+                  <div class="text-caption text-grey-6">
+                    {{ $t("profilePage.firstName") }}
+                  </div>
+                  <div class="text-weight-medium">
+                    {{ korisnik_trenutno.ime_korisnika }}
+                  </div>
+                </div>
+              </q-card-section>
+            </q-card>
+          </div>
+
+          <div class="col-12 col-sm-6 col-md-3">
+            <q-card flat bordered class="info-tile">
+              <q-card-section class="row items-center q-gutter-sm">
+                <q-icon name="badge" color="primary" />
+                <div>
+                  <div class="text-caption text-grey-6">
+                    {{ $t("profilePage.lastName") }}
+                  </div>
+                  <div class="text-weight-medium">
+                    {{ korisnik_trenutno.prezime_korisnika }}
+                  </div>
+                </div>
+              </q-card-section>
+            </q-card>
+          </div>
+
+          <div class="col-12 col-sm-6 col-md-3">
+            <q-card flat bordered class="info-tile">
+              <q-card-section class="row items-center q-gutter-sm">
+                <q-icon name="mail" color="primary" />
+                <div>
+                  <div class="text-caption text-grey-6">
+                    {{ $t("profilePage.email") }}
+                  </div>
+                  <div class="text-weight-medium ellipsis">
+                    {{ korisnik_trenutno.email_korisnika }}
+                  </div>
+                </div>
+              </q-card-section>
+            </q-card>
+          </div>
+
+          <div class="col-12 col-sm-6 col-md-3">
+            <q-card flat bordered class="info-tile">
+              <q-card-section class="row items-center q-gutter-sm">
+                <q-icon name="place" color="primary" />
+                <div>
+                  <div class="text-caption text-grey-6">
+                    {{ $t("profilePage.address") }}
+                  </div>
+                  <div class="text-weight-medium">
+                    {{ korisnik_trenutno.adresa_korisnika }}
+                  </div>
+                </div>
+              </q-card-section>
+            </q-card>
+          </div>
+        </div>
+      </q-card-section>
+    </q-card>
+
+    <!-- SPREMLJENE AUKCIJE -->
+    <div class="section-head q-mb-md">
+      <h5>{{ $t("savedAuctions.title") }}</h5>
     </div>
-    <q-btn color="primary" label="Izmjena korisničkih podataka" @click="$router.push('/UpdateProfil')" />
 
-    <!-- predmeti na aukciji koje je korisnik postavio -->
-    <h3>Vaši predmeti na aukciji</h3>
-    <p ref="nema_predmete"></p>
-    <div class="q-pa-sm row flex flex-center">
-      <div v-for="predmet in vlastitiPredmeti" :key="predmet.id_predmeta" class="q-pa-md" style="width: 400px">
-        <q-card>
-          <q-item-section @click="pregledPredmeta(predmet.id_predmeta)">
-            <q-img v-if="predmet.slika" :src="predmet.slika" no-native-menu />
-            <q-item class="q-pa-sm text-bold text-blue-7">{{ predmet.naziv_predmeta }} </q-item>
-            <q-item>Početna cijena: {{ predmet.pocetna_cijena }}$</q-item>
-            <q-item>Vrijeme pocetka: {{ formattedDate(predmet.vrijeme_pocetka) }}</q-item>
-            <q-item>Vrijeme zavrsetka: {{ formattedDate(predmet.vrijeme_zavrsetka) }}</q-item>
-            <q-item>Preostalo vrijeme aukcije: {{ predmet.preostalo_vrijeme }} h </q-item>
-            <q-item>Trenutna cijena: {{ predmet.trenutna_cijena }}$</q-item>
-          </q-item-section>
-          <q-separator dark />
-          <q-card-actions v-if="provjeriDatum(predmet)">
-            <q-btn flat color="primary" @click="izmijeniPredmet(predmet.id_predmeta)">Izmijeni</q-btn>
-            <q-btn flat color="negative" @click="obrisiPredmet(predmet.id_predmeta)">Obriši</q-btn>
+    <p v-if="spremljeneAukcije.length === 0" class="text-grey">
+      {{ $t("savedAuctions.empty") }}
+    </p>
+
+    <div class="row q-col-gutter-md q-mb-xl">
+      <div
+        v-for="predmet in spremljeneAukcije"
+        :key="predmet.id_predmeta"
+        class="col-12 col-sm-6 col-md-4"
+      >
+        <q-card class="saved-item-card">
+          <q-img v-if="predmet.slika" :src="predmet.slika" ratio="4/3" />
+
+          <q-card-section>
+            <div class="row justify-between items-center">
+              <div class="text-h6 text-primary">
+                {{ $pick(predmet.naziv_predmeta, predmet.naziv_predmeta_en) }}
+              </div>
+              <q-badge color="green">
+                {{ $t("profilePage.active") }}
+              </q-badge>
+            </div>
+
+            <div class="q-mt-sm text-body2">
+              {{ $t("profilePage.startingPrice") }}:
+              {{ predmet.pocetna_cijena }}$
+            </div>
+            <div class="text-body2">
+              {{ $t("profilePage.endTime") }}:
+              {{ formattedDate(predmet.vrijeme_zavrsetka) }}
+            </div>
+            <div class="text-body2 text-weight-bold">
+              {{ $t("profilePage.currentPrice") }}:
+              {{ predmet.trenutna_cijena }}$
+            </div>
+          </q-card-section>
+
+          <q-separator />
+
+          <q-card-actions align="between">
+            <q-btn
+              flat
+              :label="$t('profilePage.view')"
+              @click="pregledPredmeta(predmet.id_predmeta)"
+            />
+            <q-btn
+              flat
+              round
+              color="negative"
+              icon="favorite"
+              :disable="
+                uklanjanjeSpremljenihIds.includes(Number(predmet.id_predmeta))
+              "
+              @click.stop="ukloniSpremljenuAukciju(predmet.id_predmeta)"
+            >
+              <q-tooltip>{{ $t("savedAuctions.remove") }}</q-tooltip>
+            </q-btn>
           </q-card-actions>
         </q-card>
       </div>
     </div>
 
-    <!-- ponude korisnika -->
-    <h3>Vaše ponude</h3>
-    <p ref="nema_ponude"></p>
-    <div class="q-pa-sm row flex flex-center">
-  <div v-for="ponuda in vlastitePonude" :key="ponuda.id_ponude" class="q-pa-md" style="width: 400px">
-    <q-card>
-      <q-item-section>
-        <q-img v-if="ponuda.slika" :src="ponuda.slika" no-native-menu />
-        <q-item class="q-pa-sm text-bold text-blue-7">{{ ponuda.naziv_predmeta }} </q-item>
-        <q-item>Opis: {{ ponuda.opis_predmeta }}$</q-item>
-        <q-item>vrijednost ponude: {{ ponuda.vrijednost_ponude }}$</q-item>
-        <q-item>Vrijeme postavljanja ponude: {{ formattedDate(ponuda.vrijeme_ponude) }}</q-item>
-      </q-item-section>
-      <q-separator dark />
-    </q-card>
-  </div>
-</div>
+    <!-- PREDMETI -->
+    <div class="section-head q-mb-md">
+      <h5>{{ $t("profilePage.yourAuctionItems") }}</h5>
+    </div>
+
+    <p v-if="vlastitiPredmeti.length === 0" class="text-grey">
+      {{ $t("profilePage.noAuctionItems") }}
+    </p>
+
+    <div class="row q-col-gutter-md q-mb-xl">
+      <div
+        v-for="predmet in vlastitiPredmeti"
+        :key="predmet.id_predmeta"
+        class="col-12 col-sm-6 col-md-4"
+      >
+        <q-card class="auction-card">
+          <q-img v-if="predmet.slika" :src="predmet.slika" ratio="4/3" />
+
+          <q-card-section>
+            <div class="row justify-between items-center">
+              <div class="text-h6 text-primary">
+                {{ $pick(predmet.naziv_predmeta, predmet.naziv_predmeta_en) }}
+              </div>
+
+              <q-badge :color="provjeriDatum(predmet) ? 'green' : 'grey'">
+                {{
+                  provjeriDatum(predmet)
+                    ? $t("profilePage.active")
+                    : $t("profilePage.finished")
+                }}
+              </q-badge>
+            </div>
+
+            <div class="q-mt-sm text-body2">
+              {{ $t("profilePage.startingPrice") }}:
+              {{ predmet.pocetna_cijena }}$
+            </div>
+            <div class="text-body2">
+              {{ $t("profilePage.startTime") }}:
+              {{ formattedDate(predmet.vrijeme_pocetka) }}
+            </div>
+            <div class="text-body2">
+              {{ $t("profilePage.endTime") }}:
+              {{ formattedDate(predmet.vrijeme_zavrsetka) }}
+            </div>
+            <div class="text-body2">
+              {{ $t("profilePage.remainingTime") }}:
+              {{ predmet.preostalo_vrijeme }} h
+            </div>
+            <div class="text-body2 text-weight-bold">
+              {{ $t("profilePage.currentPrice") }}:
+              {{ predmet.trenutna_cijena }}$
+            </div>
+          </q-card-section>
+
+          <q-separator />
+
+          <q-card-actions align="between">
+            <q-btn
+              flat
+              :label="$t('profilePage.view')"
+              @click="pregledPredmeta(predmet.id_predmeta)"
+            />
+
+            <div v-if="provjeriDatum(predmet)">
+              <q-btn
+                flat
+                color="primary"
+                :label="$t('profilePage.edit')"
+                @click="izmijeniPredmet(predmet.id_predmeta)"
+              />
+              <q-btn
+                flat
+                color="negative"
+                :label="$t('profilePage.delete')"
+                @click="obrisiPredmet(predmet.id_predmeta)"
+              />
+            </div>
+          </q-card-actions>
+        </q-card>
+      </div>
+    </div>
+
+    <!-- PONUDE -->
+    <div class="section-head q-mb-md">
+      <h5>{{ $t("profilePage.yourBids") }}</h5>
+    </div>
+
+    <p v-if="vlastitePonude.length === 0" class="text-grey">
+      {{ $t("profilePage.noBids") }}
+    </p>
+
+    <div class="row q-col-gutter-md">
+      <div
+        v-for="ponuda in vlastitePonude"
+        :key="ponuda.id_ponude"
+        class="col-12 col-sm-6 col-md-4"
+      >
+        <q-card class="bid-card">
+          <q-card-section>
+            <q-img
+              v-if="ponuda.slika"
+              :src="ponuda.slika"
+              style="height: 150px"
+            />
+
+            <div class="text-subtitle1 text-primary q-mt-sm">
+              {{ $pick(ponuda.naziv_predmeta, ponuda.naziv_predmeta_en) }}
+            </div>
+
+            <div class="text-body2">
+              {{ $t("profilePage.description") }}:
+              {{ $pick(ponuda.opis_predmeta, ponuda.opis_en) }}
+            </div>
+
+            <div class="text-body2">
+              {{ $t("profilePage.bidValue") }}: {{ ponuda.vrijednost_ponude }}$
+            </div>
+
+            <div class="text-body2">
+              {{ $t("profilePage.bidTime") }}:
+              {{ formattedDate(ponuda.vrijeme_ponude) }}
+            </div>
+          </q-card-section>
+        </q-card>
+      </div>
+    </div>
+
+    <!-- OSVOJENI PREDMETI -->
+    <div class="section-head q-mb-md q-mt-xl">
+      <h5>{{ $t("profilePage.yourWonItems") }}</h5>
+    </div>
+
+    <p v-if="vlastitiOsvojeniPredmeti.length === 0" class="text-grey">
+      {{ $t("profilePage.noWonItems") }}
+    </p>
+
+    <div class="row q-col-gutter-md">
+      <div
+        v-for="osvojeniPredmet in vlastitiOsvojeniPredmeti"
+        :key="osvojeniPredmet.id_predmeta"
+        class="col-12 col-sm-6 col-md-4"
+      >
+        <q-card class="won-item-card">
+          <q-img
+            v-if="osvojeniPredmet.slika"
+            :src="osvojeniPredmet.slika"
+            style="height: 200px"
+          />
+
+          <q-card-section>
+            <div class="text-h6 text-primary">
+              {{
+                $pick(
+                  osvojeniPredmet.naziv_predmeta,
+                  osvojeniPredmet.naziv_predmeta_en,
+                )
+              }}
+            </div>
+
+            <div class="q-mt-sm text-body2">
+              {{
+                $pick(osvojeniPredmet.opis_predmeta, osvojeniPredmet.opis_en)
+              }}
+            </div>
+
+            <q-separator class="q-my-md" />
+
+            <div class="text-body2 text-weight-bold text-positive">
+              {{ $t("profilePage.finalPrice") }}:
+              {{ osvojeniPredmet.konacna_cijena }}$
+            </div>
+
+            <q-btn
+              v-if="!osvojeniPredmet.je_ocijenjeno"
+              class="q-mt-md"
+              color="primary"
+              outline
+              icon="star"
+              :label="$t('profilePage.rateSeller')"
+              @click="otvoriOcjenjivanje(osvojeniPredmet)"
+            />
+
+            <q-btn
+              v-else
+              class="q-mt-md"
+              color="positive"
+              outline
+              icon="check"
+              :label="$t('profilePage.sellerRated')"
+              disable
+            />
+          </q-card-section>
+        </q-card>
+      </div>
+    </div>
+
+    <q-dialog v-model="ocjenaDialog">
+      <q-card class="rating-dialog" style="width: 430px; max-width: 90vw">
+        <q-card-section class="q-pb-sm">
+          <div class="text-h6">
+            {{ $t("profilePage.rateSellerTitle") }} #{{
+              odabraniOsvojeniPredmet?.id_prodavatelja
+            }}
+          </div>
+
+          <div class="text-body2 text-grey q-mt-sm">
+            {{ $t("auctionViewPage.item") }}:
+            {{
+              $pick(
+                odabraniOsvojeniPredmet?.naziv_predmeta,
+                odabraniOsvojeniPredmet?.naziv_predmeta_en,
+              )
+            }}
+          </div>
+        </q-card-section>
+
+        <q-card-section>
+          <q-select
+            outlined
+            v-model="ocjenaProdavatelja"
+            :options="[1, 2, 3, 4, 5]"
+            :label="$t('profilePage.ratingSeller')"
+          />
+
+          <q-input
+            outlined
+            type="textarea"
+            v-model="komentarProdavatelja"
+            :label="$t('profilePage.comment')"
+            class="q-mt-md"
+          />
+        </q-card-section>
+
+        <q-card-actions align="right">
+          <q-btn flat :label="$t('common.cancel')" color="grey" v-close-popup />
+          <q-btn
+            unelevated
+            :label="$t('profilePage.saveRating')"
+            color="primary"
+            @click="spremiOcjenuProdavatelja"
+          />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
   </div>
 </template>
 
 <style scoped>
-.user-info {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  background-color: #f2f2f2;
-  padding: 20px;
-  margin-bottom: 20px;
-  width: 100%;
+.profile-page {
+  background: linear-gradient(135deg, #f5f7fa, #e4ecff);
+  min-height: 100vh;
 }
 
-.user-info-header {
-  margin-bottom: 20px;
+.profile-hero {
+  border-radius: 20px;
 }
 
-.user-info-header h2 {
-  font-size: 24px;
-  margin-bottom: 5px;
+.info-tile {
+  border-radius: 14px;
+  transition: 0.2s;
 }
 
-.user-info-header p {
-  font-size: 16px;
-  margin-bottom: 5px;
+.info-tile:hover {
+  transform: translateY(-2px);
 }
 
-.user-info-image img {
-  width: 200px;
-  height: 200px;
-  object-fit: cover;
-  border-radius: 50%;
+.auction-card,
+.saved-item-card,
+.bid-card,
+.won-item-card {
+  border-radius: 16px;
+  transition: 0.25s;
 }
 
-.card {
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  width: 300px;
-  height: 400px;
-  margin: 10px;
-  border-radius: 15px;
-  border: 1px solid #ccc;
+.auction-card:hover,
+.saved-item-card:hover,
+.bid-card:hover,
+.won-item-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+.rating-dialog {
+  border-radius: 20px;
   overflow: hidden;
-  transition: transform 0.3s ease-in-out, background-color 0.3s ease-in-out;
-  cursor: pointer;
 }
 </style>
-
 
 <script>
 import axios from "axios";
@@ -119,135 +468,206 @@ import axios from "axios";
 export default {
   data() {
     return {
-      currentUser: {}, // Korisnički podaci
-      userBids: [], // Predmeti na koje je korisnik postavio bid
       korisnik_trenutno: {
         ime_korisnika: "",
         prezime_korisnika: "",
         email_korisnika: "",
-        adresa_korisnika: ""
+        adresa_korisnika: "",
       },
+      spremljeneAukcije: [],
+      uklanjanjeSpremljenihIds: [],
       vlastitiPredmeti: [],
       vlastitePonude: [],
-    }
+      vlastitiOsvojeniPredmeti: [],
+      ocjenaDialog: false,
+      odabraniOsvojeniPredmet: null,
+      ocjenaProdavatelja: null,
+      komentarProdavatelja: "",
+    };
   },
 
   async mounted() {
     try {
-      // Get the JWT token from local storage
       const token = localStorage.getItem("token");
-
-      // Parse the token to get user ID
       const userId = this.getUserIdFromToken(token);
-
-      // Fetch user data using user ID
-      const userData = await this.fetchUserData(userId);
       const headers = { Authorization: `Bearer ${token}` };
-      // Update the component's data with the fetched user data
+
+      const userData = await this.fetchUserData(userId);
       this.korisnik_trenutno = userData;
 
       this.dohvatPredmeta(userId, headers);
+      this.dohvatSpremljeneAukcije(headers);
       this.dohvatPonude(userId, headers);
+      this.dohvatOsvojeniPredmeti(userId, headers);
     } catch (error) {
-      console.error("Greška kod dohvaćanja vlastitih predmeta:", error);
+      console.error(error);
     }
   },
 
   methods: {
+    async dohvatSpremljeneAukcije(headers) {
+      try {
+        const res = await axios.get(
+          "http://localhost:3000/api/spremljene-aukcije",
+          { headers },
+        );
+        this.spremljeneAukcije = res.data;
+      } catch (error) {
+        console.error("Greška pri dohvatu spremljenih aukcija:", error);
+      }
+    },
+
+    async ukloniSpremljenuAukciju(id) {
+      const idPredmeta = Number(id);
+      if (this.uklanjanjeSpremljenihIds.includes(idPredmeta)) return;
+
+      const token = localStorage.getItem("token");
+      const headers = { Authorization: `Bearer ${token}` };
+      this.uklanjanjeSpremljenihIds.push(idPredmeta);
+
+      try {
+        await axios.delete(
+          "http://localhost:3000/api/spremljene-aukcije/" + idPredmeta,
+          { headers },
+        );
+        this.spremljeneAukcije = this.spremljeneAukcije.filter(
+          (predmet) => Number(predmet.id_predmeta) !== idPredmeta,
+        );
+        this.$q.notify({
+          type: "positive",
+          message: this.$t("savedAuctions.removed"),
+        });
+      } catch (error) {
+        console.error("Greška pri uklanjanju spremljene aukcije:", error);
+        this.$q.notify({
+          type: "negative",
+          message: this.$t("savedAuctions.error"),
+        });
+      } finally {
+        this.uklanjanjeSpremljenihIds =
+          this.uklanjanjeSpremljenihIds.filter(
+            (savedId) => savedId !== idPredmeta,
+          );
+      }
+    },
 
     async dohvatPredmeta(userId, headers) {
-      await axios
-        .get("http://localhost:3000/api/vlastiti-predmeti/" + userId, { headers })
-        .then((response) => {
-          if (response.data.length === 0) {
-            this.$refs.nema_predmete.textContent = "Nemate niti jedan predmet koji je ili je bio na aukciji!";
-          } else {
-            this.vlastitiPredmeti = response.data;
-          }
-        })},
+      const res = await axios.get(
+        "http://localhost:3000/api/vlastiti-predmeti/" + userId,
+        { headers },
+      );
+      this.vlastitiPredmeti = res.data;
+    },
 
-    formattedDate(dateString) {
-      return new Date(dateString).toLocaleString("hr-HR").replace(",", "");
-    },
-    pregledPredmeta(id_predmeta) {
-      this.$router.push({ path: "prikaz", query: { id_predmeta } });
-    },
-    izmijeniPredmet(id_predmeta) {
-      this.$router.push({ path: "izmjena_predmeta", query: { id_predmeta } });
-    },
-    async obrisiPredmet(id_predmeta) { //bilo bi dobro imat uvjet da se ne mogu brisat izvedene ili aukcije u tijeku
-      const token = localStorage.getItem("token");
-      const userId = this.getUserIdFromToken(token);
-      const headers = { Authorization: `Bearer ${token}` };
-      if (window.confirm('Jeste li sigurni da želite obrisati predmet?')) {
-        try {
-          const response = await axios.delete("http://localhost:3000/api/brisanjePredmeta/" + id_predmeta, { headers });
-
-          this.$q.notify({
-            color: "positive",
-            position: "top",
-            message: "Brisanje podataka uspješno!",
-          });
-
-          this.dohvatPredmeta(userId, headers);
-        } catch (error) {
-          console.log("Greška pri brisanju predmeta: " + error);
-        }
-      }
-    },
     async dohvatPonude(userId, headers) {
-  await axios
-    .get("http://localhost:3000/api/vlastita-ponuda-korisnik/" + userId, { headers })
-    .then((response) => {
-      console.log("API Data:", response.data); // Log API data
-      if (response.data.length === 0) {
-        this.$refs.nema_ponude.textContent = "Nemate niti jednu ponudu!";
-      } else {
-        this.vlastitePonude = response.data;
-      }
-    })
-    .catch((error) => {
-      console.error("API Error:", error); 
-    });
-},
+      const res = await axios.get(
+        "http://localhost:3000/api/vlastita-ponuda-korisnik/" + userId,
+        { headers },
+      );
+      this.vlastitePonude = res.data;
+    },
 
-    editBid(bid) {
-      // Funkcija za uređivanje bid-a na aukciji
+    async dohvatOsvojeniPredmeti(userId, headers) {
+      const res = await axios.get(
+        "http://localhost:3000/api/osvojeni-predmeti/" + userId,
+        { headers },
+      );
+
+      console.log("Puni osvojeni predmeti:", JSON.stringify(res.data, null, 2));
+
+      res.data.forEach((p, i) => {
+        console.log(`Predmet ${i}:`, {
+          id_predmeta: p.id_predmeta,
+          naziv_predmeta: p.naziv_predmeta,
+          slika_length: p.slika ? p.slika.length : "NULL",
+          slika_start: p.slika ? p.slika.substring(0, 50) : "NULL",
+        });
+      });
+
+      this.vlastitiOsvojeniPredmeti = res.data;
     },
-    deleteBid(bid) {
-      // Funkcija za brisanje bid-a na aukciji
+
+    formattedDate(date) {
+      return new Date(date).toLocaleString("hr-HR").replace(",", "");
     },
+
+    pregledPredmeta(id) {
+      this.$router.push({
+        path: "prikaz",
+        query: { id_predmeta: id },
+      });
+    },
+
+    izmijeniPredmet(id) {
+      this.$router.push({
+        path: "izmjena_predmeta",
+        query: { id_predmeta: id },
+      });
+    },
+
+    async obrisiPredmet(id) {
+      const token = localStorage.getItem("token");
+      const headers = { Authorization: `Bearer ${token}` };
+
+      if (confirm(this.$t("profilePage.confirmDelete"))) {
+        await axios.delete("http://localhost:3000/api/brisanjePredmeta/" + id, {
+          headers,
+        });
+        location.reload();
+      }
+    },
+
     getUserIdFromToken(token) {
-      // Parse JWT token and extract user ID
-      var base64Url = token.split('.')[1];
-      var base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-      var jsonPayload = decodeURIComponent(atob(base64).split('').map(function (c) {
-        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-      }).join(''));
-      return JSON.parse(jsonPayload).id;
+      const base64 = token.split(".")[1];
+      return JSON.parse(atob(base64)).id;
     },
 
     async fetchUserData(userId) {
-      try {
-        // Fetch user data from the server using user ID
-        const response = await axios.get(`http://localhost:3000/api/korisnikinfo1/${userId}`);
-        // Return user data
-        return response.data[0];
-      } catch (error) {
-        console.error("Error fetching user data:", error);
-        // If an error occurs, you might want to handle it accordingly
-        throw error;
-      }
+      const res = await axios.get(
+        `http://localhost:3000/api/korisnikinfo1/${userId}`,
+      );
+      return res.data[0];
     },
 
     provjeriDatum(predmet) {
-      const vrijemePocetka = new Date(predmet.vrijeme_pocetka)
-      if(vrijemePocetka < new Date()) {
-        return false;
-      }
-      return true;
-    }
-  }
-}
+      return new Date(predmet.vrijeme_pocetka) > new Date();
+    },
 
+    otvoriOcjenjivanje(osvojeniPredmet) {
+      this.odabraniOsvojeniPredmet = osvojeniPredmet;
+      this.ocjenaProdavatelja = null;
+      this.komentarProdavatelja = "";
+      this.ocjenaDialog = true;
+    },
+
+    async spremiOcjenuProdavatelja() {
+      try {
+        const token = localStorage.getItem("token");
+        const headers = { Authorization: `Bearer ${token}` };
+
+        await axios.post(
+          "http://localhost:3000/api/ocjena-prodavatelja",
+          {
+            id_transakcije: this.odabraniOsvojeniPredmet.id_transakcije,
+            ocjena: this.ocjenaProdavatelja,
+            komentar: this.komentarProdavatelja,
+          },
+          { headers },
+        );
+
+        alert(this.$t("profilePage.ratingSaved"));
+
+        this.odabraniOsvojeniPredmet.je_ocijenjeno = 1;
+        this.ocjenaDialog = false;
+      } catch (error) {
+        console.error(error);
+
+        const poruka =
+          error.response?.data?.message || this.$t("profilePage.ratingError");
+
+        alert(poruka);
+      }
+    },
+  },
+};
 </script>

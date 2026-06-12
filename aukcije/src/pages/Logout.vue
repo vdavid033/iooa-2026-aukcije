@@ -14,7 +14,7 @@ export default {
         this.$q.notify({
           color: 'positive',
           position: 'top',
-          message: 'Odjavljeni ste!',
+          message: this.$t('auth.logoutSuccess'),
           icon: 'check_circle'
         });
       } catch (error) {
@@ -22,7 +22,7 @@ export default {
         this.$q.notify({
           color: 'negative',
           position: 'top',
-          message: 'Greška pri odjavi!',
+          message: this.$t('auth.logoutError'),
           icon: 'warning' 
         });
       }

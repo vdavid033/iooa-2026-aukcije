@@ -1,166 +1,216 @@
 <template>
   <q-layout view="lHh Lpr lFf">
-    <q-header elevated>
+
+    <!-- HEADER -->
+    <q-header elevated class="bg-white text-dark">
       <q-toolbar>
-        <q-btn flat dense round icon="menu" aria-label="Menu" @click="toggleLeftDrawer" />
-        <q-toolbar-title>
-          <router-link to="/" class="link-style">
-            <q-avatar>
-              <img src="~assets\aukcije_logo.jpg" alt="Logo" />
-            </q-avatar>
-          </router-link>
-        </q-toolbar-title>
-        <q-space></q-space>
-        <q-space /><q-space /><q-space /><q-space /><q-space /><q-space /><q-space /><q-space />
-        <template v-if="isAuthenticated()">
-          <div class="q-pa-md">
-            <q-btn-dropdown  ripple="false" stretch flat text-color="white" color="primary" :label="`${userIme} ${userPrezime}`" >
-              <q-list>
-                <router-link to="/Moj_profil" class="link-style" @click="toggleLeftDrawerClose">
-                  <q-item clickable v-close-popup @click="onItemClick">
-                    <q-item-section>
-                      <q-item-label>Moj profil</q-item-label>
+
+        <!-- LOGO -->
+        <router-link to="/" class="link-style row items-center">
+          <q-avatar size="50px">
+            <img src="~assets/aukcije_logo.jpg" alt="Logo" />
+          </q-avatar>
+        </router-link>
+
+        <!-- NASLOV -->
+        <div class="q-ml-md text-weight-bold text-h6">
+          {{ $t('common.appName') }}
+        </div>
+
+        <q-space />
+        <!-- DESNA STRANA -->
+        <div class="row items-center q-gutter-sm">
+
+          <!-- PREBACIVAC JEZIKA -->
+          <q-btn-toggle
+            v-model="lang"
+            unelevated
+            dense
+            no-caps
+            size="sm"
+            toggle-color="primary"
+            color="grey-3"
+            text-color="primary"
+            :options="[
+              { label: 'HR', value: 'hr-HR' },
+              { label: 'EN', value: 'en-US' }
+            ]"
+            @update:model-value="setLang"
+          />
+
+          <!-- GUEST -->
+          <template v-if="!isAuthenticated()">
+            <q-btn flat :label="$t('menu.register')" to="/registracija" />
+            <q-btn color="primary" unelevated :label="$t('menu.login')" to="/prijava" />
+          </template>
+          
+          <!-- DROPDOWN -->
+          <q-btn
+            flat
+            color="primary"
+            class="q-ml-sm menu-btn"
+          >
+            <q-icon name="menu" size="22px" />
+
+            <q-icon
+              name="keyboard_arrow_down"
+              size="18px"
+              class="arrow-icon q-ml-xs"
+              :class="{ 'arrow-rotate': menuOpen }"
+            />
+
+            <q-menu
+              v-model="menuOpen"
+              anchor="bottom right"
+              self="top right"
+              :offset="[0, 14]"
+              class="custom-dropdown"
+            >
+              <q-list class="dropdown-list">
+
+                <router-link to="/" class="link-style">
+                  <q-item clickable v-close-popup class="dropdown-item">
+                    <q-item-section avatar>
+                      <q-icon name="home" color="primary" />
                     </q-item-section>
+                    <q-item-section>{{ $t('menu.home') }}</q-item-section>
                   </q-item>
                 </router-link>
-                <q-item clickable v-close-popup @click="confirmLogout">
-                  <q-item-section>
-                    <q-item-label>Odjava</q-item-label>
-                  </q-item-section>
-                </q-item>
+
+                <router-link to="/postavi" class="link-style">
+                  <q-item clickable v-close-popup class="dropdown-item">
+                    <q-item-section avatar>
+                      <q-icon name="add_circle" color="primary" />
+                    </q-item-section>
+                    <q-item-section>{{ $t('menu.addAuction') }}</q-item-section>
+                  </q-item>
+                </router-link>
+
+                <router-link to="/Moj_profil" class="link-style">
+                  <q-item clickable v-close-popup class="dropdown-item">
+                    <q-item-section avatar>
+                      <q-icon name="person" color="primary" />
+                    </q-item-section>
+                    <q-item-section>{{ $t('menu.profile') }}</q-item-section>
+                  </q-item>
+                </router-link>
+
+                <template v-if="isAdmin()">
+                  <q-separator class="q-my-sm" />
+
+                  <router-link to="/admin/" class="link-style">
+                    <q-item clickable v-close-popup class="dropdown-item">
+                      <q-item-section avatar>
+                        <q-icon name="admin_panel_settings" color="primary" />
+                      </q-item-section>
+                      <q-item-section>{{ $t('menu.admin') }}</q-item-section>
+                    </q-item>
+                  </router-link>
+                </template>
+
+                <template v-if="isAuthenticated()">
+                  <q-separator class="q-my-sm" />
+
+                  <q-item
+                    clickable
+                    v-close-popup
+                    @click="confirmLogout"
+                    class="dropdown-item logout-item"
+                  >
+                    <q-item-section avatar>
+                      <q-icon name="logout" color="negative" />
+                    </q-item-section>
+                    <q-item-section>
+                      <span class="text-negative">{{ $t('menu.logout') }}</span>
+                    </q-item-section>
+                  </q-item>
+                </template>
+
               </q-list>
-            </q-btn-dropdown>
-          </div>
-        </template>
+            </q-menu>
+          </q-btn>
+
+        </div>
       </q-toolbar>
     </q-header>
 
-    <q-drawer v-model="leftDrawerOpen" bordered>
-      <q-list>
-        <q-item-label header class="text-bold text-black"> Mogućnosti </q-item-label>
-
-        <div class="q-pa-sm col">
-          <!--        Za navigaciju bez otvaranja novog tab-a-->
-          <template v-if="!isAuthenticated()">
-            <div class="q-pa-sm col">
-              <router-link to="/prijava" class="link-style" @click="toggleLeftDrawerClose">
-                <q-btn class="flex flex-center" style="width: 280px"> Prijava </q-btn>
-              </router-link>
-            </div>
-            <div class="q-pa-sm col">
-              <router-link to="/registracija" class="link-style" @click="toggleLeftDrawerClose">
-                <q-btn class="flex flex-center" style="width: 280px"> Registracija </q-btn>
-              </router-link>
-            </div>
-          </template>
-          <div class="q-pa-sm col">
-            <router-link to="/" class="link-style" @click="toggleLeftDrawerClose">
-              <q-btn class="flex flex-center" style="width: 280px"> Početna stranica </q-btn>
-            </router-link>
-          </div>
-          <div class="q-pa-sm col">
-            <router-link to="postavi" class="link-style" @click="toggleLeftDrawerClose">
-              <q-btn class="flex flex-center" style="width: 280px"> Dodaj aukciju </q-btn>
-            </router-link>
-          </div>
-          <template v-if="isAuthenticated()">
-            <div class="q-pa-sm col">
-              <router-link to="/Moj_profil" class="link-style" @click="toggleLeftDrawerClose">
-                <q-btn class="flex flex-center" style="width: 280px"> Moj profil </q-btn>
-              </router-link>
-            </div>
-          </template>
-          <template v-if="isAdmin()">
-            <div class="q-pa-sm col">
-              <router-link to="/admin/" class="link-style" @click="toggleLeftDrawer">
-                <q-btn class="flex flex-center" color="primary" style="width: 280px">Admin Dashboard</q-btn>
-              </router-link>
-            </div>
-          </template>
-        </div>
-      </q-list>
-    </q-drawer>
-
+    <!-- PAGE -->
     <q-page-container>
       <router-view />
+
+      <div class="app-footer bg-white text-grey-8 text-center q-pa-md shadow-2">
+        © 2026 {{ $t('common.appName') }}
+      </div>
     </q-page-container>
 
-    <!-- Logout Confirmation Dialog -->
+    <!-- LOGOUT DIALOG -->
     <q-dialog v-model="confirmLogoutDialog" persistent>
       <q-card>
         <q-card-section class="row items-center">
           <q-avatar icon="warning" color="negative" text-color="white" />
-          <span class="q-ml-sm">Jeste li sigurni da želite se odjaviti?</span>
+          <span class="q-ml-sm">
+            {{ $t('menu.logoutConfirm') }}
+          </span>
         </q-card-section>
 
         <q-card-actions align="right">
-          <q-btn flat label="Odustani" color="primary" v-close-popup />
-          <q-btn flat label="Odjavi se" color="negative" @click="logoutAndReload" />
+          <q-btn flat :label="$t('common.cancel')" color="primary" v-close-popup />
+          <q-btn flat :label="$t('menu.logout')" color="negative" @click="logoutAndReload" />
         </q-card-actions>
       </q-card>
     </q-dialog>
+
   </q-layout>
 </template>
 
 <script>
 import { defineComponent, ref, computed } from "vue";
 import { jwtDecode } from "jwt-decode";
+import { useI18n } from "vue-i18n";
 
 export default defineComponent({
   name: "MainLayout",
 
   setup() {
-    const leftDrawerOpen = ref(false);
-    const confirmLogoutDialog = ref(false);
+    const { locale } = useI18n({ useScope: "global" });
+    const lang = ref(localStorage.getItem("lang") || "hr-HR");
+    const setLang = (val) => {
+      lang.value = val;
+      locale.value = val;
+      localStorage.setItem("lang", val);
+    };
 
+    const confirmLogoutDialog = ref(false);
+    const menuOpen = ref(false);
     const token = ref(localStorage.getItem("token"));
 
-    // Decode the JWT token and extract the user's name and surname
     const userIme = computed(() => {
-      if (token.value) {
-        try {
-          const decodedToken = jwtDecode(token.value);
-          return decodedToken.ime; // Return user's name from token
-        } catch (error) {
-          console.error("Error decoding token:", error);
-          return "";
-        }
+      try {
+        return token.value ? jwtDecode(token.value).ime : "";
+      } catch {
+        return "";
       }
-      return "";
     });
 
     const userPrezime = computed(() => {
-      if (token.value) {
-        try {
-          const decodedToken = jwtDecode(token.value);
-          return decodedToken.prezime; // Return user's surname from token
-        } catch (error) {
-          console.error("Error decoding token:", error);
-          return "";
-        }
+      try {
+        return token.value ? jwtDecode(token.value).prezime : "";
+      } catch {
+        return "";
       }
-      return "";
     });
 
-    const isAdmin = () => {
-      if (isAuthenticated() && token.value) {
-        const decodedToken = jwtDecode(token.value);
-        return decodedToken.uloga === "admin";
-      }
-      return false;
-    };
-
     const isAuthenticated = () => {
-      const token = localStorage.getItem("token");
-      return !!token;
+      return !!localStorage.getItem("token");
     };
 
-    const toggleLeftDrawer = () => {
-      leftDrawerOpen.value = !leftDrawerOpen.value;
-    };
-
-    const toggleLeftDrawerClose = () => {
-      leftDrawerOpen.value = false;
+    const isAdmin = () => {
+      if (!isAuthenticated()) return false;
+      try {
+        return jwtDecode(token.value).uloga === "admin";
+      } catch {
+        return false;
+      }
     };
 
     const confirmLogout = () => {
@@ -168,24 +218,68 @@ export default defineComponent({
     };
 
     const logoutAndReload = () => {
-      // Clear JWT token from local storage
       localStorage.removeItem("token");
-      // Reload the page
       window.location.reload();
     };
 
     return {
-      leftDrawerOpen,
+      lang,
+      setLang,
       confirmLogoutDialog,
+      menuOpen,
       isAuthenticated,
       isAdmin,
-      toggleLeftDrawer,
-      toggleLeftDrawerClose,
       confirmLogout,
       logoutAndReload,
-      userPrezime,
       userIme,
+      userPrezime,
     };
   },
 });
 </script>
+
+<style>
+.link-style {
+  text-decoration: none;
+  color: inherit;
+}
+
+.menu-btn {
+  border-radius: 10px;
+  min-width: 64px;
+}
+
+.arrow-icon {
+  transition: 0.25s ease;
+}
+
+.arrow-rotate {
+  transform: rotate(180deg);
+}
+
+.dropdown-list {
+  min-width: 260px;
+  padding: 14px;
+}
+
+.dropdown-item {
+  border-radius: 12px;
+  margin: 6px 0;
+  min-height: 54px;
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.dropdown-item:hover {
+  background: #eef4ff;
+}
+
+.logout-item:hover {
+  background: #fff0f0;
+}
+
+.custom-dropdown {
+  border-radius: 10px;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.16);
+}
+</style>

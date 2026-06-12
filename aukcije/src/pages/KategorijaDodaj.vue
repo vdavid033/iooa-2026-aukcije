@@ -1,11 +1,11 @@
 <template>
   <q-page style="margin-left: 2%; margin-right: 2%" window-height window-width>
     <div class="row">
-      <h5 class="text-h3 text-blue q-my-md">Unos nove kategorije</h5>
+      <h5 class="text-h3 text-blue q-my-md">{{ $t('addCategoryPage.title') }}</h5>
     </div>
     <q-form @submit="dodajKategoriju()">
-      <q-input v-model="naziv_kategorije" label="Naziv:" outlined dense type="text" />
-      <q-btn type="submit" label="Dodaj" color="primary" class="q-mt-md" />
+      <q-input v-model="naziv_kategorije" :label="$t('addCategoryPage.name')" outlined dense type="text" />
+      <q-btn type="submit" :label="$t('addCategoryPage.add')" color="primary" class="q-mt-md" />
     </q-form>
   </q-page>
 </template>
@@ -47,7 +47,7 @@ export default {
         this.$q.notify({
           color: "positive",
           position: "top",
-          message: "Kategorija uspješno unesena.",
+          message: this.$t('addCategoryPage.success'),
         });
         
         this.previosPage();
@@ -57,7 +57,7 @@ export default {
         this.$q.notify({
           color: "negative",
           position: "top",
-          message: "Greška pri unosu kategorije!",
+          message: this.$t('addCategoryPage.error'),
           icon: "warning",
         });
       }
@@ -68,7 +68,7 @@ export default {
         this.$q.notify({
           color: "negative",
           position: "top",
-          message: "Niste unjeli naziv kategorije!",
+          message: this.$t('addCategoryPage.required'),
           icon: "warning",
         });
       } else {

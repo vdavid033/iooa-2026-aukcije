@@ -1,6 +1,6 @@
 <template>
   <div class="q-pa-md">
-    <q-table flat bordered title="Korisnici" rows-per-page-label="Broj prikazanih redova:" :rows="korisnici" :col-props="colProps" :columns="stupci">
+    <q-table flat bordered :title="$t('usersPage.title')" :rows-per-page-label="$t('usersPage.rowsPerPage')" :rows="korisnici" :col-props="colProps" :columns="stupci">
       <template v-slot:body-cell-ime_korisnika="props">
         {{ props.row.ime_korisnika }}
       </template>
@@ -15,8 +15,8 @@
       </template>
       <template v-slot:body-cell-gumbovi="props">
         <q-btn-group spread>
-          <q-btn color="primary" label="Izmijeni" @click="odiNaDetalje(props.row.id_korisnika)" />
-          <q-btn color="red" label="Obriši" @click="obrisiKorisnika(props.row.id_korisnika)" />
+          <q-btn color="primary" :label="$t('usersPage.edit')" @click="odiNaDetalje(props.row.id_korisnika)" />
+          <q-btn color="red" :label="$t('usersPage.delete')" @click="obrisiKorisnika(props.row.id_korisnika)" />
         </q-btn-group>
       </template>
     </q-table>
@@ -29,45 +29,6 @@ export default {
   data() {
     return {
       korisnici: [],
-      stupci: [
-        {
-          name: "ime",
-          required: true,
-          label: "Ime",
-          align: "left",
-          field: "ime_korisnika",
-          sortable: true,
-        },
-        {
-          name: "prezime",
-          required: true,
-          label: "Prezime",
-          align: "left",
-          field: "prezime_korisnika",
-          sortable: true,
-        },
-        {
-          name: "email",
-          required: true,
-          label: "E-mail",
-          align: "left",
-          field: "email_korisnika",
-          sortable: true,
-        },
-        {
-          name: "adresa",
-          required: true,
-          label: "Adresa",
-          align: "left",
-          field: "adresa_korisnika",
-          sortable: true,
-        },
-        {
-          name: "gumbovi",
-          label: "Dodatne mogucnosti",
-          align: "center",
-        },
-      ],
     };
   },
 
@@ -79,6 +40,18 @@ export default {
     const headers = { Authorization: `Bearer ${token}` };
     this.dohvatiKorisnike(headers);
     //console.log("korisnici nakon API poziva:", this.korisnici);
+  },
+
+  computed: {
+    stupci() {
+      return [
+        { name: "ime", required: true, label: this.$t('usersPage.name'), align: "left", field: "ime_korisnika", sortable: true },
+        { name: "prezime", required: true, label: this.$t('usersPage.surname'), align: "left", field: "prezime_korisnika", sortable: true },
+        { name: "email", required: true, label: this.$t('usersPage.email'), align: "left", field: "email_korisnika", sortable: true },
+        { name: "adresa", required: true, label: this.$t('usersPage.address'), align: "left", field: "adresa_korisnika", sortable: true },
+        { name: "gumbovi", label: this.$t('usersPage.actions'), align: "center" }
+      ];
+    }
   },
 
   methods: {
@@ -99,7 +72,7 @@ export default {
     async obrisiKorisnika(idKorisnika) {
         const token = localStorage.getItem("token");
         const headers = { Authorization: `Bearer ${token}` };
-        if(window.confirm('Jeste li sigurni da želite obrisati korisnika?')) {
+        if(window.confirm(this.$t('usersPage.confirmDelete'))) {
             const response = await axios.put("http://localhost:3000/api/brisanjekorisnika/" + idKorisnika, null, { headers }); //null zbog PUT 'payloada'
             const response2 = await axios.get("http://localhost:3000/api/korisnici", {headers});
             this.korisnici = response2.data;

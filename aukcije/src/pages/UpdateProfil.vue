@@ -1,21 +1,21 @@
 <template>
   <q-page style="margin-left: 2%; margin-right: 2%" window-height window-width>
     <div class="row">
-      <h5 ref="h_korisnik" class="text-h3 text-blue q-my-md">Korisnik {{ korisnik_trenutno.ime_korisnika }} {{ korisnik_trenutno.prezime_korisnika }}</h5>
+      <h5 ref="h_korisnik" class="text-h3 text-blue q-my-md">{{ $t('updateProfilePage.user') }} {{ korisnik_trenutno.ime_korisnika }} {{ korisnik_trenutno.prezime_korisnika }}</h5>
     </div>
     <q-form @submit="provjeraPolja">
-      <q-input v-model="korisnik_novo.ime_korisnika" label="Ime" outlined dense type="text" />
+      <q-input v-model="korisnik_novo.ime_korisnika" :label="$t('updateProfilePage.firstName')" outlined dense type="text" />
       <p ref="p_ime"></p>
-      <q-input v-model="korisnik_novo.prezime_korisnika" label="Prezime" outlined dense type="text" />
+      <q-input v-model="korisnik_novo.prezime_korisnika" :label="$t('updateProfilePage.lastName')" outlined dense type="text" />
       <p ref="p_prezime"></p>
-      <q-input v-model="korisnik_novo.email_korisnika" label="E-mail" outlined dense type="email" />
+      <q-input v-model="korisnik_novo.email_korisnika" :label="$t('updateProfilePage.email')" outlined dense type="email" />
       <p ref="p_email"></p>
-      <q-input v-model="korisnik_novo.lozinka_korisnika" label="Lozinka" outlined dense type="password" />
-      <q-input v-model="korisnik_novo.potvrda_lozinke" label="Potvrda lozinke" outlined dense type="password" />
+      <q-input v-model="korisnik_novo.lozinka_korisnika" :label="$t('updateProfilePage.password')" outlined dense type="password" />
+      <q-input v-model="korisnik_novo.potvrda_lozinke" :label="$t('updateProfilePage.confirmPassword')" outlined dense type="password" />
       <p style="height:10px"></p>
-      <q-input v-model="korisnik_novo.adresa_korisnika" label="Adresa" outlined dense type="text" />
+      <q-input v-model="korisnik_novo.adresa_korisnika" :label="$t('updateProfilePage.address')" outlined dense type="text" />
       <p ref="p_adresa"></p>
-      <q-btn type="submit" label="Izmijeni" color="primary" class="q-mt-md" />
+      <q-btn type="submit" :label="$t('updateProfilePage.edit')" color="primary" class="q-mt-md" />
     </q-form>
   </q-page>
 </template>
@@ -95,11 +95,11 @@ export default {
 
     ispisiPodatke() {
       try {
-        this.$refs.p_ime.textContent = "Trenutno ime: " + this.korisnik_trenutno.ime_korisnika;
-        this.$refs.p_prezime.textContent = "Trenutno prezime: " + this.korisnik_trenutno.prezime_korisnika;
-        this.$refs.p_email.textContent = "Trenutni email: " + this.korisnik_trenutno.email_korisnika;
-        this.$refs.p_adresa.textContent = "Trenutna adresa: " + this.korisnik_trenutno.adresa_korisnika;
-        this.$refs.h_korisnik.textContent = "Korisnik " + this.korisnik_trenutno.ime_korisnika + " " + this.korisnik_trenutno.prezime_korisnika;
+        this.$refs.p_ime.textContent = this.$t('updateProfilePage.currentFirstName') + ": " + this.korisnik_trenutno.ime_korisnika;
+        this.$refs.p_prezime.textContent = this.$t('updateProfilePage.currentLastName') + ": " + this.korisnik_trenutno.prezime_korisnika;
+        this.$refs.p_email.textContent = this.$t('updateProfilePage.currentEmail') + ": " + this.korisnik_trenutno.email_korisnika;
+        this.$refs.p_adresa.textContent = this.$t('updateProfilePage.currentAddress') + ": " + this.korisnik_trenutno.adresa_korisnika;
+        this.$refs.h_korisnik.textContent = this.$t('updateProfilePage.user') + " " + this.korisnik_trenutno.ime_korisnika + " " + this.korisnik_trenutno.prezime_korisnika;
       } catch (error) {
         console.error("Greška pri upisivanju podataka", error);
       }
@@ -117,14 +117,14 @@ export default {
         this.$q.notify({
           color: "negative",
           position: "top",
-          message: "Nije napravljena niti jedna izmjena!",
+          message: this.$t('updateProfilePage.noChanges'),
           icon: "warning",
         });
       } else if (this.korisnik_novo.lozinka_korisnika != this.korisnik_novo.potvrda_lozinke) {
         this.$q.notify({
           color: "negative",
           position: "top",
-          message: "Lozinke se ne podudaraju!",
+          message: this.$t('updateProfilePage.passwordMismatch'),
           icon: "warning",
         });
       } else {
@@ -161,7 +161,7 @@ export default {
         this.$q.notify({
           color: "positive",
           position: "top",
-          message: "Izmjena podataka uspješna!",
+          message: this.$t('updateProfilePage.updateSuccess'),
         });
         await this.fetchUserData(this.korisnik_novo.id_korisnika);
         console.log(this.korisnik_novo.id_korisnika);
@@ -173,7 +173,7 @@ export default {
         this.$q.notify({
           color: "negative",
           position: "top",
-          message: "Izmjena podataka neuspješna.",
+          message: this.$t('updateProfilePage.updateFailed'),
         });
         console.error("Error updating user data:", error);
       }

@@ -37,55 +37,99 @@ app.use(express.urlencoded({ extended: true }));
 connection.connect();
 
 app.get("/api/korisnici", authJwt.verifyTokenAdmin, (req, res) => {
-  connection.query("SELECT id_korisnika, ime_korisnika, prezime_korisnika, email_korisnika, adresa_korisnika FROM korisnik WHERE ime_korisnika != 'obrisani' AND prezime_korisnika != 'korisnik'", (error, results) => {
-    if (error) throw error;
-
-    res.send(results);
-  });
-});
-
-app.get("/getUnosPredmeta", authJwt.verifyTokenUser, function (request, response) {
-  connection.query("SELECT * FROM korisnik", function (error, korisniciResults) {
-    if (error) throw error;
-
-    connection.query("SELECT * FROM kategorija", function (error, kategorijeResults) {
+  connection.query(
+    "SELECT id_korisnika, ime_korisnika, prezime_korisnika, email_korisnika, adresa_korisnika FROM korisnik WHERE ime_korisnika != 'obrisani' AND prezime_korisnika != 'korisnik'",
+    (error, results) => {
       if (error) throw error;
 
-      response.send({
-        korisnici: korisniciResults,
-        kategorije: kategorijeResults,
-      });
-    });
-  });
+      res.send(results);
+    },
+  );
 });
 
-app.post("/unosPredmeta", upload.none(), authJwt.verifyTokenUser, function (request, response) {
-  const data = request.body;
-  const predmet = [[data.naziv_predmeta, data.opis_predmeta, data.vrijeme_pocetka, data.vrijeme_zavrsetka, data.pocetna_cijena, data.id_korisnika, data.id_kategorije]];
-
-  connection.query("INSERT INTO predmet (naziv_predmeta, opis_predmeta, vrijeme_pocetka, vrijeme_zavrsetka, pocetna_cijena, id_korisnika, id_kategorije) VALUES ?", [predmet], function (error, results) {
-    if (error) throw error;
-    const insertedPredmetId = results.insertId;
-
-    const keys = Object.keys(data).filter(key => key.startsWith("file"));
-    let completed = 0;
-
-    if (keys.length === 0) {
-      return response.send({ error: false, message: "Predmet dodan bez slika.", insertedPredmetId: insertedPredmetId });
-    }
-
-    keys.forEach((key) => {
-      const base64String = data[key];
-      connection.query("INSERT INTO slika (slika, id_predmeta) VALUES (?, ?)", [base64String, insertedPredmetId], function (error) {
+app.get(
+  "/getUnosPredmeta",
+  authJwt.verifyTokenUser,
+  function (request, response) {
+    connection.query(
+      "SELECT * FROM korisnik",
+      function (error, korisniciResults) {
         if (error) throw error;
-        completed++;
-        if (completed === keys.length) {
-          return response.send({ error: false, message: "Predmet i slike su dodani.", insertedPredmetId: insertedPredmetId });
+
+        connection.query(
+          "SELECT * FROM kategorija",
+          function (error, kategorijeResults) {
+            if (error) throw error;
+
+            response.send({
+              korisnici: korisniciResults,
+              kategorije: kategorijeResults,
+            });
+          },
+        );
+      },
+    );
+  },
+);
+
+app.post(
+  "/unosPredmeta",
+  upload.none(),
+  authJwt.verifyTokenUser,
+  function (request, response) {
+    const data = request.body;
+    const predmet = [
+      [
+        data.naziv_predmeta,
+        data.opis_predmeta,
+        data.vrijeme_pocetka,
+        data.vrijeme_zavrsetka,
+        data.pocetna_cijena,
+        data.id_korisnika,
+        data.id_kategorije,
+      ],
+    ];
+
+    connection.query(
+      "INSERT INTO predmet (naziv_predmeta, opis_predmeta, vrijeme_pocetka, vrijeme_zavrsetka, pocetna_cijena, id_korisnika, id_kategorije) VALUES ?",
+      [predmet],
+      function (error, results) {
+        if (error) throw error;
+        const insertedPredmetId = results.insertId;
+
+        const keys = Object.keys(data).filter((key) => key.startsWith("file"));
+        let completed = 0;
+
+        if (keys.length === 0) {
+          return response.send({
+            error: false,
+            message: "Predmet dodan bez slika.",
+            insertedPredmetId: insertedPredmetId,
+          });
         }
-      });
-    });
-  });
-});
+
+        keys.forEach((key) => {
+          const base64String = data[key];
+          connection.query(
+            "INSERT INTO slika (slika, id_predmeta) VALUES (?, ?)",
+            [base64String, insertedPredmetId],
+            function (error) {
+              if (error) throw error;
+              completed++;
+              if (completed === keys.length) {
+                return response.send({
+                  error: false,
+                  message: "Predmet i slike su dodani.",
+                  insertedPredmetId: insertedPredmetId,
+                });
+              }
+            },
+          );
+        });
+      },
+    );
+  },
+);
 
 app.get("/api/all-predmet", (req, res) => {
   const query = `
@@ -93,6 +137,8 @@ app.get("/api/all-predmet", (req, res) => {
         p.id_predmeta,
         p.opis_predmeta,
         p.naziv_predmeta,
+        p.naziv_predmeta_en,
+        p.opis_en,
         p.pocetna_cijena,
         p.vrijeme_pocetka,
         p.vrijeme_zavrsetka,
@@ -125,7 +171,7 @@ app.get("/api/get-predmet/:id", (req, res) => {
   const { id } = req.params;
 
   connection.query(
-    `SELECT p.naziv_predmeta, p.id_predmeta, p.pocetna_cijena, p.vrijeme_pocetka, p.vrijeme_zavrsetka, TIME_FORMAT( SEC_TO_TIME(TIMESTAMPDIFF(SECOND, p.vrijeme_pocetka, p.vrijeme_zavrsetka)), '%H:%i:%s' ) AS preostalo_vrijeme, p.opis_predmeta, COALESCE(MAX(po.vrijednost_ponude), p.pocetna_cijena) AS vrijednost_ponude, GROUP_CONCAT(DISTINCT s.slika SEPARATOR '|||') AS slike
+    `SELECT p.naziv_predmeta, p.id_predmeta, p.id_korisnika AS id_prodavatelja, p.pocetna_cijena, p.vrijeme_pocetka, p.vrijeme_zavrsetka, TIME_FORMAT( SEC_TO_TIME(TIMESTAMPDIFF(SECOND, p.vrijeme_pocetka, p.vrijeme_zavrsetka)), '%H:%i:%s' ) AS preostalo_vrijeme, p.opis_predmeta, p.naziv_predmeta_en, p.opis_en, COALESCE(MAX(po.vrijednost_ponude), p.pocetna_cijena) AS vrijednost_ponude, GROUP_CONCAT(DISTINCT s.slika SEPARATOR '|||') AS slike
     FROM predmet p 
     LEFT JOIN ponuda po ON p.id_predmeta = po.id_predmeta 
     LEFT JOIN slika s ON p.id_predmeta = s.id_predmeta 
@@ -138,7 +184,42 @@ app.get("/api/get-predmet/:id", (req, res) => {
         results[0].slike = results[0].slike.split("|||");
       }
       res.send(results);
-    }
+    },
+  );
+});
+
+app.get("/api/recenzije-prodavatelja/:id", (req, res) => {
+  const idProdavatelja = req.params.id;
+
+  connection.query(
+    `SELECT 
+        p.naziv_predmeta,
+        p.naziv_predmeta_en,
+        op.ocjena,
+        op.komentar,
+        DATE_FORMAT(op.datum_ocjene, "%Y-%m-%d %H:%i:%s") AS datum_ocjene
+      FROM ocjena_prodavatelja op
+      JOIN transakcija t ON op.id_transakcije = t.id_transakcije
+      JOIN predmet p ON t.id_predmeta = p.id_predmeta
+      WHERE p.id_korisnika = ?
+      ORDER BY op.datum_ocjene DESC`,
+    [idProdavatelja],
+    (error, recenzije) => {
+      if (error) throw error;
+
+      const brojRecenzija = recenzije.length;
+      const prosjecnaOcjena =
+        brojRecenzija > 0
+          ? recenzije.reduce((sum, r) => sum + Number(r.ocjena), 0) /
+            brojRecenzija
+          : null;
+
+      res.send({
+        prosjecnaOcjena,
+        brojRecenzija,
+        recenzije,
+      });
+    },
   );
 });
 
@@ -151,6 +232,8 @@ app.get("/api/get-kategorija-predmet/:id", (req, res) => {
     p.id_predmeta,
     p.opis_predmeta,
     p.naziv_predmeta,
+    p.naziv_predmeta_en,
+    p.opis_en,
     p.pocetna_cijena,
     p.vrijeme_pocetka,
     p.vrijeme_zavrsetka,
@@ -175,13 +258,37 @@ ORDER BY preostalo_vrijeme DESC;
     (error, results) => {
       if (error) throw error;
       res.send(results);
-    }
+    },
   );
 });
 
 app.get("/api/all-kategorija", (req, res) => {
-  connection.query("SELECT * FROM kategorija", (error, results) => {
-    if (error) throw error;
+  const query = `
+    SELECT 
+      k.id_kategorije,
+      k.naziv_kategorije,
+      k.naziv_kategorije_en,
+      k.slika,
+
+      COUNT(p.id_predmeta) AS count
+
+    FROM kategorija k
+
+    LEFT JOIN predmet p 
+      ON k.id_kategorije = p.id_kategorije
+      AND p.vrijeme_zavrsetka > NOW()
+
+    GROUP BY k.id_kategorije
+
+    ORDER BY k.naziv_kategorije ASC
+  `;
+
+  connection.query(query, (error, results) => {
+    if (error) {
+      console.log(error);
+      return res.status(500).send(error);
+    }
+
     res.send(results);
   });
 });
@@ -198,20 +305,43 @@ app.get("/api/all-kategorija", (req, res) => {
 app.get("/api/get-ponuda/:id", (req, res) => {
   const { id } = req.params;
 
-  connection.query('SELECT id_ponude, vrijednost_ponude, DATE_FORMAT(vrijeme_ponude, "%Y-%m-%d %H:%i:%s") as vrijeme_ponude, id_korisnika FROM ponuda WHERE id_predmeta = ?', [id], (error, results) => {
-    if (error) throw error;
-    res.send(results);
-  });
+  connection.query(
+    'SELECT id_ponude, vrijednost_ponude, DATE_FORMAT(vrijeme_ponude, "%Y-%m-%d %H:%i:%s") as vrijeme_ponude, id_korisnika FROM ponuda WHERE id_predmeta = ?',
+    [id],
+    (error, results) => {
+      if (error) throw error;
+      res.send(results);
+    },
+  );
 });
 
-app.post("/unostrenutnaponuda", authJwt.verifyTokenUser, function (request, response) {
-  const data = request.body;
-  const ponuda = [[data.vrijednost_ponude, data.vrijeme_ponude, data.id_korisnika, data.id_predmeta]];
-  connection.query("INSERT INTO ponuda (vrijednost_ponude, vrijeme_ponude, id_korisnika, id_predmeta) VALUES ?", [ponuda], function (error, results, fields) {
-    if (error) throw error;
-    return response.send({ error: false, data: results, message: "Dodana je trenutna ponuda." });
-  });
-});
+app.post(
+  "/unostrenutnaponuda",
+  authJwt.verifyTokenUser,
+  function (request, response) {
+    const data = request.body;
+    const ponuda = [
+      [
+        data.vrijednost_ponude,
+        data.vrijeme_ponude,
+        data.id_korisnika,
+        data.id_predmeta,
+      ],
+    ];
+    connection.query(
+      "INSERT INTO ponuda (vrijednost_ponude, vrijeme_ponude, id_korisnika, id_predmeta) VALUES ?",
+      [ponuda],
+      function (error, results, fields) {
+        if (error) throw error;
+        return response.send({
+          error: false,
+          data: results,
+          message: "Dodana je trenutna ponuda.",
+        });
+      },
+    );
+  },
+);
 
 app.get("/api/vlastita-ponuda-korisnik/:id", (req, res) => {
   const { id } = req.params;
@@ -228,7 +358,7 @@ app.get("/api/vlastita-ponuda-korisnik/:id", (req, res) => {
     (error, results) => {
       if (error) throw error;
       res.json(results);
-    }
+    },
   );
 });
 
@@ -236,42 +366,89 @@ app.post("/api/unos-slike", authJwt.verifyTokenUser, function (req, res) {
   const data = req.body;
   const slika = data.slika;
 
-  connection.query("INSERT INTO slika (slika) VALUES (?)", [slika], function (error, results, fields) {
-    if (error) {
-      console.error(error);
-      return res.status(500).send({
-        error: true,
-        message: "Dogodila se greška prilikom dodavanja teksta.",
+  connection.query(
+    "INSERT INTO slika (slika) VALUES (?)",
+    [slika],
+    function (error, results, fields) {
+      if (error) {
+        console.error(error);
+        return res.status(500).send({
+          error: true,
+          message: "Dogodila se greška prilikom dodavanja teksta.",
+        });
+      }
+      return res.send({
+        error: false,
+        data: results,
+        message: "Slika je dodana.",
       });
-    }
-    return res.send({
-      error: false,
-      data: results,
-      message: "Slika je dodana.",
-    });
-  });
+    },
+  );
 });
 
 app.get("/api/all-predmet-with-current-price", (req, res) => {
-  connection.query("SELECT p.id_predmeta, p.naziv_predmeta,  p.opis_predmeta, p.pocetna_cijena, p.vrijeme_pocetka, p.vrijeme_zavrsetka, TIME_FORMAT( SEC_TO_TIME(TIMESTAMPDIFF(SECOND, NOW(), p.vrijeme_zavrsetka)), '%H:%i:%s' ) AS preostalo_vrijeme, COALESCE(MAX(po.vrijednost_ponude), p.pocetna_cijena) AS trenutna_cijena FROM predmet p LEFT JOIN ponuda po ON p.id_predmeta = po.id_predmeta WHERE p.vrijeme_zavrsetka > NOW() GROUP BY p.id_predmeta ORDER BY preostalo_vrijeme DESC", (error, results) => {
-    if (error) throw error;
+  connection.query(
+    "SELECT p.id_predmeta, p.naziv_predmeta,  p.opis_predmeta, p.pocetna_cijena, p.vrijeme_pocetka, p.vrijeme_zavrsetka, TIME_FORMAT( SEC_TO_TIME(TIMESTAMPDIFF(SECOND, NOW(), p.vrijeme_zavrsetka)), '%H:%i:%s' ) AS preostalo_vrijeme, COALESCE(MAX(po.vrijednost_ponude), p.pocetna_cijena) AS trenutna_cijena FROM predmet p LEFT JOIN ponuda po ON p.id_predmeta = po.id_predmeta WHERE p.vrijeme_zavrsetka > NOW() GROUP BY p.id_predmeta ORDER BY preostalo_vrijeme DESC",
+    (error, results) => {
+      if (error) throw error;
 
-    res.send(results);
-  });
+      res.send(results);
+    },
+  );
 });
 
 app.get("/api/get-predmet-trenutna-cijena/:id", (req, res) => {
   const { id } = req.params;
-  connection.query("SELECT MAX(`vrijednost_ponude`) AS max_vrijednost_ponude FROM `ponuda` WHERE id_predmeta = ?", [id], (error, results) => {
-    if (error) {
-      return res.status(500).send({ error: "Database error" });
-    }
-    if (results && results.length > 0) {
-      res.send({ max_vrijednost_ponude: results[0].max_vrijednost_ponude });
-    } else {
-      res.status(404).send({ message: "No offers found for the given id_predmeta" });
-    }
-  });
+  connection.query(
+    "SELECT MAX(`vrijednost_ponude`) AS max_vrijednost_ponude FROM `ponuda` WHERE id_predmeta = ?",
+    [id],
+    (error, results) => {
+      if (error) {
+        return res.status(500).send({ error: "Database error" });
+      }
+      if (results && results.length > 0) {
+        res.send({ max_vrijednost_ponude: results[0].max_vrijednost_ponude });
+      } else {
+        res
+          .status(404)
+          .send({ message: "No offers found for the given id_predmeta" });
+      }
+    },
+  );
+});
+
+app.post("/api/ocjena-prodavatelja", authJwt.verifyTokenUser, (req, res) => {
+  const data = req.body;
+
+  connection.query(
+    `INSERT INTO ocjena_prodavatelja
+      (ocjena, komentar, id_transakcije)
+     VALUES (?, ?, ?)`,
+    [data.ocjena, data.komentar, data.id_transakcije],
+    (error, results) => {
+      if (error) {
+        console.error("Greška pri spremanju ocjene prodavatelja:", error);
+
+        if (error.code === "ER_DUP_ENTRY") {
+          return res.status(409).json({
+            error: true,
+            message: "Ova transakcija je već ocijenjena.",
+          });
+        }
+
+        return res.status(500).json({
+          error: true,
+          message: "Ocjena nije spremljena.",
+        });
+      }
+
+      res.json({
+        error: false,
+        message: "Ocjena je uspješno spremljena.",
+        data: results,
+      });
+    },
+  );
 });
 
 app.listen(port, () => {
@@ -284,19 +461,34 @@ app.post("/regaKorisnika", function (request, response) {
   bcrypt.hash(data.lozinka, saltRounds, function (err, hash) {
     if (err) {
       console.error("Error hashing password:", err);
-      return response.status(500).json({ error: true, message: "Error hashing password." });
+      return response
+        .status(500)
+        .json({ error: true, message: "Error hashing password." });
     }
 
-    const korisnik = [[data.ime, data.prezime, data.email, hash, data.adresa, "user"]];
+    const korisnik = [
+      [data.ime, data.prezime, data.email, hash, data.adresa, "user"],
+    ];
 
-    connection.query("INSERT INTO korisnik (ime_korisnika, prezime_korisnika, email_korisnika, lozinka_korisnika, adresa_korisnika, uloga) VALUES ?", [korisnik], function (error, results, fields) {
-      if (error) {
-        console.error("Registracija korisnika neuspješna.", error);
-        return response.status(500).json({ error: true, message: "Registracija korisnika neuspješna." });
-      }
-      console.log("data", data);
-      return response.send({ error: false, data: results, message: "Uspješna registracija!" });
-    });
+    connection.query(
+      "INSERT INTO korisnik (ime_korisnika, prezime_korisnika, email_korisnika, lozinka_korisnika, adresa_korisnika, uloga) VALUES ?",
+      [korisnik],
+      function (error, results, fields) {
+        if (error) {
+          console.error("Registracija korisnika neuspješna.", error);
+          return response.status(500).json({
+            error: true,
+            message: "Registracija korisnika neuspješna.",
+          });
+        }
+        console.log("data", data);
+        return response.send({
+          error: false,
+          data: results,
+          message: "Uspješna registracija!",
+        });
+      },
+    );
   });
 });
 
@@ -305,24 +497,51 @@ app.post("/login", function (req, res) {
   const email = data.email;
   const password = data.password;
 
-  connection.query("SELECT * FROM korisnik WHERE email_korisnika = ?", [email], function (err, result) {
-    if (err) {
-      res.status(500).json({ success: false, message: "Internal server error" });
-    } else if (result.length > 0) {
-      // Compare passwords
-      bcrypt.compare(password, result[0].lozinka_korisnika, function (err, bcryptRes) {
-        if (bcryptRes) {
-          // Generate JWT token
-          const token = jwt.sign({ id: result[0].id_korisnika, prezime: result[0].prezime_korisnika, ime: result[0].ime_korisnika, uloga: result[0].uloga }, config.secret);
-          res.status(200).json({ success: true, message: "Login successful", token: token });
-        } else {
-          res.status(401).json({ success: false, message: "Invalid email or password " });
-        }
-      });
-    } else {
-      res.status(401).json({ success: false, message: "Invalid email or password" });
-    }
-  });
+  connection.query(
+    "SELECT * FROM korisnik WHERE email_korisnika = ?",
+    [email],
+    function (err, result) {
+      if (err) {
+        res
+          .status(500)
+          .json({ success: false, message: "Internal server error" });
+      } else if (result.length > 0) {
+        // Compare passwords
+        bcrypt.compare(
+          password,
+          result[0].lozinka_korisnika,
+          function (err, bcryptRes) {
+            if (bcryptRes) {
+              // Generate JWT token
+              const token = jwt.sign(
+                {
+                  id: result[0].id_korisnika,
+                  prezime: result[0].prezime_korisnika,
+                  ime: result[0].ime_korisnika,
+                  uloga: result[0].uloga,
+                },
+                config.secret,
+              );
+              res.status(200).json({
+                success: true,
+                message: "Login successful",
+                token: token,
+              });
+            } else {
+              res.status(401).json({
+                success: false,
+                message: "Invalid email or password ",
+              });
+            }
+          },
+        );
+      } else {
+        res
+          .status(401)
+          .json({ success: false, message: "Invalid email or password" });
+      }
+    },
+  );
 });
 
 app.get("/logout", (req, res) => {
@@ -340,19 +559,27 @@ app.get("/logout", (req, res) => {
 app.get("/api/korisnikinfo/:id", authJwt.verifyTokenAdmin, (req, res) => {
   const id = req.params.id;
 
-  connection.query("SELECT ime_korisnika, prezime_korisnika, email_korisnika, adresa_korisnika, lozinka_korisnika FROM korisnik WHERE id_korisnika = ?", [id], (error, results) => {
-    if (error) throw error;
-    res.send(results);
-  });
+  connection.query(
+    "SELECT ime_korisnika, prezime_korisnika, email_korisnika, adresa_korisnika, lozinka_korisnika FROM korisnik WHERE id_korisnika = ?",
+    [id],
+    (error, results) => {
+      if (error) throw error;
+      res.send(results);
+    },
+  );
 });
 
 app.get("/api/korisnikinfo1/:id", (req, res) => {
   const id = req.params.id;
 
-  connection.query("SELECT ime_korisnika, prezime_korisnika, email_korisnika, adresa_korisnika, lozinka_korisnika FROM korisnik WHERE id_korisnika = ?", [id], (error, results) => {
-    if (error) throw error;
-    res.send(results);
-  });
+  connection.query(
+    "SELECT ime_korisnika, prezime_korisnika, email_korisnika, adresa_korisnika, lozinka_korisnika FROM korisnik WHERE id_korisnika = ?",
+    [id],
+    (error, results) => {
+      if (error) throw error;
+      res.send(results);
+    },
+  );
 });
 
 app.put("/api/izmjenakorisnika/", authJwt.verifyTokenAdmin, (req, res) => {
@@ -364,19 +591,43 @@ app.put("/api/izmjenakorisnika/", authJwt.verifyTokenAdmin, (req, res) => {
     bcrypt.hash(korisnik.lozinka_korisnika, saltRounds, function (err, hash) {
       if (err) {
         console.error("Error hashing password:", err);
-        return response.status(500).json({ error: true, message: "Error hashing password." });
+        return response
+          .status(500)
+          .json({ error: true, message: "Error hashing password." });
       }
-      connection.query("UPDATE korisnik SET ime_korisnika = ?, prezime_korisnika = ?, email_korisnika = ?, lozinka_korisnika = ?, adresa_korisnika = ? WHERE id_korisnika = ?", [korisnik.ime_korisnika, korisnik.prezime_korisnika, korisnik.email_korisnika, hash, korisnik.adresa_korisnika, korisnik.id_korisnika], (error, results) => {
-        if (error) throw error;
-        res.send(results);
-      });
+      connection.query(
+        "UPDATE korisnik SET ime_korisnika = ?, prezime_korisnika = ?, email_korisnika = ?, lozinka_korisnika = ?, adresa_korisnika = ? WHERE id_korisnika = ?",
+        [
+          korisnik.ime_korisnika,
+          korisnik.prezime_korisnika,
+          korisnik.email_korisnika,
+          hash,
+          korisnik.adresa_korisnika,
+          korisnik.id_korisnika,
+        ],
+        (error, results) => {
+          if (error) throw error;
+          res.send(results);
+        },
+      );
     });
   } else {
     //ako lozinka nije unesena
-    connection.query("UPDATE korisnik SET ime_korisnika = ?, prezime_korisnika = ?, email_korisnika = ?, lozinka_korisnika = ?, adresa_korisnika = ? WHERE id_korisnika = ?", [korisnik.ime_korisnika, korisnik.prezime_korisnika, korisnik.email_korisnika, korisnik.lozinka_korisnika, korisnik.adresa_korisnika, korisnik.id_korisnika], (error, results) => {
-      if (error) throw error;
-      res.send(results);
-    });
+    connection.query(
+      "UPDATE korisnik SET ime_korisnika = ?, prezime_korisnika = ?, email_korisnika = ?, lozinka_korisnika = ?, adresa_korisnika = ? WHERE id_korisnika = ?",
+      [
+        korisnik.ime_korisnika,
+        korisnik.prezime_korisnika,
+        korisnik.email_korisnika,
+        korisnik.lozinka_korisnika,
+        korisnik.adresa_korisnika,
+        korisnik.id_korisnika,
+      ],
+      (error, results) => {
+        if (error) throw error;
+        res.send(results);
+      },
+    );
   }
 });
 
@@ -388,80 +639,153 @@ app.put("/api/izmjenakorisnika1/", (req, res) => {
     bcrypt.hash(korisnik.lozinka_korisnika, saltRounds, function (err, hash) {
       if (err) {
         console.error("Error hashing password:", err);
-        return res.status(500).json({ error: true, message: "Error hashing password." });
+        return res
+          .status(500)
+          .json({ error: true, message: "Error hashing password." });
       }
-      connection.query("UPDATE korisnik SET ime_korisnika = ?, prezime_korisnika = ?, email_korisnika = ?, lozinka_korisnika = ?, adresa_korisnika = ? WHERE id_korisnika = ?", [korisnik.ime_korisnika, korisnik.prezime_korisnika, korisnik.email_korisnika, hash, korisnik.adresa_korisnika, korisnik.id_korisnika], (error, results) => {
-        if (error) {
-          console.error("Error updating user:", error);
-          return res.status(500).json({ error: true, message: "Error updating user." });
-        }
-        res.json({ success: true, message: "User updated successfully." });
-      });
+      connection.query(
+        "UPDATE korisnik SET ime_korisnika = ?, prezime_korisnika = ?, email_korisnika = ?, lozinka_korisnika = ?, adresa_korisnika = ? WHERE id_korisnika = ?",
+        [
+          korisnik.ime_korisnika,
+          korisnik.prezime_korisnika,
+          korisnik.email_korisnika,
+          hash,
+          korisnik.adresa_korisnika,
+          korisnik.id_korisnika,
+        ],
+        (error, results) => {
+          if (error) {
+            console.error("Error updating user:", error);
+            return res
+              .status(500)
+              .json({ error: true, message: "Error updating user." });
+          }
+          res.json({ success: true, message: "User updated successfully." });
+        },
+      );
     });
   } else {
     // Handle the case where the password is not changed
     // Assuming you also want to update other fields even if the password is not changed
-    connection.query("UPDATE korisnik SET ime_korisnika = ?, prezime_korisnika = ?, email_korisnika = ?, adresa_korisnika = ? WHERE id_korisnika = ?", [korisnik.ime_korisnika, korisnik.prezime_korisnika, korisnik.email_korisnika, korisnik.adresa_korisnika, korisnik.id_korisnika], (error, results) => {
-      if (error) {
-        console.error("Error updating user:", error);
-        return res.status(500).json({ error: true, message: "Error updating user." });
-      }
-      res.json({ success: true, message: "User updated successfully." });
-    });
+    connection.query(
+      "UPDATE korisnik SET ime_korisnika = ?, prezime_korisnika = ?, email_korisnika = ?, adresa_korisnika = ? WHERE id_korisnika = ?",
+      [
+        korisnik.ime_korisnika,
+        korisnik.prezime_korisnika,
+        korisnik.email_korisnika,
+        korisnik.adresa_korisnika,
+        korisnik.id_korisnika,
+      ],
+      (error, results) => {
+        if (error) {
+          console.error("Error updating user:", error);
+          return res
+            .status(500)
+            .json({ error: true, message: "Error updating user." });
+        }
+        res.json({ success: true, message: "User updated successfully." });
+      },
+    );
   }
 });
 
-app.put("/api/brisanjekorisnika/:idKorisnika", authJwt.verifyTokenAdmin, (req, res) => {
-  let rnd_lozinka = require("crypto").randomBytes(64).toString("hex");
-  connection.query("UPDATE korisnik SET ime_korisnika = ?, prezime_korisnika = ?, email_korisnika = ?, lozinka_korisnika = ?, adresa_korisnika = ? WHERE id_korisnika = ?", ["obrisani", "korisnik", rnd_lozinka, rnd_lozinka, "obrisani korisnik", req.params.idKorisnika], (error, results) => {
-    if (error) throw error;
-    res.send(results);
-  });
-});
+app.put(
+  "/api/brisanjekorisnika/:idKorisnika",
+  authJwt.verifyTokenAdmin,
+  (req, res) => {
+    let rnd_lozinka = require("crypto").randomBytes(64).toString("hex");
+    connection.query(
+      "UPDATE korisnik SET ime_korisnika = ?, prezime_korisnika = ?, email_korisnika = ?, lozinka_korisnika = ?, adresa_korisnika = ? WHERE id_korisnika = ?",
+      [
+        "obrisani",
+        "korisnik",
+        rnd_lozinka,
+        rnd_lozinka,
+        "obrisani korisnik",
+        req.params.idKorisnika,
+      ],
+      (error, results) => {
+        if (error) throw error;
+        res.send(results);
+      },
+    );
+  },
+);
 
 app.get("/api/kategorijainfo/:id", authJwt.verifyTokenAdmin, (req, res) => {
   const id = req.params.id;
 
-  connection.query("SELECT naziv_kategorije FROM kategorija WHERE id_kategorije = ?", [id], (error, results) => {
-    if (error) throw error;
-    res.send(results);
-  });
+  connection.query(
+    "SELECT naziv_kategorije FROM kategorija WHERE id_kategorije = ?",
+    [id],
+    (error, results) => {
+      if (error) throw error;
+      res.send(results);
+    },
+  );
 });
 
 app.put("/api/izmjenaKategorije", authJwt.verifyTokenAdmin, (req, res) => {
   kategorija = req.body;
-  connection.query("UPDATE kategorija SET naziv_kategorije = ? WHERE id_kategorije= ?", [kategorija.naziv_kategorije, kategorija.id_kategorije], (error, results) => {
-    if (error) throw error;
-    res.send(results);
-  });
+  connection.query(
+    "UPDATE kategorija SET naziv_kategorije = ? WHERE id_kategorije= ?",
+    [kategorija.naziv_kategorije, kategorija.id_kategorije],
+    (error, results) => {
+      if (error) throw error;
+      res.send(results);
+    },
+  );
 });
 
 app.post("/api/dodajKategoriju", authJwt.verifyTokenAdmin, (req, res) => {
   const data = req.body;
   const naziv_kategorije = data.naziv_kategorije;
 
-  connection.query("INSERT INTO kategorija (naziv_kategorije) VALUES (?)", [naziv_kategorije], (error, results) => {
-    if (error) {
-      console.error("Neuspjeh unosa nove kategorije.", error);
-      return res.status(500).json({ error: true, message: "Neuspjeh unosa nove kategorije." });
-    }
-    //console.log("data", data);
-    return res.send({ error: false, data: results, message: "Kategorija unešena uspješno." });
-  });
+  connection.query(
+    "INSERT INTO kategorija (naziv_kategorije) VALUES (?)",
+    [naziv_kategorije],
+    (error, results) => {
+      if (error) {
+        console.error("Neuspjeh unosa nove kategorije.", error);
+        return res
+          .status(500)
+          .json({ error: true, message: "Neuspjeh unosa nove kategorije." });
+      }
+      //console.log("data", data);
+      return res.send({
+        error: false,
+        data: results,
+        message: "Kategorija unešena uspješno.",
+      });
+    },
+  );
 });
 
-app.delete("/api/deleteKategoriju/:id", authJwt.verifyTokenAdmin, (req, res) => {
-  const idKat = req.params.id;
+app.delete(
+  "/api/deleteKategoriju/:id",
+  authJwt.verifyTokenAdmin,
+  (req, res) => {
+    const idKat = req.params.id;
 
-  connection.query("DELETE FROM kategorija WHERE id_kategorije = (?)", [idKat], (error, results) => {
-    if (error) {
-      console.error("Neuspješno brisanje.");
-      return res.status(500).json({ error: true, message: "Neuspješno brisanje " + idKat });
-    }
-    console.log("Brisanje uspješno.");
-    return res.send({ error: false, message: "Kategorija uspješno obrisana." });
-  });
-});
+    connection.query(
+      "DELETE FROM kategorija WHERE id_kategorije = (?)",
+      [idKat],
+      (error, results) => {
+        if (error) {
+          console.error("Neuspješno brisanje.");
+          return res
+            .status(500)
+            .json({ error: true, message: "Neuspješno brisanje " + idKat });
+        }
+        console.log("Brisanje uspješno.");
+        return res.send({
+          error: false,
+          message: "Kategorija uspješno obrisana.",
+        });
+      },
+    );
+  },
+);
 
 app.get("/api/vlastiti-predmeti/:id", authJwt.verifyTokenUser, (req, res) => {
   connection.query(
@@ -469,6 +793,8 @@ app.get("/api/vlastiti-predmeti/:id", authJwt.verifyTokenUser, (req, res) => {
     p.id_predmeta,
     p.opis_predmeta,
     p.naziv_predmeta,
+    p.naziv_predmeta_en,
+    p.opis_en,
     p.pocetna_cijena,
     p.vrijeme_pocetka,
     p.vrijeme_zavrsetka,
@@ -491,34 +817,213 @@ ORDER BY preostalo_vrijeme DESC;`,
     (error, results) => {
       if (error) throw error;
       res.send(results);
-    }
+    },
+  );
+});
+
+app.get("/api/spremljene-aukcije", authJwt.verifyTokenUser, (req, res) => {
+  connection.query(
+    `SELECT
+      p.id_predmeta,
+      p.opis_predmeta,
+      p.naziv_predmeta,
+      p.naziv_predmeta_en,
+      p.opis_en,
+      p.pocetna_cijena,
+      p.vrijeme_pocetka,
+      p.vrijeme_zavrsetka,
+      CONCAT(
+        FLOOR(TIMESTAMPDIFF(SECOND, NOW(), p.vrijeme_zavrsetka) / (24 * 3600)),
+        ' dana, ',
+        TIME_FORMAT(
+          SEC_TO_TIME(TIMESTAMPDIFF(SECOND, NOW(), p.vrijeme_zavrsetka) % (24 * 3600)),
+          '%H:%i:%s'
+        )
+      ) AS preostalo_vrijeme,
+      (SELECT slika FROM slika WHERE id_predmeta = p.id_predmeta LIMIT 1) AS slika,
+      COALESCE(MAX(po.vrijednost_ponude), p.pocetna_cijena) AS trenutna_cijena
+    FROM spremljena_aukcija sa
+    JOIN predmet p ON sa.id_predmeta = p.id_predmeta
+    LEFT JOIN ponuda po ON p.id_predmeta = po.id_predmeta
+    WHERE sa.id_korisnika = ? AND p.vrijeme_zavrsetka > NOW()
+    GROUP BY p.id_predmeta, sa.datum_spremanja
+    ORDER BY sa.datum_spremanja DESC`,
+    [req.userId],
+    (error, results) => {
+      if (error) {
+        console.error("Greška pri dohvatu spremljenih aukcija:", error);
+        return res.status(500).send({
+          error: true,
+          message: "Greška pri dohvatu spremljenih aukcija.",
+        });
+      }
+
+      res.send(results);
+    },
+  );
+});
+
+app.post(
+  "/api/spremljene-aukcije/:idPredmeta",
+  authJwt.verifyTokenUser,
+  (req, res) => {
+    connection.query(
+      `INSERT INTO spremljena_aukcija (id_korisnika, id_predmeta)
+       SELECT ?, p.id_predmeta
+       FROM predmet p
+       WHERE p.id_predmeta = ? AND p.vrijeme_zavrsetka > NOW()`,
+      [req.userId, req.params.idPredmeta],
+      (error, results) => {
+        if (error && error.code === "ER_DUP_ENTRY") {
+          return res.send({
+            error: false,
+            message: "Aukcija je već spremljena.",
+          });
+        }
+
+        if (error) {
+          console.error("Greška pri spremanju aukcije:", error);
+          return res.status(500).send({
+            error: true,
+            message: "Greška pri spremanju aukcije.",
+          });
+        }
+
+        if (results.affectedRows === 0) {
+          return res.status(400).send({
+            error: true,
+            message: "Moguće je spremiti samo aktivnu aukciju.",
+          });
+        }
+
+        res.status(201).send({
+          error: false,
+          message: "Aukcija je spremljena.",
+        });
+      },
+    );
+  },
+);
+
+app.delete(
+  "/api/spremljene-aukcije/:idPredmeta",
+  authJwt.verifyTokenUser,
+  (req, res) => {
+    connection.query(
+      "DELETE FROM spremljena_aukcija WHERE id_korisnika = ? AND id_predmeta = ?",
+      [req.userId, req.params.idPredmeta],
+      (error) => {
+        if (error) {
+          console.error("Greška pri uklanjanju spremljene aukcije:", error);
+          return res.status(500).send({
+            error: true,
+            message: "Greška pri uklanjanju spremljene aukcije.",
+          });
+        }
+
+        res.send({
+          error: false,
+          message: "Aukcija je uklonjena iz spremljenih.",
+        });
+      },
+    );
+  },
+);
+
+app.get("/api/osvojeni-predmeti/:id", authJwt.verifyTokenUser, (req, res) => {
+  connection.query(
+    `SELECT
+    op.id_predmeta,
+    t.id_transakcije,
+    p.id_korisnika AS id_prodavatelja,
+    CASE 
+      WHEN ocj.id_ocjene IS NULL THEN 0
+      ELSE 1
+    END AS je_ocijenjeno,
+    op.naziv_predmeta,
+    p.naziv_predmeta_en,
+    p.opis_predmeta,
+    p.opis_en,
+    (SELECT slika FROM slika WHERE id_predmeta = p.id_predmeta LIMIT 1) AS slika,
+    COALESCE(MAX(po.vrijednost_ponude), p.pocetna_cijena) AS konacna_cijena
+FROM osvojeni_predmeti op
+JOIN predmet p ON op.id_predmeta = p.id_predmeta
+LEFT JOIN transakcija t ON p.id_predmeta = t.id_predmeta
+LEFT JOIN ocjena_prodavatelja ocj ON t.id_transakcije = ocj.id_transakcije
+LEFT JOIN ponuda po ON p.id_predmeta = po.id_predmeta
+WHERE op.id_korisnika = ?
+GROUP BY op.id_predmeta, t.id_transakcije, p.id_korisnika, ocj.id_ocjene
+ORDER BY op.id_predmeta DESC;`,
+    [req.params.id],
+    (error, results) => {
+      if (error) throw error;
+      res.send(results);
+    },
   );
 });
 
 app.delete("/api/brisanjePredmeta/:id", authJwt.verifyTokenUser, (req, res) => {
-  connection.query("DELETE FROM predmet WHERE id_predmeta = ?", [req.params.id], (error, results) => {
-    if (error) {
-      console.error("Neuspješno brisanje.");
-      return res.status(500).json({ error: true, message: "Neuspješno brisanje " + error });
-    }
-    console.log("Brisanje uspješno.");
-    return res.send({ error: false, message: "." });
-  });
+  connection.query(
+    "DELETE FROM spremljena_aukcija WHERE id_predmeta = ?",
+    [req.params.id],
+    (error) => {
+      if (error) {
+        console.error("Neuspješno brisanje.");
+        return res
+          .status(500)
+          .json({ error: true, message: "Neuspješno brisanje " + error });
+      }
+
+      connection.query(
+        "DELETE FROM predmet WHERE id_predmeta = ?",
+        [req.params.id],
+        (deleteError) => {
+          if (deleteError) {
+            console.error("Neuspješno brisanje.");
+            return res.status(500).json({
+              error: true,
+              message: "Neuspješno brisanje " + deleteError,
+            });
+          }
+          console.log("Brisanje uspješno.");
+          return res.send({ error: false, message: "." });
+        },
+      );
+    },
+  );
 });
 
 app.put("/api/izmjenaPredmeta/:id", authJwt.verifyTokenUser, (req, res) => {
   const izmjena = req.body;
 
-  izmjena.vrijeme_pocetka = new Date(izmjena.vrijeme_pocetka).toISOString().replace("T", " ").replace("Z", "");
-  izmjena.vrijeme_zavrsetka = new Date(izmjena.vrijeme_zavrsetka).toISOString().replace("T", " ").replace("Z", "");
+  izmjena.vrijeme_pocetka = new Date(izmjena.vrijeme_pocetka)
+    .toISOString()
+    .replace("T", " ")
+    .replace("Z", "");
+  izmjena.vrijeme_zavrsetka = new Date(izmjena.vrijeme_zavrsetka)
+    .toISOString()
+    .replace("T", " ")
+    .replace("Z", "");
 
-  connection.query("UPDATE predmet SET naziv_predmeta = ?, opis_predmeta = ?, pocetna_cijena = ?, vrijeme_pocetka = ?, vrijeme_zavrsetka = ?, id_kategorije = ? WHERE id_predmeta = ?", [izmjena.naziv_predmeta, izmjena.opis_predmeta, izmjena.pocetna_cijena, izmjena.vrijeme_pocetka, izmjena.vrijeme_zavrsetka, izmjena.id_kategorije, req.params.id], (error, results) => {
-    if (error) throw error;
-    if (results.length > 0 && results[0].slike) {
-      results[0].slike = results[0].slike.split("|||");
-    }
-    res.send(results);
-  });
+  connection.query(
+    "UPDATE predmet SET naziv_predmeta = ?, opis_predmeta = ?, pocetna_cijena = ?, vrijeme_pocetka = ?, vrijeme_zavrsetka = ?, id_kategorije = ? WHERE id_predmeta = ?",
+    [
+      izmjena.naziv_predmeta,
+      izmjena.opis_predmeta,
+      izmjena.pocetna_cijena,
+      izmjena.vrijeme_pocetka,
+      izmjena.vrijeme_zavrsetka,
+      izmjena.id_kategorije,
+      req.params.id,
+    ],
+    (error, results) => {
+      if (error) throw error;
+      if (results.length > 0 && results[0].slike) {
+        results[0].slike = results[0].slike.split("|||");
+      }
+      res.send(results);
+    },
+  );
 });
 
 app.get("/api/get-predmet2/:id", (req, res) => {
@@ -540,30 +1045,148 @@ app.get("/api/get-predmet2/:id", (req, res) => {
         results[0].id_slika = results[0].id_slika.split("|||");
       }
       res.send(results);
-    }
+    },
   );
 });
 
 app.delete("/api/brisanjeSlike/:id", authJwt.verifyTokenUser, (req, res) => {
-  connection.query("DELETE FROM slika WHERE id_slike = ?", [req.params.id], (error, results) => {
-    if (error) {
-      console.error("Neuspješno brisanje.");
-      return res.status(500).json({ error: true, message: "Neuspješno brisanje " + error });
-    }
-    return res.send({ error: false, message: "." });
-  });
+  connection.query(
+    "DELETE FROM slika WHERE id_slike = ?",
+    [req.params.id],
+    (error, results) => {
+      if (error) {
+        console.error("Neuspješno brisanje.");
+        return res
+          .status(500)
+          .json({ error: true, message: "Neuspješno brisanje " + error });
+      }
+      return res.send({ error: false, message: "." });
+    },
+  );
 });
 
-app.post("/api/dodavanjeSlika", upload.none(), authJwt.verifyTokenUser, function (request, response) {
-  const data = request.body;
-  const id_predmeta = data.id_predmeta;
-  Object.keys(data).forEach((key) => {
-    if (key.startsWith("file")) {
-      const base64String = data[key];
-      connection.query("INSERT INTO slika (slika, id_predmeta) VALUES (?, ?)", [base64String, id_predmeta], function (error) {
-        if (error) throw error;
-      });
-    }
-  });
-  return response.send({ error: false, message: "Slike su uspješno dodane." });
+app.post(
+  "/api/dodavanjeSlika",
+  upload.none(),
+  authJwt.verifyTokenUser,
+  function (request, response) {
+    const data = request.body;
+    const id_predmeta = data.id_predmeta;
+    Object.keys(data).forEach((key) => {
+      if (key.startsWith("file")) {
+        const base64String = data[key];
+        connection.query(
+          "INSERT INTO slika (slika, id_predmeta) VALUES (?, ?)",
+          [base64String, id_predmeta],
+          function (error) {
+            if (error) throw error;
+          },
+        );
+      }
+    });
+    return response.send({
+      error: false,
+      message: "Slike su uspješno dodane.",
+    });
+  },
+);
+
+// --- Automatsko zatvaranje aukcija i upis pobjednika ---
+
+const obradeneAukcije = new Set();
+
+// Predpuni Set iz baze kako server restart ne bi duplirao unose
+connection.query("SELECT id_predmeta FROM osvojeni_predmeti", (err, rows) => {
+  if (!err) rows.forEach((r) => obradeneAukcije.add(r.id_predmeta));
 });
+
+function obradiZavrsenuAukciju(aukcija) {
+  connection.query(
+    "SELECT id_korisnika, vrijednost_ponude FROM ponuda WHERE id_predmeta = ? ORDER BY vrijednost_ponude DESC LIMIT 1",
+    [aukcija.id_predmeta],
+    (err, ponude) => {
+      if (err) {
+        console.error(
+          "Greška pri dohvatu ponuda za aukciju",
+          aukcija.id_predmeta,
+          err,
+        );
+        return;
+      }
+
+      if (!ponude.length) {
+        console.log("Aukcija", aukcija.id_predmeta, "završila bez ponuda.");
+        return;
+      }
+
+      const pobjednik = ponude[0];
+
+      connection.query(
+        "INSERT IGNORE INTO osvojeni_predmeti (id_predmeta, id_korisnika, naziv_predmeta) VALUES (?, ?, ?)",
+        [aukcija.id_predmeta, pobjednik.id_korisnika, aukcija.naziv_predmeta],
+        (errI) => {
+          if (errI) {
+            console.error(
+              "Greška pri upisu pobjednika za aukciju",
+              aukcija.id_predmeta,
+              errI,
+            );
+            return;
+          }
+
+          connection.query(
+            "SELECT id_transakcije FROM transakcija WHERE id_predmeta = ? AND id_korisnika = ? LIMIT 1",
+            [aukcija.id_predmeta, pobjednik.id_korisnika],
+            (errT, transakcije) => {
+              if (errT) {
+                console.error(
+                  "Greška pri provjeri transakcije za aukciju",
+                  aukcija.id_predmeta,
+                  errT,
+                );
+                return;
+              }
+
+              if (transakcije.length > 0) {
+                return;
+              }
+
+              connection.query(
+                "INSERT INTO transakcija (iznos_transakcije, vrijeme_transakcije, id_korisnika, id_predmeta) VALUES (?, NOW(), ?, ?)",
+                [
+                  pobjednik.vrijednost_ponude,
+                  pobjednik.id_korisnika,
+                  aukcija.id_predmeta,
+                ],
+                (errTR) => {
+                  if (errTR) {
+                    console.error(
+                      "Greška pri upisu transakcije za aukciju",
+                      aukcija.id_predmeta,
+                      errTR,
+                    );
+                  }
+                },
+              );
+            },
+          );
+        },
+      );
+    },
+  );
+}
+
+setInterval(() => {
+  connection.query(
+    "SELECT id_predmeta, naziv_predmeta FROM predmet WHERE vrijeme_zavrsetka <= NOW()",
+    (err, aukcije) => {
+      if (err || !aukcije.length) return;
+      aukcije
+        .filter((a) => !obradeneAukcije.has(a.id_predmeta))
+        .forEach((a) => {
+          obradeneAukcije.add(a.id_predmeta);
+          obradiZavrsenuAukciju(a);
+        });
+    },
+  );
+}, 60 * 1000);
