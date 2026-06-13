@@ -218,8 +218,8 @@ export default {
     shippingDate: "Datum slanja",
     trackingNumber: "Broj za praćenje pošiljke",
     deleteCommunicationRecord: "Izbriši prethodni unos",
-    packageMatches: "Pošiljka odgovara",
-    packageDoesNotMatch: "Pošiljka ne odgovara",
+    packageMatches: "Pošiljka odgovara opisu",
+    packageDoesNotMatch: "Pošiljka ne odgovara opisu",
   },
 
   updateProfilePage: {

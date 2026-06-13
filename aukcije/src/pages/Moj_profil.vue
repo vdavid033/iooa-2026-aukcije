@@ -277,7 +277,9 @@
                   :label="gumb.simbol"
                   @click="otvoriKomunikaciju(predmet, gumb, 'seller')"
                 >
-                  <q-tooltip>{{ porukaKomunikacijskogGumba(predmet, gumb) }}</q-tooltip>
+                  <q-tooltip>
+                    <div style="white-space: pre-line">{{ porukaKomunikacijskogGumba(predmet, gumb) }}</div>
+                  </q-tooltip>
                 </q-btn>
               </div>
             </div>
@@ -416,7 +418,9 @@
                 :label="gumb.simbol"
                 @click="otvoriKomunikaciju(osvojeniPredmet, gumb, 'buyer')"
               >
-                <q-tooltip>{{ porukaKomunikacijskogGumba(osvojeniPredmet, gumb) }}</q-tooltip>
+                <q-tooltip>
+                  <div style="white-space: pre-line">{{ porukaKomunikacijskogGumba(osvojeniPredmet, gumb) }}</div>
+                </q-tooltip>
               </q-btn>
             </div>
           </q-card-section>
@@ -601,6 +605,7 @@
     flex-wrap: wrap;
 }
 
+white-space: pre-line;
 
 </style>
 
@@ -817,8 +822,7 @@ export default {
 
       // Za prodavatelja su klikabilni samo gumbi "primljena uplata" i "poslano"
       // u okviru "Vaši predmeti na aukciji", i to samo nakon završetka aukcije.
-      // Ne smijemo ovdje uvjetovati prikaz s id_transakcije, jer se taj podatak
-      // ponekad ne vrati u listi predmeta; backend ga može dohvatiti preko id_predmeta.
+
       if (kontekst === "seller") {
         return !this.provjeriDatum(predmet);
       }
@@ -849,7 +853,9 @@ export default {
       if (gumb.polje === "poslano") {
         const datum = predmet.datum_slanja ? this.formattedDate(predmet.datum_slanja) : "-";
         const pracenje = predmet.broj_za_pracenje || "-";
-        return `${this.$t("profilePage.sentTooltip")} ${this.$t("profilePage.shippingDate")}: ${datum}. ${this.$t("profilePage.trackingNumber")}: ${pracenje}.`;
+        const datumPrikaz = datum ? datum.toString().substring(0, 13) : "-";
+
+        return `${this.$t("profilePage.sentTooltip")}\n${this.$t("profilePage.shippingDate")}: ${datumPrikaz}\n${this.$t("profilePage.trackingNumber")}: ${pracenje}`;
       }
 
       if (gumb.polje === "posiljka_odgovara") {
