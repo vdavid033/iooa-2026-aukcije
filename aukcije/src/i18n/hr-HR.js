@@ -217,7 +217,7 @@ export default {
     packageDoesNotMatchTooltip: "Pošiljka ne odgovara oglašenom.",
     shippingDate: "Datum slanja",
     trackingNumber: "Broj za praćenje pošiljke",
-    deleteCommunicationRecord: "Izbriši zapis iz baze",
+    deleteCommunicationRecord: "Izbriši prethodni unos",
     packageMatches: "Pošiljka odgovara",
     packageDoesNotMatch: "Pošiljka ne odgovara",
   },

@@ -226,49 +226,62 @@
               {{ $t("profilePage.currentPrice") }}:
               {{ predmet.trenutna_cijena }}$
             </div>
-          </q-card-section>
+
 
           <q-separator />
 
-          <q-card-actions align="between">
-            <q-btn
-              flat
-              :label="$t('profilePage.view')"
-              @click="pregledPredmeta(predmet.id_predmeta)"
-            />
 
-            <div v-if="provjeriDatum(predmet)">
+            <q-card-actions align="between">
               <q-btn
                 flat
-                color="primary"
-                :label="$t('profilePage.edit')"
-                @click="izmijeniPredmet(predmet.id_predmeta)"
+                :label="$t('profilePage.view')"
+                @click="pregledPredmeta(predmet.id_predmeta)"
               />
-              <q-btn
-                flat
-                color="negative"
-                :label="$t('profilePage.delete')"
-                @click="obrisiPredmet(predmet.id_predmeta)"
-              />
+
+              <div v-if="provjeriDatum(predmet)">
+                <q-btn
+                  flat
+                  color="primary"
+                  :label="$t('profilePage.edit')"
+                  @click="izmijeniPredmet(predmet.id_predmeta)"
+                />
+                <q-btn
+                  flat
+                  color="negative"
+                  :label="$t('profilePage.delete')"
+                  @click="obrisiPredmet(predmet.id_predmeta)"
+                />
+              </div>
+            </q-card-actions>
+
+
+            <div v-if="!provjeriDatum(predmet)" >
+
+
+              <q-separator />
+
+              <div class="komunikacija-nakon-kupnje-title">
+                Komunikacija nakon kupnje
+              </div>
+
+
+              <div class="communication-actions">
+                <q-btn
+                  v-for="gumb in komunikacijaGumbi"
+                  :key="'seller-' + predmet.id_predmeta + '-' + gumb.polje"
+                  dense
+                  unelevated
+                  class="communication-btn"
+                  :class="{ 'communication-btn--readonly': !mozeKliknutiKomunikaciju('seller', gumb, predmet) }"
+                  :color="bojaKomunikacijskogGumba(predmet, gumb)"
+                  :label="gumb.simbol"
+                  @click="otvoriKomunikaciju(predmet, gumb, 'seller')"
+                >
+                  <q-tooltip>{{ porukaKomunikacijskogGumba(predmet, gumb) }}</q-tooltip>
+                </q-btn>
+              </div>
             </div>
-          </q-card-actions>
-
-          <q-separator v-if="!provjeriDatum(predmet)" />
-          <q-card-actions v-if="!provjeriDatum(predmet)" class="communication-actions">
-            <q-btn
-              v-for="gumb in komunikacijaGumbi"
-              :key="'seller-' + predmet.id_predmeta + '-' + gumb.polje"
-              dense
-              unelevated
-              class="communication-btn"
-              :class="{ 'communication-btn--readonly': !mozeKliknutiKomunikaciju('seller', gumb, predmet) }"
-              :color="bojaKomunikacijskogGumba(predmet, gumb)"
-              :label="gumb.simbol"
-              @click="otvoriKomunikaciju(predmet, gumb, 'seller')"
-            >
-              <q-tooltip>{{ porukaKomunikacijskogGumba(predmet, gumb) }}</q-tooltip>
-            </q-btn>
-          </q-card-actions>
+          </q-card-section>
         </q-card>
       </div>
     </div>
@@ -385,13 +398,11 @@
 
             <q-separator class="q-my-md" />
 
+
             <div class="komunikacija-nakon-kupnje-title">
                 Komunikacija nakon kupnje
             </div>
 
-            <div class="komunikacija-nakon-kupnje-buttons">
-                <!-- pet postojećih gumba -->
-            </div>
 
             <div class="communication-actions">
               <q-btn
@@ -461,7 +472,6 @@
         </q-card-actions>
       </q-card>
     </q-dialog>
-
 
 
     <q-dialog v-model="komunikacijaDialog">
@@ -803,7 +813,18 @@ export default {
 
 
     mozeKliknutiKomunikaciju(kontekst, gumb, predmet) {
-      return gumb.uloge.includes(kontekst) && !!predmet.id_transakcije;
+      if (!gumb.uloge.includes(kontekst)) return false;
+
+      // Za prodavatelja su klikabilni samo gumbi "primljena uplata" i "poslano"
+      // u okviru "Vaši predmeti na aukciji", i to samo nakon završetka aukcije.
+      // Ne smijemo ovdje uvjetovati prikaz s id_transakcije, jer se taj podatak
+      // ponekad ne vrati u listi predmeta; backend ga može dohvatiti preko id_predmeta.
+      if (kontekst === "seller") {
+        return !this.provjeriDatum(predmet);
+      }
+
+      // Za kupca ostaje sigurnosna provjera da postoji transakcija.
+      return !!predmet.id_transakcije;
     },
 
     bojaKomunikacijskogGumba(predmet, gumb) {
@@ -865,6 +886,7 @@ export default {
           "http://localhost:3000/api/komunikacija-nakon-prodaje",
           {
             id_transakcije: predmet.id_transakcije,
+            id_predmeta: predmet.id_predmeta,
             polje: gumb.polje,
             vrijednost: this.komunikacijaForma.odabir,
             datum_slanja: this.komunikacijaForma.datum_slanja,
