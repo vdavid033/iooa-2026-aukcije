@@ -124,6 +124,8 @@
 
 <script>
 import axios from "axios";
+import { jwtDecode } from "jwt-decode";
+import socket, { SOCKET_EVENTS } from "../socket";
 
 const baseUrl = "http://localhost:3000/api/";
 
@@ -132,6 +134,8 @@ export default {
     return {
       Pretrazivanje: "",
       items: [],
+      joinedPredmeti: new Set(),
+      cijenaAzuriranaHandler: null,
       selectedsortianje: "",
       defaultImg: "https://via.placeholder.com/400",
       spremljeniIds: [],
@@ -164,9 +168,14 @@ export default {
     }
   },
 
-  mounted() {
-    this.dohvatiAukcijeKategorije();
+  async mounted() {
+    await this.dohvatiAukcijeKategorije();
     this.dohvatiSpremljeneAukcije();
+    this.setupSocket();
+  },
+
+  beforeUnmount() {
+    this.cleanupSocket();
   },
 
   methods: {
@@ -275,8 +284,72 @@ export default {
       });
     },
 
-    sortiranjeOpcija(val) {
-      switch (val) {
+    setupSocket() {
+      this.cleanupSocket();
+      if (!socket.connected) {
+        socket.connect();
+      }
+
+      this.cijenaAzuriranaHandler = ({
+        id_predmeta,
+        trenutna_cijena,
+        id_korisnika,
+      }) => {
+        const item = this.items.find(
+          (predmet) => Number(predmet.id_predmeta) === Number(id_predmeta),
+        );
+
+        if (!item) return;
+
+        item.trenutna_cijena = trenutna_cijena;
+
+        const currentUserId = this.getCurrentUserId();
+
+        if (
+          id_korisnika !== undefined &&
+          id_korisnika !== null &&
+          Number(id_korisnika) !== Number(currentUserId)
+        ) {
+          this.$q.notify({
+            type: "info",
+            message: "Cijena predmeta je ažurirana.",
+          });
+        }
+      };
+
+      socket.on(SOCKET_EVENTS.cijenaAzurirana, this.cijenaAzuriranaHandler);
+
+      this.items.forEach((item) => {
+        if (!item.id_predmeta) return;
+        if (this.joinedPredmeti.has(item.id_predmeta)) return;
+
+        this.joinedPredmeti.add(item.id_predmeta);
+        socket.emit(SOCKET_EVENTS.joinPredmet, item.id_predmeta);
+      });
+    },
+    cleanupSocket() {
+      if (this.cijenaAzuriranaHandler) {
+        socket.off(SOCKET_EVENTS.cijenaAzurirana, this.cijenaAzuriranaHandler);
+        this.cijenaAzuriranaHandler = null;
+      }
+
+      this.joinedPredmeti.forEach((id_predmeta) => {
+        socket.emit(SOCKET_EVENTS.leavePredmet, id_predmeta);
+      });
+      this.joinedPredmeti.clear();
+    },
+    getCurrentUserId() {
+      const token = localStorage.getItem("token");
+      if (!token) return null;
+
+      try {
+        return jwtDecode(token).id;
+      } catch {
+        return null;
+      }
+    },
+    sortiranjeOpcija(selectedsortianje) {
+      switch (selectedsortianje) {
         case "price-asc":
           this.items.sort((a, b) => a.pocetna_cijena - b.pocetna_cijena);
           break;

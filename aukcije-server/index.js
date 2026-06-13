@@ -1,9 +1,11 @@
 const express = require("express");
+const http = require("http");
 const session = require("express-session");
 const bcrypt = require("bcrypt");
 const cors = require("cors");
 const bodyParser = require("body-parser");
 const mysql = require("mysql");
+const { Server } = require("socket.io");
 const { join } = require("path");
 const path = require("path");
 const multer = require("multer");
@@ -11,19 +13,96 @@ const upload = multer();
 const jwt = require("jsonwebtoken");
 const config = require("../aukcije-server/auth.config.js");
 const authJwt = require("../aukcije-server/authJwt.js");
+const {
+  calculateAutoBidWinner,
+  normalizeMoney,
+  BID_INCREMENT,
+} = require("./autoBidCalculator");
+const {
+  REALTIME_ROOMS,
+  REALTIME_CLIENT_EVENTS,
+  emitCijenaAzurirana,
+} = require("./realtimeContract");
 
 const app = express();
 const port = 3000;
+const allowedOrigins = [
+  "http://localhost:8080",
+  "http://127.0.0.1:8080",
+  "http://localhost:9000",
+  "http://127.0.0.1:9000",
+];
 
+const corsOptions = {
+  origin(origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+
+    return callback(new Error(`CORS blocked for origin: ${origin}`));
+  },
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: [
+    "Origin",
+    "X-Requested-With",
+    "Content-Type",
+    "Accept",
+    "Authorization",
+  ],
+};
+
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: corsOptions,
+});
+
+function getSocketPredmetId(payload) {
+  const id_predmeta =
+    payload && typeof payload === "object" ? payload.id_predmeta : payload;
+
+  if (id_predmeta === undefined || id_predmeta === null || id_predmeta === "") {
+    return null;
+  }
+
+  const normalizedId = Number(id_predmeta);
+
+  if (!Number.isInteger(normalizedId) || normalizedId <= 0) {
+    return null;
+  }
+
+  return normalizedId;
+}
+
+io.on("connection", (socket) => {
+  socket.on(REALTIME_CLIENT_EVENTS.joinPredmet, (payload) => {
+    const id_predmeta = getSocketPredmetId(payload);
+    if (!id_predmeta) return;
+
+    socket.join(REALTIME_ROOMS.predmet(id_predmeta));
+  });
+
+  socket.on(REALTIME_CLIENT_EVENTS.leavePredmet, (payload) => {
+    const id_predmeta = getSocketPredmetId(payload);
+    if (!id_predmeta) return;
+
+    socket.leave(REALTIME_ROOMS.predmet(id_predmeta));
+  });
+
+  socket.on("pridruzi_se_korisniku", (id_korisnika) => {
+    if (!id_korisnika) return;
+    socket.join(`korisnik_${id_korisnika}`);
+  });
+});
 // Parser za JSON podatke
 app.use(bodyParser.json());
 
 // Parser za podatke iz formi
 app.use(bodyParser.urlencoded({ extended: true }));
 
-// Postavke direktorija za statičke datoteke
+// Postavke direktorija za statiÄŤke datoteke
+app.use(cors(corsOptions));
+app.options("*", cors(corsOptions));
 app.use(express.static(path.join(__dirname, "public")));
-app.use(cors({ origin: "*" }));
 
 const connection = mysql.createConnection({
   host: "student.veleri.hr",
@@ -36,9 +115,276 @@ app.use(express.urlencoded({ extended: true }));
 
 connection.connect();
 
+connection.query(`
+  CREATE TABLE IF NOT EXISTS transakcija (
+    id_transakcije INT AUTO_INCREMENT PRIMARY KEY,
+    id_predmeta INT NOT NULL,
+    id_korisnika INT NOT NULL,
+    iznos_transakcije DECIMAL(10,2) NOT NULL,
+    vrijeme_transakcije DATETIME DEFAULT CURRENT_TIMESTAMP,
+    status VARCHAR(50) DEFAULT 'završena',
+    FOREIGN KEY (id_predmeta) REFERENCES predmet(id_predmeta),
+    FOREIGN KEY (id_korisnika) REFERENCES korisnik(id_korisnika)
+  )
+`, (error) => {
+  if (error) {
+    console.error('Greška pri kreiranju tablice transakcija:', error);
+  } else {
+    console.log('Tablica transakcija kreirana ili već postoji.');
+  }
+});
+
+function queryAsync(sql, params = []) {
+  return new Promise((resolve, reject) => {
+    connection.query(sql, params, (error, results) => {
+      if (error) {
+        reject(error);
+        return;
+      }
+
+      resolve(results);
+    });
+  });
+}
+
+function beginTransactionAsync() {
+  return new Promise((resolve, reject) => {
+    connection.beginTransaction((error) => {
+      if (error) {
+        reject(error);
+        return;
+      }
+
+      resolve();
+    });
+  });
+}
+
+function commitAsync() {
+  return new Promise((resolve, reject) => {
+    connection.commit((error) => {
+      if (error) {
+        reject(error);
+        return;
+      }
+
+      resolve();
+    });
+  });
+}
+
+function rollbackAsync() {
+  return new Promise((resolve) => {
+    connection.rollback(() => resolve());
+  });
+}
+
+async function getCurrentPrice(id_predmeta) {
+  const rows = await queryAsync(
+    `SELECT
+       p.pocetna_cijena,
+       COALESCE(MAX(po.vrijednost_ponude), p.pocetna_cijena) AS trenutna_cijena
+     FROM predmet p
+     LEFT JOIN ponuda po ON po.id_predmeta = p.id_predmeta
+     WHERE p.id_predmeta = ?
+     GROUP BY p.id_predmeta, p.pocetna_cijena`,
+    [id_predmeta],
+  );
+
+  if (rows.length === 0) {
+    return null;
+  }
+
+  return normalizeMoney(rows[0].trenutna_cijena);
+}
+
+async function getPonudaRealtimeData(id_ponude) {
+  const rows = await queryAsync(
+    `SELECT id_ponude, id_predmeta, id_korisnika,
+            DATE_FORMAT(vrijeme_ponude, "%Y-%m-%d %H:%i:%s") AS vrijeme_ponude
+     FROM ponuda
+     WHERE id_ponude = ?`,
+    [id_ponude],
+  );
+
+  return rows[0] || null;
+}
+
+async function createNotification(id_korisnika, message) {
+  await queryAsync(
+    `INSERT INTO obavijest (id_korisnika, poruka, procitano, vrijeme_obavijesti)
+     VALUES (?, ?, 0, NOW())`,
+    [id_korisnika, message],
+  );
+}
+
+async function validateAutoBidInput(
+  id_korisnika,
+  id_predmeta,
+  maksimalni_iznos,
+) {
+  const normalizedMaxAmount = normalizeMoney(maksimalni_iznos);
+
+  if (Number.isNaN(normalizedMaxAmount) || normalizedMaxAmount <= 0) {
+    const invalidAmountError = new Error(
+      "Maksimalni iznos auto-bida nije ispravan.",
+    );
+    invalidAmountError.status = 400;
+    throw invalidAmountError;
+  }
+
+  const predmetRows = await queryAsync(
+    `SELECT id_predmeta, id_korisnika, pocetna_cijena
+     FROM predmet
+     WHERE id_predmeta = ?`,
+    [id_predmeta],
+  );
+
+  if (predmetRows.length === 0) {
+    const notFoundError = new Error("Predmet nije pronađen.");
+    notFoundError.status = 404;
+    throw notFoundError;
+  }
+
+  if (Number(predmetRows[0].id_korisnika) === Number(id_korisnika)) {
+    const ownerError = new Error(
+      "Vlasnik predmeta ne može postaviti auto-bid na vlastitu aukciju.",
+    );
+    ownerError.status = 400;
+    throw ownerError;
+  }
+
+  const currentPrice = await getCurrentPrice(id_predmeta);
+
+  if (currentPrice === null) {
+    const priceError = new Error("Trenutna cijena nije dostupna.");
+    priceError.status = 400;
+    throw priceError;
+  }
+
+  if (normalizedMaxAmount <= currentPrice) {
+    const validationError = new Error(
+      `Maksimalni auto-bid mora biti veći od trenutne cijene (${currentPrice}$).`,
+    );
+    validationError.status = 400;
+    throw validationError;
+  }
+
+  return {
+    predmet: predmetRows[0],
+    currentPrice,
+    normalizedMaxAmount,
+  };
+}
+
+// Returns all active, non-limit-reached auto-bids for an item, excluding the user
+// who triggered the current bid cycle.
+async function getActiveAutoBidsForItem(id_predmeta, excludedUserId) {
+  return queryAsync(
+    `SELECT id_auto_bid, id_korisnika, id_predmeta, maksimalni_iznos, aktivan, limit_dosegnut, vrijeme_postavljanja
+     FROM auto_bid
+     WHERE id_predmeta = ?
+       AND id_korisnika <> ?
+       AND aktivan = 1
+       AND COALESCE(limit_dosegnut, 0) = 0
+     ORDER BY maksimalni_iznos DESC, vrijeme_postavljanja ASC`,
+    [id_predmeta, excludedUserId],
+  );
+}
+
+// Marks a single auto-bid as limit-reached and persists a notification.
+async function markAutoBidLimitReached(id_auto_bid, id_korisnika) {
+  await queryAsync(
+    `UPDATE auto_bid SET limit_dosegnut = 1 WHERE id_auto_bid = ?`,
+    [id_auto_bid],
+  );
+
+  await createNotification(
+    id_korisnika,
+    "Vaš Auto-bid limit za aukciju je dosegnut.",
+  );
+}
+
+// Handles the full multi-user auto-bid cycle after a manual (or auto) bid is placed.
+//
+// Algorithm (proxy-bidding):
+//   1. Fetch all active auto-bids for the item, excluding the triggering user.
+//   2. Any whose max <= currentBidAmount are already beaten — mark them immediately.
+//   3. From the remaining competitive bids, pick a winner using calculateAutoBidWinner:
+//        winner  = highest maksimalni_iznos (tie-break: earliest vrijeme_postavljanja)
+//        winning bid = min(secondBest.max + increment, winner.max)
+//   4. Insert the winning bid into ponuda.
+//   5. Mark all non-winning auto-bids whose max <= winning bid as limit reached.
+//   6. If the winning bid equals the winner's max, mark the winner as limit reached too.
+async function processMultipleAutoBids(id_predmeta, currentBidAmount, triggeringUserId) {
+  const normalizedCurrent = normalizeMoney(currentBidAmount);
+  const allActiveBids = await getActiveAutoBidsForItem(id_predmeta, triggeringUserId);
+
+  // Split: auto-bids already surpassed by the current bid vs still competitive.
+  const beaten = allActiveBids.filter(
+    (ab) => normalizeMoney(ab.maksimalni_iznos) <= normalizedCurrent,
+  );
+  const competitive = allActiveBids.filter(
+    (ab) => normalizeMoney(ab.maksimalni_iznos) > normalizedCurrent,
+  );
+
+  for (const ab of beaten) {
+    await markAutoBidLimitReached(ab.id_auto_bid, ab.id_korisnika);
+  }
+
+  if (competitive.length === 0) {
+    return { triggered: false, autoBid: null };
+  }
+
+  const { winner, winningBid, losers } = calculateAutoBidWinner(
+    competitive,
+    normalizedCurrent,
+  );
+
+  if (!winner || winningBid === null) {
+    return { triggered: false, autoBid: null };
+  }
+
+  const insertResult = await queryAsync(
+    `INSERT INTO ponuda (vrijednost_ponude, vrijeme_ponude, id_korisnika, id_predmeta)
+     VALUES (?, NOW(), ?, ?)`,
+    [winningBid, winner.id_korisnika, id_predmeta],
+  );
+
+  for (const loser of losers) {
+    await markAutoBidLimitReached(loser.id_auto_bid, loser.id_korisnika);
+  }
+
+  let winnerLimitReached = false;
+  if (winningBid >= normalizeMoney(winner.maksimalni_iznos)) {
+    winnerLimitReached = true;
+    await markAutoBidLimitReached(winner.id_auto_bid, winner.id_korisnika);
+  }
+
+  return {
+    triggered: true,
+    autoBid: {
+      id_ponude: insertResult.insertId,
+      id_korisnika: winner.id_korisnika,
+      id_predmeta,
+      vrijednost_ponude: winningBid,
+      limit_dosegnut: winnerLimitReached,
+    },
+  };
+}
+
+async function disableAutoBidForUser(id_predmeta, id_korisnika) {
+  return queryAsync(
+    `UPDATE auto_bid
+     SET aktivan = 0
+     WHERE id_predmeta = ? AND id_korisnika = ?`,
+    [id_predmeta, id_korisnika],
+  );
+}
+
 app.get("/api/korisnici", authJwt.verifyTokenAdmin, (req, res) => {
   connection.query(
-    "SELECT id_korisnika, ime_korisnika, prezime_korisnika, email_korisnika, adresa_korisnika FROM korisnik WHERE ime_korisnika != 'obrisani' AND prezime_korisnika != 'korisnik'",
+    "SELECT id_korisnika, ime_korisnika, prezime_korisnika, email_korisnika, adresa_korisnika, uloga FROM korisnik WHERE ime_korisnika != 'obrisani' AND prezime_korisnika != 'korisnik'",
     (error, results) => {
       if (error) throw error;
 
@@ -54,12 +400,28 @@ app.get(
     connection.query(
       "SELECT * FROM korisnik",
       function (error, korisniciResults) {
-        if (error) throw error;
+        if (error) {
+          console.error(
+            "Error fetching korisnici for /getUnosPredmeta:",
+            error,
+          );
+          return response.status(500).send({
+            message: "Dogodila se greska pri dohvatu korisnika.",
+          });
+        }
 
         connection.query(
           "SELECT * FROM kategorija",
           function (error, kategorijeResults) {
-            if (error) throw error;
+            if (error) {
+              console.error(
+                "Error fetching kategorije for /getUnosPredmeta:",
+                error,
+              );
+              return response.status(500).send({
+                message: "Dogodila se greska pri dohvatu kategorija.",
+              });
+            }
 
             response.send({
               korisnici: korisniciResults,
@@ -96,6 +458,12 @@ app.post(
       function (error, results) {
         if (error) throw error;
         const insertedPredmetId = results.insertId;
+
+        connection.query(
+          "INSERT IGNORE INTO lista_pracenja (id_korisnika, id_predmeta) VALUES (?, ?)",
+          [data.id_korisnika, insertedPredmetId],
+          () => {}
+        );
 
         const keys = Object.keys(data).filter((key) => key.startsWith("file"));
         let completed = 0;
@@ -167,7 +535,55 @@ app.get("/api/all-predmet", (req, res) => {
   });
 });
 
-app.get("/api/get-predmet/:id", (req, res) => {
+app.get("/api/pretrazi-predmet", (req, res) => {
+  const keyword = (req.query.keyword || "").trim();
+
+  if (!keyword) {
+    return res.status(400).send({ message: "Ključna riječ je obavezna." });
+  }
+
+ const searchKeyword = `%${keyword.toLowerCase()}%`;
+
+  const query = `
+    SELECT
+        p.id_predmeta,
+        p.opis_predmeta,
+        p.naziv_predmeta,
+        p.pocetna_cijena,
+        p.vrijeme_pocetka,
+        p.vrijeme_zavrsetka,
+        CONCAT(
+            FLOOR(TIMESTAMPDIFF(SECOND, NOW(), p.vrijeme_zavrsetka) / (24 * 3600)),
+            ' dana, ',
+            TIME_FORMAT(
+                SEC_TO_TIME(TIMESTAMPDIFF(SECOND, NOW(), p.vrijeme_zavrsetka) % (24 * 3600)),
+                '%H:%i:%s'
+            )
+        ) AS preostalo_vrijeme,
+        (SELECT slika FROM slika WHERE id_predmeta = p.id_predmeta LIMIT 1) AS slika,
+        COALESCE(MAX(po.vrijednost_ponude), p.pocetna_cijena) AS trenutna_cijena
+    FROM predmet p
+    LEFT JOIN ponuda po ON p.id_predmeta = po.id_predmeta
+    WHERE p.vrijeme_zavrsetka > NOW()
+      AND (
+        LOWER(p.naziv_predmeta) LIKE ?
+        OR LOWER(p.opis_predmeta) LIKE ?
+      )
+    GROUP BY p.id_predmeta
+    ORDER BY p.vrijeme_zavrsetka ASC;
+  `;
+
+  connection.query(query, [searchKeyword, searchKeyword], (error, results) => {
+    if (error) {
+      console.error("Greška kod pretrage aukcija:", error);
+      return res.status(500).send({ message: "Greška kod pretrage aukcija." });
+    }
+
+    res.send(results);
+  });
+});
+
+app.get("/api/get-predmet/:id", async (req, res) => {
   const { id } = req.params;
 
   connection.query(
@@ -223,6 +639,207 @@ app.get("/api/recenzije-prodavatelja/:id", (req, res) => {
   );
 });
 
+app.get(
+  "/api/auto-bid/:id_predmeta",
+  authJwt.verifyTokenUser,
+  async (req, res) => {
+    const { id_predmeta } = req.params;
+
+    try {
+      const autoBidRows = await queryAsync(
+        `SELECT maksimalni_iznos, aktivan, limit_dosegnut
+       FROM auto_bid
+       WHERE id_predmeta = ? AND id_korisnika = ?
+       ORDER BY vrijeme_postavljanja DESC, id_auto_bid DESC
+       LIMIT 1`,
+        [id_predmeta, req.userId],
+      );
+
+      if (autoBidRows.length === 0) {
+        res.send(null);
+        return;
+      }
+
+      res.send({
+        maksimalni_iznos: normalizeMoney(autoBidRows[0].maksimalni_iznos),
+        aktivan: autoBidRows[0].aktivan,
+        limit_dosegnut: autoBidRows[0].limit_dosegnut,
+      });
+    } catch (error) {
+      console.error("GreĹˇka pri dohvaÄ‡anju auto-bida:", error);
+      res.status(500).send({ message: "GreĹˇka pri dohvaÄ‡anju auto-bida." });
+    }
+  },
+);
+
+app.post("/api/auto-bid", authJwt.verifyTokenUser, async (req, res) => {
+  const { id_predmeta, maksimalni_iznos } = req.body;
+
+  if (!id_predmeta || maksimalni_iznos === undefined) {
+    res.status(400).send({
+      message: "Potrebno je poslati ispravan predmet i maksimalni iznos.",
+    });
+    return;
+  }
+
+  try {
+    const validation = await validateAutoBidInput(
+      req.userId,
+      id_predmeta,
+      maksimalni_iznos,
+    );
+
+    const existingRows = await queryAsync(
+      `SELECT id_auto_bid
+       FROM auto_bid
+       WHERE id_predmeta = ? AND id_korisnika = ?
+       ORDER BY vrijeme_postavljanja DESC, id_auto_bid DESC`,
+      [id_predmeta, req.userId],
+    );
+
+    if (existingRows.length > 0) {
+      await queryAsync(
+        `UPDATE auto_bid
+         SET maksimalni_iznos = ?, aktivan = 1, limit_dosegnut = 0, vrijeme_postavljanja = NOW()
+         WHERE id_auto_bid = ?`,
+        [validation.normalizedMaxAmount, existingRows[0].id_auto_bid],
+      );
+
+      res.send({
+        error: false,
+        updated: true,
+        message: "Auto-bid je ažuriran.",
+      });
+      return;
+    }
+
+    await queryAsync(
+      `INSERT INTO auto_bid (
+         id_korisnika,
+         id_predmeta,
+         maksimalni_iznos,
+         aktivan,
+         limit_dosegnut,
+         vrijeme_postavljanja
+       ) VALUES (?, ?, ?, 1, 0, NOW())`,
+      [req.userId, id_predmeta, validation.normalizedMaxAmount],
+    );
+
+    res.send({
+      error: false,
+      created: true,
+      message: "Auto-bid je uspješno kreiran.",
+    });
+  } catch (error) {
+    console.error("GreĹˇka pri spremanju auto-bida:", error);
+    res.status(error.status || 500).send({
+      message: error.message || "GreĹˇka pri spremanju auto-bida.",
+    });
+  }
+});
+
+app.put("/api/auto-bid", authJwt.verifyTokenUser, async (req, res) => {
+  const { id_predmeta, maksimalni_iznos } = req.body;
+
+  if (!id_predmeta || maksimalni_iznos === undefined) {
+    res.status(400).send({
+      message: "Potrebno je poslati predmet i maksimalni iznos.",
+    });
+    return;
+  }
+
+  try {
+    const validation = await validateAutoBidInput(
+      req.userId,
+      id_predmeta,
+      maksimalni_iznos,
+    );
+
+    const existingRows = await queryAsync(
+      `SELECT id_auto_bid
+       FROM auto_bid
+       WHERE id_predmeta = ? AND id_korisnika = ?
+       ORDER BY vrijeme_postavljanja DESC, id_auto_bid DESC
+       LIMIT 1`,
+      [id_predmeta, req.userId],
+    );
+
+    if (existingRows.length === 0) {
+      res.status(404).send({ message: "Auto-bid nije pronađen." });
+      return;
+    }
+
+    await queryAsync(
+      `UPDATE auto_bid
+       SET maksimalni_iznos = ?, aktivan = 1, limit_dosegnut = 0, vrijeme_postavljanja = NOW()
+       WHERE id_auto_bid = ?`,
+      [validation.normalizedMaxAmount, existingRows[0].id_auto_bid],
+    );
+
+    res.send({
+      error: false,
+      message: "Auto-bid je ažuriran.",
+    });
+  } catch (error) {
+    console.error("Greška pri ažuriranju auto-bida:", error);
+    res.status(error.status || 500).send({
+      message: error.message || "Greška pri ažuriranju auto-bida.",
+    });
+  }
+});
+
+app.put("/api/auto-bid/disable", authJwt.verifyTokenUser, async (req, res) => {
+  const { id_predmeta } = req.body;
+
+  if (!id_predmeta) {
+    res.status(400).send({ message: "Potrebno je poslati id predmeta." });
+    return;
+  }
+
+  try {
+    const result = await disableAutoBidForUser(id_predmeta, req.userId);
+
+    if (result.affectedRows === 0) {
+      res.status(404).send({ message: "Auto-bid nije pronađen." });
+      return;
+    }
+
+    res.send({
+      error: false,
+      message: "Auto-bid je onemogućen.",
+    });
+  } catch (error) {
+    console.error("GreĹˇka pri gaĹˇenju auto-bida:", error);
+    res.status(500).send({ message: "GreĹˇka pri gaĹˇenju auto-bida." });
+  }
+});
+
+app.delete(
+  "/api/auto-bid/:id_predmeta",
+  authJwt.verifyTokenUser,
+  async (req, res) => {
+    try {
+      const result = await disableAutoBidForUser(
+        req.params.id_predmeta,
+        req.userId,
+      );
+
+      if (result.affectedRows === 0) {
+        res.status(404).send({ message: "Auto-bid nije pronađen." });
+        return;
+      }
+
+      res.send({
+        error: false,
+        message: "Auto-bid je onemogućen.",
+      });
+    } catch (error) {
+      console.error("Greška pri gašenju auto-bida:", error);
+      res.status(500).send({ message: "Greška pri gašenju auto-bida." });
+    }
+  },
+);
+
 app.get("/api/get-kategorija-predmet/:id", (req, res) => {
   const { id } = req.params;
 
@@ -262,9 +879,19 @@ ORDER BY preostalo_vrijeme DESC;
   );
 });
 
+app.get("/all-kategorija", (req, res) => {
+  connection.query("SELECT * FROM kategorija", (error, results) => {
+    if (error) {
+      console.error('Greška pri dohvaćanju kategorija (alias):', error);
+      return res.status(500).json({ error: error.message });
+    }
+    res.json(results);
+  });
+});
+
 app.get("/api/all-kategorija", (req, res) => {
   const query = `
-    SELECT 
+    SELECT
       k.id_kategorije,
       k.naziv_kategorije,
       k.naziv_kategorije_en,
@@ -274,7 +901,7 @@ app.get("/api/all-kategorija", (req, res) => {
 
     FROM kategorija k
 
-    LEFT JOIN predmet p 
+    LEFT JOIN predmet p
       ON k.id_kategorije = p.id_kategorije
       AND p.vrijeme_zavrsetka > NOW()
 
@@ -293,53 +920,204 @@ app.get("/api/all-kategorija", (req, res) => {
   });
 });
 
-/* app.get("/api/get-predmet/:id", (req, res) => {
-  const { id } = req.params;
-
-  connection.query("SELECT id_predmeta, naziv_predmeta,pocetna_cijena, vrijeme_pocetka, vrijeme_zavrsetka, TIME_FORMAT( SEC_TO_TIME(TIMESTAMPDIFF(SECOND, NOW(), vrijeme_zavrsetka)), '%H:%i:%s' ) AS preostalo_vrijeme FROM predmet WHERE id_predmeta = ?", [id], (error, results) => {
-    if (error) throw error;
-    res.send(results);
-  });
-}); */
-
-app.get("/api/get-ponuda/:id", (req, res) => {
-  const { id } = req.params;
-
-  connection.query(
-    'SELECT id_ponude, vrijednost_ponude, DATE_FORMAT(vrijeme_ponude, "%Y-%m-%d %H:%i:%s") as vrijeme_ponude, id_korisnika FROM ponuda WHERE id_predmeta = ?',
-    [id],
-    (error, results) => {
-      if (error) throw error;
-      res.send(results);
-    },
+function getPonudeZaPredmet(id_predmeta) {
+  return queryAsync(
+    `SELECT
+       po.id_ponude,
+       po.vrijednost_ponude,
+       DATE_FORMAT(po.vrijeme_ponude, "%Y-%m-%d %H:%i:%s") AS vrijeme_ponude,
+       po.id_korisnika,
+       k.ime_korisnika,
+       k.prezime_korisnika
+     FROM ponuda po
+     JOIN korisnik k ON po.id_korisnika = k.id_korisnika
+     WHERE po.id_predmeta = ?
+     ORDER BY po.vrijeme_ponude ASC, po.id_ponude ASC`,
+    [id_predmeta],
   );
+}
+
+async function sendPonudeZaPredmet(req, res) {
+  const id_predmeta = req.params.id_predmeta || req.params.id;
+  const normalizedId = Number(id_predmeta);
+
+  if (!Number.isInteger(normalizedId) || normalizedId <= 0) {
+    res.status(400).send({ message: "Id predmeta nije ispravan." });
+    return;
+  }
+
+  try {
+    const results = await getPonudeZaPredmet(normalizedId);
+    res.send(results);
+  } catch (error) {
+    console.error("Greška pri dohvaćanju povijesti ponuda:", error);
+    res.status(500).send({ message: "Greška pri dohvaćanju povijesti ponuda." });
+  }
+}
+
+app.get("/api/predmeti/:id_predmeta/ponude", sendPonudeZaPredmet);
+app.get("/api/get-ponuda/:id", sendPonudeZaPredmet);
+
+function getRacuniOrderClause(sortBy, sortDir) {
+  const direction = String(sortDir).toLowerCase() === "asc" ? "ASC" : "DESC";
+
+  const allowedSorts = {
+    datum: "t.vrijeme_transakcije",
+    iznos: "t.iznos_transakcije",
+  };
+
+  const column = allowedSorts[sortBy] || allowedSorts.datum;
+
+  return `${column} ${direction}, t.id_transakcije ${direction}`;
+}
+
+app.get("/api/racuni", authJwt.verifyTokenUser, (req, res) => {
+  const { sortBy = "datum", sortDir = "desc" } = req.query;
+
+  const sql = `
+    SELECT
+      t.id_transakcije,
+      t.id_predmeta,
+      t.iznos_transakcije,
+      DATE_FORMAT(t.vrijeme_transakcije, "%Y-%m-%d %H:%i:%s") AS vrijeme_transakcije,
+      p.naziv_predmeta
+    FROM transakcija t
+    JOIN predmet p ON p.id_predmeta = t.id_predmeta
+    WHERE t.id_korisnika = ?
+    ORDER BY ${getRacuniOrderClause(sortBy, sortDir)}
+  `;
+
+  connection.query(sql, [req.userId], (err, results) => {
+    if (err) {
+      console.error("Greška pri dohvaćanju računa:", err);
+      return res.status(500).json({
+        error: true,
+        message: "Greška pri dohvaćanju računa.",
+      });
+    }
+
+    return res.status(200).json(results);
+  });
 });
 
 app.post(
   "/unostrenutnaponuda",
   authJwt.verifyTokenUser,
-  function (request, response) {
+
+  async function (request, response) {
     const data = request.body;
-    const ponuda = [
-      [
-        data.vrijednost_ponude,
-        data.vrijeme_ponude,
-        data.id_korisnika,
-        data.id_predmeta,
-      ],
-    ];
-    connection.query(
-      "INSERT INTO ponuda (vrijednost_ponude, vrijeme_ponude, id_korisnika, id_predmeta) VALUES ?",
-      [ponuda],
-      function (error, results, fields) {
-        if (error) throw error;
-        return response.send({
-          error: false,
-          data: results,
-          message: "Dodana je trenutna ponuda.",
+    const id_predmeta = data.id_predmeta;
+    const normalizedBidAmount = normalizeMoney(data.vrijednost_ponude);
+
+    if (!id_predmeta || normalizedBidAmount === undefined) {
+      return response.status(400).send({
+        message: "Potrebno je poslati predmet i vrijednost ponude.",
+      });
+    }
+
+    try {
+      await beginTransactionAsync();
+
+      const currentPrice = await getCurrentPrice(id_predmeta);
+
+      if (normalizedBidAmount <= currentPrice) {
+        await rollbackAsync();
+        return response.status(400).send({
+          message: `Ponuda mora biti veća od trenutne cijene (${currentPrice}$).`,
         });
-      },
-    );
+      }
+
+      const insertResult = await queryAsync(
+        "INSERT INTO ponuda (vrijednost_ponude, vrijeme_ponude, id_korisnika, id_predmeta) VALUES (?, NOW(), ?, ?)",
+        [normalizedBidAmount, request.userId, id_predmeta],
+      );
+
+      const autoBidResult = await processMultipleAutoBids(
+        id_predmeta,
+        normalizedBidAmount,
+        request.userId,
+      );
+
+      const finalPrice = autoBidResult.triggered
+        ? autoBidResult.autoBid.vrijednost_ponude
+        : normalizedBidAmount;
+      const finalBid = autoBidResult.triggered
+        ? autoBidResult.autoBid
+        : {
+            id_ponude: insertResult.insertId,
+            id_predmeta: Number(id_predmeta),
+            id_korisnika: request.userId,
+          };
+      const realtimeBidData = await getPonudaRealtimeData(finalBid.id_ponude);
+      const realtimePayload = {
+        id_predmeta: Number(id_predmeta),
+        trenutna_cijena: finalPrice,
+        id_ponude: finalBid.id_ponude,
+        id_korisnika: finalBid.id_korisnika,
+        vrijeme_ponude: realtimeBidData?.vrijeme_ponude,
+      };
+
+      await disableAutoBidForUser(id_predmeta, request.userId);
+
+      await commitAsync();
+
+      emitCijenaAzurirana(io, realtimePayload);
+
+      // Notifikacije za pratitelje i ostale ponuđače (ne šalje se ponuđaču koji je upravo licitirao)
+      const ponuducId = finalBid.id_korisnika;
+      connection.query(
+        "SELECT naziv_predmeta FROM predmet WHERE id_predmeta = ?",
+        [id_predmeta],
+        (errP, predmetResult) => {
+          if (errP || !predmetResult.length) return;
+          const naziv = predmetResult[0].naziv_predmeta;
+          const poruka = `Nova ponuda ${finalPrice}$ na aukciji "${naziv}"`;
+
+          // Pratitelji
+          connection.query(
+            "SELECT id_korisnika FROM lista_pracenja WHERE id_predmeta = ? AND id_korisnika != ?",
+            [id_predmeta, ponuducId],
+            (errW, pratitelji) => {
+              // Ostali ponuđači (koji su ranije licitirali, a nisu na listi pratitelja da ne dobiju duplu notif)
+              connection.query(
+                "SELECT DISTINCT id_korisnika FROM ponuda WHERE id_predmeta = ? AND id_korisnika != ?",
+                [id_predmeta, ponuducId],
+                (errB, ostaliPonudaci) => {
+                  const korisnici = new Set();
+                  (pratitelji || []).forEach((w) => korisnici.add(w.id_korisnika));
+                  (ostaliPonudaci || []).forEach((b) => korisnici.add(b.id_korisnika));
+                  if (!korisnici.size) return;
+                  const rows = [...korisnici].map((id) => [id, Number(id_predmeta), poruka]);
+                  posaljiNotifikacije(rows);
+                }
+              );
+            }
+          );
+        }
+      );
+
+      return response.send({
+        error: false,
+        data: {
+          manualBid: {
+            id_ponude: insertResult.insertId,
+            id_predmeta: Number(id_predmeta),
+            id_korisnika: request.userId,
+            vrijednost_ponude: normalizedBidAmount,
+          },
+          autoBid: autoBidResult.autoBid,
+        },
+        autoBidTriggered: autoBidResult.triggered,
+        currentPrice: finalPrice,
+        message: "Ponuda je uspješno evidentirana.",
+      });
+    } catch (error) {
+      await rollbackAsync();
+      console.error("Greška pri unosu ponude:", error);
+      return response.status(error.status || 500).send({
+        message: error.message || "Greška pri unosu ponude.",
+      });
+    }
   },
 );
 
@@ -599,10 +1377,14 @@ app.post("/api/komunikacija-nakon-prodaje", authJwt.verifyTokenUser, (req, res) 
 
 
 
-
+/* orig sa timske grane
 app.listen(port, () => {
+na defelopment grani server.listen*/
+
+server.listen(port, () => {
   console.log("Server running at port: " + port);
 });
+
 app.post("/regaKorisnika", function (request, response) {
   const data = request.body;
   const saltRounds = 10;
@@ -890,51 +1672,90 @@ app.post("/api/dodajKategoriju", authJwt.verifyTokenAdmin, (req, res) => {
   const data = req.body;
   const naziv_kategorije = data.naziv_kategorije;
 
+  connection.query("INSERT INTO kategorija (naziv_kategorije) VALUES (?)", [naziv_kategorije], (error, results) => {
+    if (error) {
+      console.error("Neuspjeh unosa nove kategorije.", error);
+      return res.status(500).json({ error: true, message: "Neuspjeh unosa nove kategorije." });
+    }
+    return res.send({ error: false, data: results, message: "Kategorija unešena uspješno." });
+  });
+});
+
+app.post("/api/kategorije", authJwt.verifyTokenAdmin, (req, res) => {
+  const { naziv_kategorije } = req.body;
+
+  if (!naziv_kategorije || !naziv_kategorije.trim()) {
+    return res.status(400).json({ error: true, message: "Naziv kategorije je obavezan." });
+  }
+
   connection.query(
     "INSERT INTO kategorija (naziv_kategorije) VALUES (?)",
-    [naziv_kategorije],
+    [naziv_kategorije.trim()],
     (error, results) => {
       if (error) {
         console.error("Neuspjeh unosa nove kategorije.", error);
-        return res
-          .status(500)
-          .json({ error: true, message: "Neuspjeh unosa nove kategorije." });
+        return res.status(500).json({ error: true, message: "Neuspjeh unosa nove kategorije." });
       }
-      //console.log("data", data);
-      return res.send({
-        error: false,
-        data: results,
-        message: "Kategorija unešena uspješno.",
-      });
-    },
+      return res.send({ error: false, data: results, message: "Kategorija unesena uspješno." });
+    }
   );
 });
 
-app.delete(
-  "/api/deleteKategoriju/:id",
-  authJwt.verifyTokenAdmin,
-  (req, res) => {
-    const idKat = req.params.id;
+app.put("/api/kategorije/:id", authJwt.verifyTokenAdmin, (req, res) => {
+  const idKat = req.params.id;
+  const { naziv_kategorije } = req.body;
 
-    connection.query(
-      "DELETE FROM kategorija WHERE id_kategorije = (?)",
-      [idKat],
-      (error, results) => {
+  if (!naziv_kategorije || !naziv_kategorije.trim()) {
+    return res.status(400).json({ error: true, message: "Naziv kategorije je obavezan." });
+  }
+
+  connection.query(
+    "UPDATE kategorija SET naziv_kategorije = ? WHERE id_kategorije = ?",
+    [naziv_kategorije.trim(), idKat],
+    (error, results) => {
+      if (error) {
+        console.error("Neuspješna izmjena kategorije.", error);
+        return res.status(500).json({ error: true, message: "Neuspješna izmjena kategorije." });
+      }
+      if (results.affectedRows === 0) {
+        return res.status(404).json({ error: true, message: "Kategorija nije pronađena." });
+      }
+      return res.send({ error: false, data: results, message: "Kategorija ažurirana uspješno." });
+    }
+  );
+});
+
+app.delete("/api/deleteKategoriju/:id", authJwt.verifyTokenAdmin, (req, res) => {
+  const idKat = req.params.id;
+
+  connection.query(
+    "SELECT COUNT(*) AS count FROM predmet WHERE id_kategorije = ?",
+    [idKat],
+    (countError, countResults) => {
+      if (countError) {
+        console.error("Greška kod provjere predmeta za kategoriju:", countError);
+        return res.status(500).json({ error: true, message: "Greška pri provjeri kategorije." });
+      }
+
+      const count = countResults[0]?.count || 0;
+      if (count > 0) {
+        return res.status(400).json({
+          error: true,
+          message: "Kategorija sadrži predmete. Obrišite prvo predmete ili ih premjestite.",
+        });
+      }
+
+      connection.query("DELETE FROM kategorija WHERE id_kategorije = ?", [idKat], (error, results) => {
         if (error) {
-          console.error("Neuspješno brisanje.");
-          return res
-            .status(500)
-            .json({ error: true, message: "Neuspješno brisanje " + idKat });
+          console.error("Neuspješno brisanje kategorije:", error);
+          return res.status(500).json({ error: true, message: "Neuspješno brisanje kategorije." });
         }
         console.log("Brisanje uspješno.");
-        return res.send({
-          error: false,
-          message: "Kategorija uspješno obrisana.",
-        });
-      },
-    );
-  },
-);
+        return res.send({ error: false, message: "Kategorija uspješno obrisana." });
+      });
+    }
+  );
+});
 
 app.get("/api/vlastiti-predmeti/:id", authJwt.verifyTokenUser, (req, res) => {
   connection.query(
@@ -1230,15 +2051,15 @@ app.put("/api/izmjenaPredmeta/:id", authJwt.verifyTokenUser, (req, res) => {
 });
 
 app.get("/api/get-predmet2/:id", (req, res) => {
-  //razlika izmedu ovog i obicnog get-predmet je što ovaj lovi i id kategorije i id slika.
+  //razlika izmedu ovog i obicnog get-predmet je Ĺˇto ovaj lovi i id kategorije i id slika.
   const { id } = req.params;
 
   connection.query(
     `SELECT p.naziv_predmeta, p.id_predmeta, p.id_kategorije, p.pocetna_cijena, p.vrijeme_pocetka, p.vrijeme_zavrsetka, p.opis_predmeta, COALESCE(MAX(po.vrijednost_ponude), p.pocetna_cijena) AS vrijednost_ponude, GROUP_CONCAT(DISTINCT s.id_slike SEPARATOR '|||') AS id_slika, GROUP_CONCAT(DISTINCT s.slika SEPARATOR '|||') AS slike
-    FROM predmet p 
-    LEFT JOIN ponuda po ON p.id_predmeta = po.id_predmeta 
-    LEFT JOIN slika s ON p.id_predmeta = s.id_predmeta 
-    WHERE p.id_predmeta = ? 
+    FROM predmet p
+    LEFT JOIN ponuda po ON p.id_predmeta = po.id_predmeta
+    LEFT JOIN slika s ON p.id_predmeta = s.id_predmeta
+    WHERE p.id_predmeta = ?
     GROUP BY p.id_predmeta`,
     [id],
     (error, results) => {
@@ -1289,99 +2110,428 @@ app.post(
     });
     return response.send({
       error: false,
-      message: "Slike su uspješno dodane.",
+      message: "Slike su uspjeĹˇno dodane.",
     });
   },
 );
 
-// --- Automatsko zatvaranje aukcija i upis pobjednika ---
+// ── FZ-3.2: Watchlist endpointi ─────────────────────────────────────────────
+
+// GET /api/watchlist/:korisnikId  — dohvati listu praćenja korisnika
+app.get("/api/watchlist/:korisnikId", authJwt.verifyTokenUser, (req, res) => {
+  const { korisnikId } = req.params;
+
+  const query = `
+    SELECT
+      lp.id_lista,
+      lp.datum_dodavanja,
+      p.id_predmeta,
+      p.naziv_predmeta,
+      p.opis_predmeta,
+      p.pocetna_cijena,
+      p.vrijeme_pocetka,
+      p.vrijeme_zavrsetka,
+      COALESCE(MAX(po.vrijednost_ponude), p.pocetna_cijena) AS trenutna_cijena,
+      (SELECT slika FROM slika WHERE id_predmeta = p.id_predmeta LIMIT 1) AS slika
+    FROM lista_pracenja lp
+    JOIN predmet p ON lp.id_predmeta = p.id_predmeta
+    LEFT JOIN ponuda po ON p.id_predmeta = po.id_predmeta
+    WHERE lp.id_korisnika = ?
+    GROUP BY lp.id_lista, p.id_predmeta
+    ORDER BY lp.datum_dodavanja DESC
+  `;
+
+  connection.query(query, [korisnikId], (error, results) => {
+    if (error) return res.status(500).json({ error: true, message: "Greška pri dohvatu liste praćenja." });
+    res.json(results);
+  });
+});
+
+// POST /api/watchlist  — dodaj aukciju na listu praćenja
+// Body: { id_predmeta }
+app.post("/api/watchlist", authJwt.verifyTokenUser, (req, res) => {
+  const { id_predmeta } = req.body;
+  const id_korisnika = req.userId;
+
+  if (!id_predmeta) {
+    return res.status(400).json({ error: true, message: "id_predmeta je obavezan." });
+  }
+
+  connection.query(
+    "INSERT INTO lista_pracenja (id_korisnika, id_predmeta) VALUES (?, ?)",
+    [id_korisnika, id_predmeta],
+    (error) => {
+      if (error) {
+        if (error.code === "ER_DUP_ENTRY") {
+          return res.status(409).json({ error: true, message: "Aukcija je već na listi praćenja." });
+        }
+        return res.status(500).json({ error: true, message: "Greška pri dodavanju na listu praćenja." });
+      }
+      res.status(201).json({ error: false, message: "Aukcija dodana na listu praćenja." });
+    }
+  );
+});
+
+app.get("/api/admin/stats", authJwt.verifyTokenAdmin, (req, res) => {
+  const query = `
+    SELECT
+      (SELECT COUNT(*) FROM predmet) AS totalAuctions,
+      (SELECT COUNT(*) FROM predmet WHERE vrijeme_zavrsetka > NOW()) AS activeAuctions,
+      (SELECT COALESCE(SUM(iznos_transakcije), 0) FROM transakcija) AS totalRevenue,
+      (SELECT COALESCE(SUM(iznos_transakcije), 0) FROM transakcija
+       WHERE YEAR(vrijeme_transakcije) = YEAR(NOW()) AND MONTH(vrijeme_transakcije) = MONTH(NOW())) AS monthlyRevenue,
+      (SELECT COUNT(*) FROM transakcija) AS totalTransactions,
+      (SELECT COUNT(*) FROM transakcija WHERE vrijeme_transakcije >= DATE_SUB(NOW(), INTERVAL 30 DAY)) AS last30DaysTransactions,
+      ROUND(
+        COALESCE(
+          (SELECT COUNT(DISTINCT p.id_predmeta) FROM predmet p
+           JOIN ponuda po ON p.id_predmeta = po.id_predmeta
+           WHERE p.vrijeme_zavrsetka <= NOW()) /
+          NULLIF((SELECT COUNT(*) FROM predmet WHERE vrijeme_zavrsetka <= NOW()), 0) * 100
+        , 0)
+      , 1) AS successRate
+  `;
+  connection.query(query, (error, results) => {
+    if (error) return res.status(500).json({ error: error.message });
+    res.json(results[0]);
+  });
+});
+
+app.get("/api/admin/auctions", authJwt.verifyTokenAdmin, (req, res) => {
+  const page = Math.max(1, parseInt(req.query.page) || 1);
+  const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 10));
+  const offset = (page - 1) * limit;
+  const search = req.query.search ? `%${req.query.search}%` : null;
+  const status = req.query.status || 'all';
+
+  const conditions = [];
+  const params = [];
+
+  if (search) {
+    conditions.push('(p.naziv_predmeta LIKE ? OR CONCAT(k.ime_korisnika, " ", k.prezime_korisnika) LIKE ?)');
+    params.push(search, search);
+  }
+  if (status === 'active') {
+    conditions.push('p.vrijeme_zavrsetka > NOW()');
+  } else if (status === 'ended') {
+    conditions.push('p.vrijeme_zavrsetka <= NOW()');
+  }
+
+  const where = conditions.length ? 'WHERE ' + conditions.join(' AND ') : '';
+
+  const countSql = `SELECT COUNT(DISTINCT p.id_predmeta) AS total FROM predmet p LEFT JOIN korisnik k ON p.id_korisnika = k.id_korisnika ${where}`;
+  const dataSql = `
+    SELECT
+      p.id_predmeta,
+      p.naziv_predmeta,
+      CONCAT(k.ime_korisnika, ' ', k.prezime_korisnika) AS prodavac,
+      COALESCE(MAX(po.vrijednost_ponude), p.pocetna_cijena) AS trenutna_cijena,
+      COUNT(po.id_ponude) AS broj_ponuda,
+      CASE WHEN p.vrijeme_zavrsetka > NOW() THEN 'aktivna' ELSE 'završena' END AS status_aukcije,
+      p.vrijeme_zavrsetka
+    FROM predmet p
+    LEFT JOIN korisnik k ON p.id_korisnika = k.id_korisnika
+    LEFT JOIN ponuda po ON p.id_predmeta = po.id_predmeta
+    ${where}
+    GROUP BY p.id_predmeta, p.naziv_predmeta, k.ime_korisnika, k.prezime_korisnika, p.pocetna_cijena, p.vrijeme_zavrsetka
+    ORDER BY p.vrijeme_zavrsetka DESC
+    LIMIT ? OFFSET ?
+  `;
+
+  connection.query(countSql, params, (countErr, countRes) => {
+    if (countErr) return res.status(500).json({ error: countErr.message });
+    const total = countRes[0].total;
+    connection.query(dataSql, [...params, limit, offset], (dataErr, rows) => {
+      if (dataErr) return res.status(500).json({ error: dataErr.message });
+      res.json({ rows, total });
+    });
+  });
+});
+
+app.get("/api/admin/transactions", authJwt.verifyTokenAdmin, (req, res) => {
+  const page = Math.max(1, parseInt(req.query.page) || 1);
+  const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 10));
+  const offset = (page - 1) * limit;
+  const search = req.query.search ? `%${req.query.search}%` : null;
+
+  const conditions = [];
+  const params = [];
+
+  if (search) {
+    conditions.push('(p.naziv_predmeta LIKE ? OR CONCAT(k1.ime_korisnika, " ", k1.prezime_korisnika) LIKE ?)');
+    params.push(search, search);
+  }
+
+  const where = conditions.length ? 'WHERE ' + conditions.join(' AND ') : '';
+
+  const joins = `
+    JOIN predmet p  ON t.id_predmeta = p.id_predmeta
+    JOIN korisnik k1 ON t.id_korisnika = k1.id_korisnika
+    JOIN korisnik k2 ON p.id_korisnika = k2.id_korisnika
+  `;
+
+  const countSql = `SELECT COUNT(*) AS total FROM transakcija t ${joins} ${where}`;
+
+  const dataSql = `
+    SELECT
+      t.id_transakcije,
+      p.naziv_predmeta,
+      CONCAT(k1.ime_korisnika, ' ', k1.prezime_korisnika) AS kupac,
+      CONCAT(k2.ime_korisnika, ' ', k2.prezime_korisnika) AS prodavac,
+      t.iznos_transakcije,
+      DATE_FORMAT(t.vrijeme_transakcije, '%Y-%m-%d %H:%i:%s') AS vrijeme_transakcije,
+      'Završena' AS status
+    FROM transakcija t
+    ${joins}
+    ${where}
+    ORDER BY t.vrijeme_transakcije DESC
+    LIMIT ? OFFSET ?
+  `;
+
+  connection.query(countSql, params, (countErr, countRes) => {
+    if (countErr) {
+      console.error('Transactions count error:', countErr.message);
+      return res.status(500).json({ error: countErr.message });
+    }
+    const total = countRes[0].total;
+    connection.query(dataSql, [...params, limit, offset], (dataErr, rows) => {
+      if (dataErr) {
+        console.error('Transactions data error:', dataErr.message);
+        return res.status(500).json({ error: dataErr.message });
+      }
+      res.json({ rows, total });
+    });
+  });
+});
+
+// DELETE /api/watchlist/:predmetId  — ukloni aukciju s liste praćenja
+app.delete("/api/watchlist/:predmetId", authJwt.verifyTokenUser, (req, res) => {
+  const id_predmeta = req.params.predmetId;
+  const id_korisnika = req.userId;
+
+  connection.query(
+    "DELETE FROM lista_pracenja WHERE id_korisnika = ? AND id_predmeta = ?",
+    [id_korisnika, id_predmeta],
+    (error, results) => {
+      if (error) return res.status(500).json({ error: true, message: "Greška pri uklanjanju s liste praćenja." });
+      if (results.affectedRows === 0) {
+        return res.status(404).json({ error: true, message: "Aukcija nije pronađena na listi praćenja." });
+      }
+      res.json({ error: false, message: "Aukcija uklonjena s liste praćenja." });
+    }
+  );
+});
+
+// ── Notifikacije ─────────────────────────────────────────────────────────────
+
+// GET /api/notifikacije/:korisnikId — dohvati notifikacije korisnika
+app.get("/api/notifikacije/:korisnikId", authJwt.verifyTokenUser, (req, res) => {
+  connection.query(
+    `SELECT n.id_notifikacija, n.poruka, n.procitano, n.datum_kreiranja, n.id_predmeta,
+            p.naziv_predmeta
+     FROM notifikacija n
+     JOIN predmet p ON n.id_predmeta = p.id_predmeta
+     WHERE n.id_korisnika = ?
+     ORDER BY n.datum_kreiranja DESC
+     LIMIT 50`,
+    [req.params.korisnikId],
+    (error, results) => {
+      if (error) return res.status(500).json({ error: true, message: "Greška pri dohvatu notifikacija." });
+      res.json(results);
+    }
+  );
+});
+
+// PUT /api/notifikacije/procitaj-sve/:korisnikId — označi sve kao pročitano
+app.put("/api/notifikacije/procitaj-sve/:korisnikId", authJwt.verifyTokenUser, (req, res) => {
+  connection.query(
+    "UPDATE notifikacija SET procitano = 1 WHERE id_korisnika = ?",
+    [req.params.korisnikId],
+    (error) => {
+      if (error) return res.status(500).json({ error: true, message: "Greška pri označavanju notifikacija." });
+      res.json({ error: false, message: "Sve notifikacije označene kao pročitane." });
+    }
+  );
+});
+
+// GET /api/pobjednik/:id_predmeta — info o pobjedniku za prodavača
+app.get("/api/pobjednik/:id_predmeta", authJwt.verifyTokenUser, (req, res) => {
+  connection.query(
+    `SELECT k.ime_korisnika, k.prezime_korisnika, k.email_korisnika, k.adresa_korisnika,
+            po.vrijednost_ponude, p.naziv_predmeta
+     FROM ponuda po
+     JOIN korisnik k ON k.id_korisnika = po.id_korisnika
+     JOIN predmet p ON p.id_predmeta = po.id_predmeta
+     WHERE po.id_predmeta = ?
+     ORDER BY po.vrijednost_ponude DESC
+     LIMIT 1`,
+    [req.params.id_predmeta],
+    (error, results) => {
+      if (error) return res.status(500).json({ error: true });
+      if (!results.length) return res.status(404).json({ error: true, message: "Nema ponuda." });
+      res.json(results[0]);
+    }
+  );
+});
+
+// ── FZ-2: Notifikacije o završetku aukcije ────────────────────────────────────
 
 const obradeneAukcije = new Set();
 
-// Predpuni Set iz baze kako server restart ne bi duplirao unose
-connection.query("SELECT id_predmeta FROM osvojeni_predmeti", (err, rows) => {
-  if (!err) rows.forEach((r) => obradeneAukcije.add(r.id_predmeta));
-});
+connection.query(
+  "SELECT DISTINCT id_predmeta FROM notifikacija WHERE poruka LIKE '%završila%'",
+  (err, rows) => {
+    if (!err) rows.forEach((r) => obradeneAukcije.add(r.id_predmeta));
+  }
+);
+
+function posaljiNotifikacije(notifikacije) {
+  if (!notifikacije.length) return;
+  connection.query(
+    "INSERT INTO notifikacija (id_korisnika, id_predmeta, poruka) VALUES ?",
+    [notifikacije],
+    (err) => {
+      if (err) return;
+      notifikacije.forEach(([id_korisnika, id_predmeta, poruka]) => {
+        io.to(`korisnik_${id_korisnika}`).emit("nova_notifikacija", {
+          poruka,
+          id_predmeta,
+          datum_kreiranja: new Date(),
+        });
+      });
+    }
+  );
+}
 
 function obradiZavrsenuAukciju(aukcija) {
+  // Dohvati pobjednika (najveća ponuda)
   connection.query(
-    "SELECT id_korisnika, vrijednost_ponude FROM ponuda WHERE id_predmeta = ? ORDER BY vrijednost_ponude DESC LIMIT 1",
+    `SELECT po.id_korisnika, po.vrijednost_ponude,
+            k.ime_korisnika, k.prezime_korisnika, k.email_korisnika
+     FROM ponuda po
+     JOIN korisnik k ON k.id_korisnika = po.id_korisnika
+     WHERE po.id_predmeta = ?
+     ORDER BY po.vrijednost_ponude DESC
+     LIMIT 1`,
     [aukcija.id_predmeta],
-    (err, ponude) => {
-      if (err) {
-        console.error(
-          "Greška pri dohvatu ponuda za aukciju",
+    (errP, pobjednici) => {
+      if (errP) return;
+
+      const notifikacije = [];
+      const notifiedUsers = new Set();
+
+      if (pobjednici.length === 0) {
+        // Nema ponuda — obavijesti prodavača i pratitelje
+        notifikacije.push([
+          aukcija.id_prodavaca,
           aukcija.id_predmeta,
-          err,
+          `Aukcija "${aukcija.naziv_predmeta}" je završila bez ponuda.`,
+        ]);
+        notifiedUsers.add(aukcija.id_prodavaca);
+
+        connection.query(
+          "SELECT id_korisnika FROM lista_pracenja WHERE id_predmeta = ?",
+          [aukcija.id_predmeta],
+          (errW, pratitelji) => {
+            (pratitelji || []).forEach((w) => {
+              if (!notifiedUsers.has(w.id_korisnika)) {
+                notifikacije.push([
+                  w.id_korisnika,
+                  aukcija.id_predmeta,
+                  `Aukcija "${aukcija.naziv_predmeta}" je završila bez ponuda.`,
+                ]);
+              }
+            });
+            posaljiNotifikacije(notifikacije);
+          }
         );
         return;
       }
 
-      if (!ponude.length) {
-        console.log("Aukcija", aukcija.id_predmeta, "završila bez ponuda.");
-        return;
-      }
+      const pobjednik = pobjednici[0];
 
-      const pobjednik = ponude[0];
-
+      // Zabilježi osvojeni predmet (lista osvojenih aukcija)
       connection.query(
         "INSERT IGNORE INTO osvojeni_predmeti (id_predmeta, id_korisnika, naziv_predmeta) VALUES (?, ?, ?)",
         [aukcija.id_predmeta, pobjednik.id_korisnika, aukcija.naziv_predmeta],
-        (errI) => {
-          if (errI) {
-            console.error(
-              "Greška pri upisu pobjednika za aukciju",
-              aukcija.id_predmeta,
-              errI,
-            );
-            return;
-          }
-
-          connection.query(
-            "SELECT id_transakcije FROM transakcija WHERE id_predmeta = ? AND id_korisnika = ? LIMIT 1",
-            [aukcija.id_predmeta, pobjednik.id_korisnika],
-            (errT, transakcije) => {
-              if (errT) {
-                console.error(
-                  "Greška pri provjeri transakcije za aukciju",
-                  aukcija.id_predmeta,
-                  errT,
-                );
-                return;
-              }
-
-              if (transakcije.length > 0) {
-                return;
-              }
-
-              connection.query(
-                "INSERT INTO transakcija (iznos_transakcije, vrijeme_transakcije, id_korisnika, id_predmeta) VALUES (?, NOW(), ?, ?)",
-                [
-                  pobjednik.vrijednost_ponude,
-                  pobjednik.id_korisnika,
-                  aukcija.id_predmeta,
-                ],
-                (errTR) => {
-                  if (errTR) {
-                    console.error(
-                      "Greška pri upisu transakcije za aukciju",
-                      aukcija.id_predmeta,
-                      errTR,
-                    );
-                  }
-                },
-              );
-            },
-          );
-        },
+        (errO) => { if (errO) console.error("Greška pri upisu osvojenog predmeta:", errO); }
       );
-    },
+
+      // FZ-2.4: Kreiraj transakciju
+      connection.query(
+        "INSERT IGNORE INTO transakcija (id_korisnika, id_predmeta, iznos_transakcije, vrijeme_transakcije) VALUES (?, ?, ?, NOW())",
+        [pobjednik.id_korisnika, aukcija.id_predmeta, pobjednik.vrijednost_ponude],
+        (errT) => { if (errT) console.error("Greška pri kreiranju transakcije:", errT); }
+      );
+
+      // Pobjedniku: čestitke
+      notifikacije.push([
+        pobjednik.id_korisnika,
+        aukcija.id_predmeta,
+        `Čestitamo! Pobijedili ste na aukciji "${aukcija.naziv_predmeta}" s ponudom ${pobjednik.vrijednost_ponude}$. Kontaktirajte prodavača za preuzimanje.`,
+      ]);
+      notifiedUsers.add(pobjednik.id_korisnika);
+
+      // Prodavaču: info o pobjedniku
+      if (!notifiedUsers.has(aukcija.id_prodavaca)) {
+        notifikacije.push([
+          aukcija.id_prodavaca,
+          aukcija.id_predmeta,
+          `Aukcija "${aukcija.naziv_predmeta}" je završila. Pobjednik: ${pobjednik.ime_korisnika} ${pobjednik.prezime_korisnika} (${pobjednik.email_korisnika}) s ponudom ${pobjednik.vrijednost_ponude}$.`,
+        ]);
+        notifiedUsers.add(aukcija.id_prodavaca);
+      }
+
+      // Ostalim bidderima: aukcija završila
+      connection.query(
+        "SELECT DISTINCT id_korisnika FROM ponuda WHERE id_predmeta = ? AND id_korisnika != ?",
+        [aukcija.id_predmeta, pobjednik.id_korisnika],
+        (errB, ostali) => {
+          (ostali || []).forEach((b) => {
+            if (!notifiedUsers.has(b.id_korisnika)) {
+              notifikacije.push([
+                b.id_korisnika,
+                aukcija.id_predmeta,
+                `Aukcija "${aukcija.naziv_predmeta}" je završila. Pobijedio je drugi sudionik s ponudom ${pobjednik.vrijednost_ponude}$.`,
+              ]);
+              notifiedUsers.add(b.id_korisnika);
+            }
+          });
+
+          // Pratiteljima koji nisu licitirali: aukcija završila
+          connection.query(
+            "SELECT id_korisnika FROM lista_pracenja WHERE id_predmeta = ?",
+            [aukcija.id_predmeta],
+            (errW, pratitelji) => {
+              (pratitelji || []).forEach((w) => {
+                if (!notifiedUsers.has(w.id_korisnika)) {
+                  notifikacije.push([
+                    w.id_korisnika,
+                    aukcija.id_predmeta,
+                    `Aukcija "${aukcija.naziv_predmeta}" je završila.`,
+                  ]);
+                }
+              });
+              posaljiNotifikacije(notifikacije);
+            }
+          );
+        }
+      );
+    }
   );
 }
 
+// Svakih 60 sekundi provjeri ima li završenih aukcija koje još nisu obrađene
 setInterval(() => {
   connection.query(
-    "SELECT id_predmeta, naziv_predmeta FROM predmet WHERE vrijeme_zavrsetka <= NOW()",
+    `SELECT p.id_predmeta, p.naziv_predmeta, p.id_korisnika AS id_prodavaca
+     FROM predmet p
+     WHERE p.vrijeme_zavrsetka <= NOW()
+     AND NOT EXISTS (
+       SELECT 1 FROM notifikacija n
+       WHERE n.id_predmeta = p.id_predmeta
+       AND n.poruka LIKE '%zavr%ila%'
+     )`,
     (err, aukcije) => {
       if (err || !aukcije.length) return;
       aukcije
@@ -1390,6 +2540,12 @@ setInterval(() => {
           obradeneAukcije.add(a.id_predmeta);
           obradiZavrsenuAukciju(a);
         });
-    },
+    }
   );
 }, 60 * 1000);
+
+module.exports = {
+  app,
+  server,
+  io,
+};
