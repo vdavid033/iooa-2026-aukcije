@@ -1,15 +1,15 @@
 <template>
   <q-page class="bg-grey-2">
     <div class="q-pa-md">
-
       <div class="row items-center justify-between q-mb-md">
         <div>
-          <div class="text-h5 text-weight-bold">{{ $t('allAuctionsPage.title') }}</div>
+          <div class="text-h5 text-weight-bold">
+            {{ $t("allAuctionsPage.title") }}
+          </div>
           <div class="text-grey">
-            {{ $t('allAuctionsPage.subtitle') }}
+            {{ $t("allAuctionsPage.subtitle") }}
           </div>
         </div>
-
       </div>
 
       <!-- FILTERI -->
@@ -50,6 +50,17 @@
             map-options
           />
         </div>
+        <div class="col-12 col-md-4">
+          <q-select
+            filled
+            dense
+            v-model="minOcjenaProdavatelja"
+            :options="ocjenaProdavateljaOpcije"
+            label="Minimalna ocjena prodavatelja"
+            emit-value
+            map-options
+          />
+        </div>
       </div>
 
       <!-- AUKCIJE -->
@@ -59,7 +70,10 @@
           :key="item.id_predmeta"
           class="col-12 col-sm-6 col-md-4"
         >
-          <q-card class="auction-card" @click="navigateToItem(item.id_predmeta)">
+          <q-card
+            class="auction-card"
+            @click="navigateToItem(item.id_predmeta)"
+          >
             <q-img :src="item.slika || defaultImg" style="height: 220px">
               <q-btn
                 class="save-button"
@@ -87,9 +101,13 @@
               <div
                 class="time-badge"
                 :class="isActive(item) ? 'bg-red' : 'bg-grey-8'"
-                >
-                {{ isActive(item) ? item.preostalo_vrijeme : $t('allAuctionsPage.finished') }}
-                </div>
+              >
+                {{
+                  isActive(item)
+                    ? item.preostalo_vrijeme
+                    : $t("allAuctionsPage.finished")
+                }}
+              </div>
             </q-img>
 
             <q-card-section>
@@ -99,28 +117,32 @@
 
               <div class="q-mt-sm">
                 <div class="row justify-between text-caption">
-                  <span>{{ $t('allAuctionsPage.startingPrice') }}:</span>
+                  <span>{{ $t("allAuctionsPage.startingPrice") }}:</span>
                   <span>{{ item.pocetna_cijena }}€</span>
                 </div>
 
                 <div class="row justify-between text-weight-bold text-primary">
-                  <span>{{ $t('allAuctionsPage.currentPrice') }}:</span>
+                  <span>{{ $t("allAuctionsPage.currentPrice") }}:</span>
                   <span>{{ item.trenutna_cijena }}€</span>
                 </div>
 
                 <div class="row justify-between text-caption q-mt-xs">
-                  <span>{{ $t('allAuctionsPage.endsAt') }}:</span>
+                  <span>{{ $t("allAuctionsPage.endsAt") }}:</span>
                   <span>{{ formatDate(item.vrijeme_zavrsetka) }}</span>
                 </div>
               </div>
 
               <div class="row justify-between items-center q-mt-sm">
                 <div class="text-caption">
-                  {{ item.bids || 0 }} {{ $t('allAuctionsPage.bids') }}
+                  {{ item.bids || 0 }} {{ $t("allAuctionsPage.bids") }}
                 </div>
 
                 <q-badge :color="isActive(item) ? 'green' : 'grey'">
-                  {{ isActive(item) ? $t('allAuctionsPage.active') : $t('allAuctionsPage.finished') }}
+                  {{
+                    isActive(item)
+                      ? $t("allAuctionsPage.active")
+                      : $t("allAuctionsPage.finished")
+                  }}
                 </q-badge>
               </div>
 
@@ -139,9 +161,8 @@
         v-if="filtriraneAukcije.length === 0"
         class="text-center text-grey q-mt-xl"
       >
-        {{ $t('allAuctionsPage.noAuctions') }}
+        {{ $t("allAuctionsPage.noAuctions") }}
       </div>
-
     </div>
   </q-page>
 </template>
@@ -160,6 +181,7 @@ export default {
       pretrazivanje: "",
       statusFilter: "sve",
       sortiranje: "newest",
+      minOcjenaProdavatelja: "sve",
       defaultImg: "https://via.placeholder.com/400",
       spremljeniIds: [],
       spremanjeIds: [],
@@ -170,11 +192,12 @@ export default {
     const token = localStorage.getItem("token");
     const headers = { Authorization: `Bearer ${token}` };
 
-    axios.get(baseUrl + "all-predmet", { headers })
-      .then(res => {
+    axios
+      .get(baseUrl + "all-predmet", { headers })
+      .then((res) => {
         this.aukcije = res.data;
       })
-      .catch(err => {
+      .catch((err) => {
         console.error("Greška kod dohvata aukcija:", err);
       });
 
@@ -184,42 +207,66 @@ export default {
   computed: {
     statusOpcije() {
       return [
-        { label: this.$t('allAuctionsPage.statusAll'), value: "sve" },
-        { label: this.$t('allAuctionsPage.statusActive'), value: "aktivne" },
-        { label: this.$t('allAuctionsPage.statusFinished'), value: "zavrsene" }
+        { label: this.$t("allAuctionsPage.statusAll"), value: "sve" },
+        { label: this.$t("allAuctionsPage.statusActive"), value: "aktivne" },
+        { label: this.$t("allAuctionsPage.statusFinished"), value: "zavrsene" },
       ];
     },
 
     sortiranjeOpcije() {
       return [
-        { label: this.$t('allAuctionsPage.sortNewest'), value: "newest" },
-        { label: this.$t('allAuctionsPage.sortPriceAsc'), value: "price-asc" },
-        { label: this.$t('allAuctionsPage.sortPriceDesc'), value: "price-desc" },
-        { label: this.$t('allAuctionsPage.sortNameAsc'), value: "name-asc" },
-        { label: this.$t('allAuctionsPage.sortNameDesc'), value: "name-desc" },
-        { label: this.$t('allAuctionsPage.sortEndingSoon'), value: "ending-soon" }
+        { label: this.$t("allAuctionsPage.sortNewest"), value: "newest" },
+        { label: this.$t("allAuctionsPage.sortPriceAsc"), value: "price-asc" },
+        {
+          label: this.$t("allAuctionsPage.sortPriceDesc"),
+          value: "price-desc",
+        },
+        { label: this.$t("allAuctionsPage.sortNameAsc"), value: "name-asc" },
+        { label: this.$t("allAuctionsPage.sortNameDesc"), value: "name-desc" },
+        {
+          label: this.$t("allAuctionsPage.sortEndingSoon"),
+          value: "ending-soon",
+        },
       ];
     },
-
+    ocjenaProdavateljaOpcije() {
+      return [
+        { label: "Sve ocjene", value: "sve" },
+        { label: "1+", value: 1 },
+        { label: "2+", value: 2 },
+        { label: "3+", value: 3 },
+        { label: "4+", value: 4 },
+        { label: "5", value: 5 },
+      ];
+    },
     filtriraneAukcije() {
       let rezultat = [...this.aukcije];
 
       if (this.pretrazivanje) {
-        rezultat = rezultat.filter(item =>
-          item.naziv_predmeta &&
-          item.naziv_predmeta.toLowerCase()
-            .includes(this.pretrazivanje.toLowerCase())
+        rezultat = rezultat.filter(
+          (item) =>
+            item.naziv_predmeta &&
+            item.naziv_predmeta
+              .toLowerCase()
+              .includes(this.pretrazivanje.toLowerCase()),
         );
       }
 
       if (this.statusFilter === "aktivne") {
-        rezultat = rezultat.filter(item => this.isActive(item));
+        rezultat = rezultat.filter((item) => this.isActive(item));
       }
 
       if (this.statusFilter === "zavrsene") {
-        rezultat = rezultat.filter(item => !this.isActive(item));
+        rezultat = rezultat.filter((item) => !this.isActive(item));
       }
-
+      if (this.minOcjenaProdavatelja !== "sve") {
+        rezultat = rezultat.filter(
+          (item) =>
+            item.prosjecna_ocjena_prodavatelja !== null &&
+            Number(item.prosjecna_ocjena_prodavatelja) >=
+              Number(this.minOcjenaProdavatelja),
+        );
+      }
       switch (this.sortiranje) {
         case "price-asc":
           rezultat.sort((a, b) => a.trenutna_cijena - b.trenutna_cijena);
@@ -231,19 +278,20 @@ export default {
 
         case "name-asc":
           rezultat.sort((a, b) =>
-            a.naziv_predmeta.localeCompare(b.naziv_predmeta)
+            a.naziv_predmeta.localeCompare(b.naziv_predmeta),
           );
           break;
 
         case "name-desc":
           rezultat.sort((a, b) =>
-            b.naziv_predmeta.localeCompare(a.naziv_predmeta)
+            b.naziv_predmeta.localeCompare(a.naziv_predmeta),
           );
           break;
 
         case "ending-soon":
-          rezultat.sort((a, b) =>
-            new Date(a.vrijeme_zavrsetka) - new Date(b.vrijeme_zavrsetka)
+          rezultat.sort(
+            (a, b) =>
+              new Date(a.vrijeme_zavrsetka) - new Date(b.vrijeme_zavrsetka),
           );
           break;
 
@@ -254,7 +302,7 @@ export default {
       }
 
       return rezultat;
-    }
+    },
   },
 
   methods: {
@@ -334,9 +382,7 @@ export default {
           message: this.$t("savedAuctions.error"),
         });
       } finally {
-        this.spremanjeIds = this.spremanjeIds.filter(
-          (id) => id !== idPredmeta,
-        );
+        this.spremanjeIds = this.spremanjeIds.filter((id) => id !== idPredmeta);
       }
     },
 
@@ -350,15 +396,15 @@ export default {
     },
 
     formatDate(date) {
-      if (!date) return this.$t('allAuctionsPage.notDefined');
+      if (!date) return this.$t("allAuctionsPage.notDefined");
 
       return new Date(date).toLocaleDateString("hr-HR", {
         day: "2-digit",
         month: "2-digit",
-        year: "numeric"
+        year: "numeric",
       });
-    }
-  }
+    },
+  },
 };
 </script>
 
