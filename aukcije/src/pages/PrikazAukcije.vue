@@ -1,3 +1,4 @@
+div>brojRecenzijaProdavatelja: 0,
 <template>
   <q-page class="auction-page">
     <div class="page-wrap">
@@ -125,7 +126,10 @@
                     {{ $t("auctionViewPage.noSellerRatings") }}
                   </span>
                 </div>
-
+                <div class="seller-rating">
+                  Završene/prodane aukcije:
+                  {{ brojZavrsenihAukcijaProdavatelja }}
+                </div>
                 <q-btn
                   outline
                   rounded
@@ -233,7 +237,10 @@
           <q-separator />
 
           <!-- Loading skeleton while fetching auto-bid status -->
-          <q-card-section v-if="autoBidStatusLoading" data-testid="auto-bid-status-loading">
+          <q-card-section
+            v-if="autoBidStatusLoading"
+            data-testid="auto-bid-status-loading"
+          >
             <q-skeleton type="rect" height="48px" class="q-mb-sm" />
             <q-skeleton type="rect" height="56px" />
           </q-card-section>
@@ -294,10 +301,18 @@
               </q-banner>
 
               <!-- Current configured amount (own data only — never shows other users' amounts) -->
-              <div class="q-mb-sm text-body2 text-grey-8" data-testid="auto-bid-limit">
+              <div
+                class="q-mb-sm text-body2 text-grey-8"
+                data-testid="auto-bid-limit"
+              >
                 <q-icon name="info" size="xs" color="grey-6" />
                 Vaš aktivni Auto-bid limit:
-                <strong>{{ Number(autoBidStatus.maksimalni_iznos).toFixed(2) }} €</strong>
+                <strong
+                  >{{
+                    Number(autoBidStatus.maksimalni_iznos).toFixed(2)
+                  }}
+                  €</strong
+                >
               </div>
             </template>
 
@@ -358,7 +373,8 @@
           <template v-slot:avatar>
             <q-icon name="login" color="grey-7" />
           </template>
-          Prijavite se kako biste mogli postaviti automatsko licitiranje (Auto-bid).
+          Prijavite se kako biste mogli postaviti automatsko licitiranje
+          (Auto-bid).
         </q-banner>
       </div>
       <!-- ─────────────────────────────────────────────────────────── -->
@@ -397,7 +413,9 @@
               v-for="ponuda in ponude"
               :key="ponuda.id_ponude"
               :class="isNajnovijaPonuda(ponuda) ? 'bg-green-1' : ''"
-              :data-testid="isNajnovijaPonuda(ponuda) ? 'najnovija-ponuda' : 'ponuda-red'"
+              :data-testid="
+                isNajnovijaPonuda(ponuda) ? 'najnovija-ponuda' : 'ponuda-red'
+              "
             >
               <q-item-section avatar>
                 <q-avatar color="blue-1" text-color="blue-8" icon="person" />
@@ -674,6 +692,7 @@ export default {
       recenzijeProdavatelja: [],
       prosjecnaOcjenaProdavatelja: null,
       brojRecenzijaProdavatelja: 0,
+      brojZavrsenihAukcijaProdavatelja: 0,
       successPrice: 0,
       odabranaCijena: "",
       prices: [],
@@ -701,7 +720,11 @@ export default {
       this.dohvatiRecenzijeProdavatelja(),
     ]);
     if (this.isAuthenticated) {
-      await Promise.all([this.dohvatiAutoBid(), this.dohvatiStatusPracenja(), this.dohvatiStatusSpremanja()]);
+      await Promise.all([
+        this.dohvatiAutoBid(),
+        this.dohvatiStatusPracenja(),
+        this.dohvatiStatusSpremanja(),
+      ]);
     }
     this.setupSocket();
   },
@@ -863,6 +886,8 @@ export default {
 
         this.prosjecnaOcjenaProdavatelja = res.data.prosjecnaOcjena;
         this.brojRecenzijaProdavatelja = res.data.brojRecenzija;
+        this.brojZavrsenihAukcijaProdavatelja =
+          res.data.brojZavrsenihAukcija || 0;
         this.recenzijeProdavatelja = res.data.recenzije;
       } catch (error) {
         console.error("Error fetching seller reviews:", error);
@@ -983,7 +1008,10 @@ export default {
             headers: this.getAuthHeaders(),
           });
           this.pratim = false;
-          this.$q.notify({ type: "positive", message: "Aukcija uklonjena s liste praćenja." });
+          this.$q.notify({
+            type: "positive",
+            message: "Aukcija uklonjena s liste praćenja.",
+          });
         } else {
           await axios.post(
             `${API_URL}/watchlist`,
@@ -991,12 +1019,17 @@ export default {
             { headers: this.getAuthHeaders() },
           );
           this.pratim = true;
-          this.$q.notify({ type: "positive", message: "Aukcija dodana na listu praćenja." });
+          this.$q.notify({
+            type: "positive",
+            message: "Aukcija dodana na listu praćenja.",
+          });
         }
       } catch (err) {
         this.$q.notify({
           type: "negative",
-          message: err.response?.data?.message || "Greška pri ažuriranju liste praćenja.",
+          message:
+            err.response?.data?.message ||
+            "Greška pri ažuriranju liste praćenja.",
         });
       }
     },
@@ -1142,7 +1175,6 @@ export default {
         this.autoBidLoading = false;
       }
     },
-
   },
 };
 </script>
