@@ -1229,6 +1229,158 @@ app.post("/api/ocjena-prodavatelja", authJwt.verifyTokenUser, (req, res) => {
   );
 });
 
+
+
+
+
+app.post("/api/komunikacija-nakon-prodaje", authJwt.verifyTokenUser, (req, res) => {
+  const {
+    id_transakcije,
+    id_predmeta,
+    polje,
+    vrijednost,
+    datum_slanja,
+    broj_za_pracenje,
+  } = req.body;
+
+  const dozvoljeneVrijednosti = {
+    placeno: ["placeno", "delete"],
+    primljena_uplata: ["primljena_uplata", "delete"],
+    poslano: ["poslano", "delete"],
+    posiljka_primljena: ["posiljka_primljena", "delete"],
+    posiljka_odgovara: ["posiljka_odgovara", "posiljka_ne_odgovara", "delete"],
+  };
+
+  if ((!id_transakcije && !id_predmeta) || !dozvoljeneVrijednosti[polje] || !dozvoljeneVrijednosti[polje].includes(vrijednost)) {
+    return res.status(400).json({ error: true, message: "Neispravni podaci." });
+  }
+
+  const poljaProdavatelja = ["primljena_uplata", "poslano"];
+  const poljaKupca = ["placeno", "posiljka_primljena", "posiljka_odgovara"];
+
+  const spremiZaTransakciju = (stvarniIdTransakcije) => {
+    connection.query(
+      `SELECT p.id_korisnika AS id_prodavatelja, op.id_korisnika AS id_kupca
+       FROM transakcija t
+       JOIN predmet p ON t.id_predmeta = p.id_predmeta
+       LEFT JOIN osvojeni_predmeti op ON op.id_predmeta = p.id_predmeta
+       WHERE t.id_transakcije = ?
+       LIMIT 1`,
+      [stvarniIdTransakcije],
+      (provjeraError, provjeraRows) => {
+        if (provjeraError) {
+          console.error("Greška pri provjeri transakcije:", provjeraError);
+          return res.status(500).json({ error: true, message: "Komunikacija nije spremljena." });
+        }
+
+        const transakcija = provjeraRows[0];
+        const smijeProdavatelj = poljaProdavatelja.includes(polje) && Number(transakcija?.id_prodavatelja) === Number(req.userId);
+        const smijeKupac = poljaKupca.includes(polje) && Number(transakcija?.id_kupca) === Number(req.userId);
+
+        if (!smijeProdavatelj && !smijeKupac) {
+          return res.status(403).json({ error: true, message: "Nemate pravo promjene ovog podatka." });
+        }
+
+        connection.query(
+          "SELECT id_komunikacije FROM komunikacija_nakon_prodaje WHERE id_transakcije = ? LIMIT 1",
+          [stvarniIdTransakcije],
+          (selectError, rows) => {
+            if (selectError) {
+              console.error("Greška pri dohvatu komunikacije:", selectError);
+              return res.status(500).json({ error: true, message: "Komunikacija nije spremljena." });
+            }
+
+            const spremiPromjenu = (idKomunikacije) => {
+              const novaVrijednost = vrijednost === "delete" ? null : vrijednost;
+              const setDijelovi = [`${polje} = ?`];
+              const params = [novaVrijednost];
+
+              if (polje === "poslano") {
+                setDijelovi.push("datum_slanja = ?", "broj_za_pracenje = ?");
+                params.push(vrijednost === "delete" ? null : datum_slanja || null);
+                params.push(vrijednost === "delete" ? null : broj_za_pracenje || null);
+              }
+
+              params.push(idKomunikacije);
+
+              connection.query(
+                `UPDATE komunikacija_nakon_prodaje SET ${setDijelovi.join(", ")} WHERE id_komunikacije = ?`,
+                params,
+                (updateError) => {
+                  if (updateError) {
+                    console.error("Greška pri spremanju komunikacije:", updateError);
+                    return res.status(500).json({ error: true, message: "Komunikacija nije spremljena." });
+                  }
+
+                  connection.query(
+                    `DELETE FROM komunikacija_nakon_prodaje
+                     WHERE id_komunikacije = ?
+                       AND placeno IS NULL
+                       AND primljena_uplata IS NULL
+                       AND poslano IS NULL
+                       AND posiljka_primljena IS NULL
+                       AND posiljka_odgovara IS NULL`,
+                    [idKomunikacije],
+                    () => res.json({ error: false, message: "Komunikacija je spremljena." }),
+                  );
+                },
+              );
+            };
+
+            if (rows.length > 0) {
+              return spremiPromjenu(rows[0].id_komunikacije);
+            }
+
+            connection.query(
+              "INSERT INTO komunikacija_nakon_prodaje (id_transakcije) VALUES (?)",
+              [stvarniIdTransakcije],
+              (insertError, insertResults) => {
+                if (insertError) {
+                  console.error("Greška pri kreiranju komunikacije:", insertError);
+                  return res.status(500).json({ error: true, message: "Komunikacija nije spremljena." });
+                }
+
+                spremiPromjenu(insertResults.insertId);
+              },
+            );
+          },
+        );
+      },
+    );
+  };
+
+  if (id_transakcije) {
+    return spremiZaTransakciju(id_transakcije);
+  }
+
+  connection.query(
+    "SELECT id_transakcije FROM transakcija WHERE id_predmeta = ? LIMIT 1",
+    [id_predmeta],
+    (transakcijaError, transakcijaRows) => {
+      if (transakcijaError) {
+        console.error("Greška pri dohvatu transakcije preko predmeta:", transakcijaError);
+        return res.status(500).json({ error: true, message: "Komunikacija nije spremljena." });
+      }
+
+      if (!transakcijaRows.length) {
+        return res.status(400).json({
+          error: true,
+          message: "Za ovaj predmet još ne postoji transakcija.",
+        });
+      }
+
+      return spremiZaTransakciju(transakcijaRows[0].id_transakcije);
+    },
+  );
+});
+
+
+
+
+/* orig sa timske grane
+app.listen(port, () => {
+na defelopment grani server.listen*/
+
 server.listen(port, () => {
   console.log("Server running at port: " + port);
 });
@@ -1616,6 +1768,20 @@ app.get("/api/vlastiti-predmeti/:id", authJwt.verifyTokenUser, (req, res) => {
     p.pocetna_cijena,
     p.vrijeme_pocetka,
     p.vrijeme_zavrsetka,
+
+
+
+    t.id_transakcije,
+    knp.placeno,
+    knp.primljena_uplata,
+    knp.poslano,
+    DATE_FORMAT(knp.datum_slanja, "%Y-%m-%d") AS datum_slanja,
+    knp.broj_za_pracenje,
+    knp.posiljka_primljena,
+    knp.posiljka_odgovara,
+
+
+
     CONCAT(
         FLOOR(TIMESTAMPDIFF(SECOND, NOW(), p.vrijeme_zavrsetka) / (24 * 3600)),
         ' dana, ',
@@ -1628,8 +1794,22 @@ app.get("/api/vlastiti-predmeti/:id", authJwt.verifyTokenUser, (req, res) => {
     COALESCE(MAX(po.vrijednost_ponude), p.pocetna_cijena) AS trenutna_cijena
 FROM predmet p
 LEFT JOIN ponuda po ON p.id_predmeta = po.id_predmeta
+
+
+
+LEFT JOIN transakcija t ON p.id_predmeta = t.id_predmeta
+LEFT JOIN komunikacija_nakon_prodaje knp ON t.id_transakcije = knp.id_transakcije
+
+
+
 WHERE p.id_korisnika = ?
-GROUP BY p.id_predmeta
+
+
+
+GROUP BY p.id_predmeta, t.id_transakcije, knp.id_komunikacije
+
+
+
 ORDER BY preostalo_vrijeme DESC;`,
     [req.params.id],
     (error, results) => {
@@ -1753,6 +1933,19 @@ app.get("/api/osvojeni-predmeti/:id", authJwt.verifyTokenUser, (req, res) => {
     `SELECT
     op.id_predmeta,
     t.id_transakcije,
+
+
+
+    knp.placeno,
+    knp.primljena_uplata,
+    knp.poslano,
+    DATE_FORMAT(knp.datum_slanja, "%Y-%m-%d") AS datum_slanja,
+    knp.broj_za_pracenje,
+    knp.posiljka_primljena,
+    knp.posiljka_odgovara,
+
+
+
     p.id_korisnika AS id_prodavatelja,
     CASE 
       WHEN ocj.id_ocjene IS NULL THEN 0
@@ -1767,10 +1960,23 @@ app.get("/api/osvojeni-predmeti/:id", authJwt.verifyTokenUser, (req, res) => {
 FROM osvojeni_predmeti op
 JOIN predmet p ON op.id_predmeta = p.id_predmeta
 LEFT JOIN transakcija t ON p.id_predmeta = t.id_predmeta
+
+
+
+LEFT JOIN komunikacija_nakon_prodaje knp ON t.id_transakcije = knp.id_transakcije
+
+
+
 LEFT JOIN ocjena_prodavatelja ocj ON t.id_transakcije = ocj.id_transakcije
 LEFT JOIN ponuda po ON p.id_predmeta = po.id_predmeta
 WHERE op.id_korisnika = ?
-GROUP BY op.id_predmeta, t.id_transakcije, p.id_korisnika, ocj.id_ocjene
+
+
+
+GROUP BY op.id_predmeta, t.id_transakcije, knp.id_komunikacije, p.id_korisnika, ocj.id_ocjene
+
+
+
 ORDER BY op.id_predmeta DESC;`,
     [req.params.id],
     (error, results) => {
