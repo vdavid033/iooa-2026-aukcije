@@ -26,7 +26,7 @@ Monia Kopjar, monia7777, (Prijevod na engleski (u bazi isto))
 Anamarija Ivanušić, AIvanusic, (Ocjene i recenzije prodavatelja)
 Darko Trbović, dtr-ri, (Komunikacija nakon završetka aukcije)
 Antonio Semialjac, AntonioSemi (dodavanje spremanja aukcija)
-Martina Rončević, newMarti24 (filtriranje aukcija prema minimalnoj ocjeni, proširenje statistike prodavača)
+Martina Rončević, newMarti24 (filtriranje aukcija prema minimalnoj ocjeni, proširenje statistike prodavača )
 
 ## Korisničke priče
 
