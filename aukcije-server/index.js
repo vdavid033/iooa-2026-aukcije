@@ -655,11 +655,23 @@ app.get("/api/recenzije-prodavatelja/:id", (req, res) => {
             brojRecenzija
           : null;
 
-      res.send({
-        prosjecnaOcjena,
-        brojRecenzija,
-        recenzije,
-      });
+      connection.query(
+        `SELECT COUNT(*) AS brojZavrsenihAukcija
+   FROM transakcija t
+   JOIN predmet p ON t.id_predmeta = p.id_predmeta
+   WHERE p.id_korisnika = ?`,
+        [idProdavatelja],
+        (errorStatistika, statistika) => {
+          if (errorStatistika) throw errorStatistika;
+
+          res.send({
+            prosjecnaOcjena,
+            brojRecenzija,
+            brojZavrsenihAukcija: statistika[0]?.brojZavrsenihAukcija || 0,
+            recenzije,
+          });
+        },
+      );
     },
   );
 });
@@ -1328,12 +1340,10 @@ app.post(
             Number(transakcija?.id_kupca) === Number(req.userId);
 
           if (!smijeProdavatelj && !smijeKupac) {
-            return res
-              .status(403)
-              .json({
-                error: true,
-                message: "Nemate pravo promjene ovog podatka.",
-              });
+            return res.status(403).json({
+              error: true,
+              message: "Nemate pravo promjene ovog podatka.",
+            });
           }
 
           connection.query(
@@ -1342,12 +1352,10 @@ app.post(
             (selectError, rows) => {
               if (selectError) {
                 console.error("Greška pri dohvatu komunikacije:", selectError);
-                return res
-                  .status(500)
-                  .json({
-                    error: true,
-                    message: "Komunikacija nije spremljena.",
-                  });
+                return res.status(500).json({
+                  error: true,
+                  message: "Komunikacija nije spremljena.",
+                });
               }
 
               const spremiPromjenu = (idKomunikacije) => {
@@ -1377,12 +1385,10 @@ app.post(
                         "Greška pri spremanju komunikacije:",
                         updateError,
                       );
-                      return res
-                        .status(500)
-                        .json({
-                          error: true,
-                          message: "Komunikacija nije spremljena.",
-                        });
+                      return res.status(500).json({
+                        error: true,
+                        message: "Komunikacija nije spremljena.",
+                      });
                     }
 
                     connection.query(
@@ -1417,12 +1423,10 @@ app.post(
                       "Greška pri kreiranju komunikacije:",
                       insertError,
                     );
-                    return res
-                      .status(500)
-                      .json({
-                        error: true,
-                        message: "Komunikacija nije spremljena.",
-                      });
+                    return res.status(500).json({
+                      error: true,
+                      message: "Komunikacija nije spremljena.",
+                    });
                   }
 
                   spremiPromjenu(insertResults.insertId);
@@ -1876,12 +1880,10 @@ app.delete(
           (error, results) => {
             if (error) {
               console.error("Neuspješno brisanje kategorije:", error);
-              return res
-                .status(500)
-                .json({
-                  error: true,
-                  message: "Neuspješno brisanje kategorije.",
-                });
+              return res.status(500).json({
+                error: true,
+                message: "Neuspješno brisanje kategorije.",
+              });
             }
             console.log("Brisanje uspješno.");
             return res.send({
@@ -2306,19 +2308,15 @@ app.post("/api/watchlist", authJwt.verifyTokenUser, (req, res) => {
     (error) => {
       if (error) {
         if (error.code === "ER_DUP_ENTRY") {
-          return res
-            .status(409)
-            .json({
-              error: true,
-              message: "Aukcija je već na listi praćenja.",
-            });
-        }
-        return res
-          .status(500)
-          .json({
+          return res.status(409).json({
             error: true,
-            message: "Greška pri dodavanju na listu praćenja.",
+            message: "Aukcija je već na listi praćenja.",
           });
+        }
+        return res.status(500).json({
+          error: true,
+          message: "Greška pri dodavanju na listu praćenja.",
+        });
       }
       res
         .status(201)
@@ -2473,19 +2471,15 @@ app.delete("/api/watchlist/:predmetId", authJwt.verifyTokenUser, (req, res) => {
     [id_korisnika, id_predmeta],
     (error, results) => {
       if (error)
-        return res
-          .status(500)
-          .json({
-            error: true,
-            message: "Greška pri uklanjanju s liste praćenja.",
-          });
+        return res.status(500).json({
+          error: true,
+          message: "Greška pri uklanjanju s liste praćenja.",
+        });
       if (results.affectedRows === 0) {
-        return res
-          .status(404)
-          .json({
-            error: true,
-            message: "Aukcija nije pronađena na listi praćenja.",
-          });
+        return res.status(404).json({
+          error: true,
+          message: "Aukcija nije pronađena na listi praćenja.",
+        });
       }
       res.json({
         error: false,
@@ -2532,12 +2526,10 @@ app.put(
       [req.params.korisnikId],
       (error) => {
         if (error)
-          return res
-            .status(500)
-            .json({
-              error: true,
-              message: "Greška pri označavanju notifikacija.",
-            });
+          return res.status(500).json({
+            error: true,
+            message: "Greška pri označavanju notifikacija.",
+          });
         res.json({
           error: false,
           message: "Sve notifikacije označene kao pročitane.",
