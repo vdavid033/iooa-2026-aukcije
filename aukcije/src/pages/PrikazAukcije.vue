@@ -1,4 +1,3 @@
-div>brojRecenzijaProdavatelja: 0,
 <template>
   <q-page class="auction-page">
     <div class="page-wrap">
@@ -138,6 +137,15 @@ div>brojRecenzijaProdavatelja: 0,
                   :label="$t('auctionViewPage.showReviews')"
                   class="q-mt-sm"
                   @click="prikaziRecenzijeProdavatelja"
+                />
+                <q-btn
+                  outline
+                  rounded
+                  color="negative"
+                  icon="flag"
+                  label="Prijavi prodavatelja"
+                  class="q-mt-sm"
+                  @click="reportDialog = true"
                 />
               </div>
 
@@ -555,6 +563,45 @@ div>brojRecenzijaProdavatelja: 0,
           </q-card-actions>
         </q-card>
       </q-dialog>
+      <q-dialog v-model="reportDialog">
+        <q-card class="reviews-dialog">
+          <q-card-section>
+            <div class="dialog-title">Prijava prodavatelja</div>
+            <div class="dialog-subtitle">
+              Odaberite razlog prijave prodavatelja za ovu aukciju.
+            </div>
+          </q-card-section>
+
+          <q-card-section>
+            <q-select
+              outlined
+              v-model="razlogPrijave"
+              :options="razloziPrijave"
+              label="Razlog prijave"
+            />
+
+            <q-input
+              class="q-mt-md"
+              outlined
+              type="textarea"
+              v-model="komentarPrijave"
+              label="Komentar"
+            />
+          </q-card-section>
+
+          <q-card-actions align="right">
+            <q-btn flat label="Odustani" color="grey-7" v-close-popup />
+
+            <q-btn
+              unelevated
+              label="Pošalji prijavu"
+              color="negative"
+              :loading="slanjePrijave"
+              @click="posaljiPrijavuProdavatelja"
+            />
+          </q-card-actions>
+        </q-card>
+      </q-dialog>
     </div>
   </q-page>
 </template>
@@ -709,6 +756,17 @@ export default {
       socketPredmetId: null,
       aukcijaSpremljena: false,
       spremanjeUTijeku: false,
+      reportDialog: false,
+      razlogPrijave: null,
+      komentarPrijave: "",
+      slanjePrijave: false,
+      razloziPrijave: [
+        "Lažni oglas",
+        "Predmet ne odgovara opisu",
+        "Sumnjiva komunikacija",
+        "Neprimjeren sadržaj",
+        "Drugo",
+      ],
     };
   },
 
@@ -897,6 +955,62 @@ export default {
     async prikaziRecenzijeProdavatelja() {
       await this.dohvatiRecenzijeProdavatelja();
       this.reviewsDialog = true;
+    },
+    async posaljiPrijavuProdavatelja() {
+      const token = localStorage.getItem("token");
+
+      if (!token) {
+        this.$q.notify({
+          type: "warning",
+          message: "Za prijavu prodavatelja morate biti prijavljeni.",
+        });
+        return;
+      }
+
+      if (!this.razlogPrijave) {
+        this.$q.notify({
+          type: "warning",
+          message: "Potrebno je odabrati razlog prijave.",
+        });
+        return;
+      }
+
+      if (this.slanjePrijave) return;
+      this.slanjePrijave = true;
+
+      try {
+        await axios.post(
+          `${API_URL}/prijava-prodavatelja`,
+          {
+            id_predmeta: this.id_predmeta,
+            razlog: this.razlogPrijave,
+            komentar: this.komentarPrijave,
+          },
+          {
+            headers: this.getAuthHeaders(),
+          },
+        );
+
+        this.$q.notify({
+          type: "positive",
+          message: "Prijava prodavatelja je uspješno poslana.",
+        });
+
+        this.reportDialog = false;
+        this.razlogPrijave = null;
+        this.komentarPrijave = "";
+      } catch (error) {
+        console.error("Greška pri slanju prijave prodavatelja:", error);
+
+        this.$q.notify({
+          type: "negative",
+          message:
+            error.response?.data?.message ||
+            "Prijava prodavatelja nije spremljena.",
+        });
+      } finally {
+        this.slanjePrijave = false;
+      }
     },
 
     async dohvatiPonude(options = {}) {
