@@ -1275,7 +1275,72 @@ app.post("/api/ocjena-prodavatelja", authJwt.verifyTokenUser, (req, res) => {
     },
   );
 });
+app.post("/api/prijava-prodavatelja", authJwt.verifyTokenUser, (req, res) => {
+  const { id_predmeta, razlog, komentar } = req.body;
+  const idPrijavitelja = req.userId;
 
+  if (!id_predmeta || !razlog) {
+    return res.status(400).json({
+      error: true,
+      message: "Potrebno je odabrati razlog prijave.",
+    });
+  }
+
+  connection.query(
+    "SELECT id_predmeta, id_korisnika AS id_prodavatelja FROM predmet WHERE id_predmeta = ?",
+    [id_predmeta],
+    (error, predmetResults) => {
+      if (error) {
+        console.error("Greška pri dohvatu predmeta za prijavu:", error);
+        return res.status(500).json({
+          error: true,
+          message: "Greška pri provjeri predmeta.",
+        });
+      }
+
+      if (predmetResults.length === 0) {
+        return res.status(404).json({
+          error: true,
+          message: "Predmet nije pronađen.",
+        });
+      }
+
+      const idProdavatelja = predmetResults[0].id_prodavatelja;
+
+      if (Number(idProdavatelja) === Number(idPrijavitelja)) {
+        return res.status(400).json({
+          error: true,
+          message: "Ne možete prijaviti sami sebe kao prodavatelja.",
+        });
+      }
+
+      connection.query(
+        `INSERT INTO prijava_prodavatelja
+          (id_predmeta, id_prodavatelja, id_prijavitelja, razlog, komentar)
+         VALUES (?, ?, ?, ?, ?)`,
+        [id_predmeta, idProdavatelja, idPrijavitelja, razlog, komentar || null],
+        (insertError, results) => {
+          if (insertError) {
+            console.error(
+              "Greška pri spremanju prijave prodavatelja:",
+              insertError,
+            );
+            return res.status(500).json({
+              error: true,
+              message: "Prijava nije spremljena.",
+            });
+          }
+
+          return res.status(201).json({
+            error: false,
+            message: "Prijava prodavatelja je uspješno spremljena.",
+            data: results,
+          });
+        },
+      );
+    },
+  );
+});
 app.post(
   "/api/komunikacija-nakon-prodaje",
   authJwt.verifyTokenUser,
