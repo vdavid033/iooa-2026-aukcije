@@ -226,32 +226,64 @@
               {{ $t("profilePage.currentPrice") }}:
               {{ predmet.trenutna_cijena }}$
             </div>
-          </q-card-section>
+
 
           <q-separator />
 
-          <q-card-actions align="between">
-            <q-btn
-              flat
-              :label="$t('profilePage.view')"
-              @click="pregledPredmeta(predmet.id_predmeta)"
-            />
 
-            <div v-if="provjeriDatum(predmet)">
+            <q-card-actions align="between">
               <q-btn
                 flat
-                color="primary"
-                :label="$t('profilePage.edit')"
-                @click="izmijeniPredmet(predmet.id_predmeta)"
+                :label="$t('profilePage.view')"
+                @click="pregledPredmeta(predmet.id_predmeta)"
               />
-              <q-btn
-                flat
-                color="negative"
-                :label="$t('profilePage.delete')"
-                @click="obrisiPredmet(predmet.id_predmeta)"
-              />
+
+              <div v-if="provjeriDatum(predmet)">
+                <q-btn
+                  flat
+                  color="primary"
+                  :label="$t('profilePage.edit')"
+                  @click="izmijeniPredmet(predmet.id_predmeta)"
+                />
+                <q-btn
+                  flat
+                  color="negative"
+                  :label="$t('profilePage.delete')"
+                  @click="obrisiPredmet(predmet.id_predmeta)"
+                />
+              </div>
+            </q-card-actions>
+
+
+            <div v-if="!provjeriDatum(predmet)" >
+
+
+              <q-separator />
+
+              <div class="komunikacija-nakon-kupnje-title">
+                Komunikacija nakon kupnje
+              </div>
+
+
+              <div class="communication-actions">
+                <q-btn
+                  v-for="gumb in komunikacijaGumbi"
+                  :key="'seller-' + predmet.id_predmeta + '-' + gumb.polje"
+                  dense
+                  unelevated
+                  class="communication-btn"
+                  :class="{ 'communication-btn--readonly': !mozeKliknutiKomunikaciju('seller', gumb, predmet) }"
+                  :color="bojaKomunikacijskogGumba(predmet, gumb)"
+                  :label="gumb.simbol"
+                  @click="otvoriKomunikaciju(predmet, gumb, 'seller')"
+                >
+                  <q-tooltip>
+                    <div style="white-space: pre-line">{{ porukaKomunikacijskogGumba(predmet, gumb) }}</div>
+                  </q-tooltip>
+                </q-btn>
+              </div>
             </div>
-          </q-card-actions>
+          </q-card-section>
         </q-card>
       </div>
     </div>
@@ -365,6 +397,32 @@
               :label="$t('profilePage.sellerRated')"
               disable
             />
+
+            <q-separator class="q-my-md" />
+
+
+            <div class="komunikacija-nakon-kupnje-title">
+                Komunikacija nakon kupnje
+            </div>
+
+
+            <div class="communication-actions">
+              <q-btn
+                v-for="gumb in komunikacijaGumbi"
+                :key="'buyer-' + osvojeniPredmet.id_predmeta + '-' + gumb.polje"
+                dense
+                unelevated
+                class="communication-btn"
+                :class="{ 'communication-btn--readonly': !mozeKliknutiKomunikaciju('buyer', gumb, osvojeniPredmet) }"
+                :color="bojaKomunikacijskogGumba(osvojeniPredmet, gumb)"
+                :label="gumb.simbol"
+                @click="otvoriKomunikaciju(osvojeniPredmet, gumb, 'buyer')"
+              >
+                <q-tooltip>
+                  <div style="white-space: pre-line">{{ porukaKomunikacijskogGumba(osvojeniPredmet, gumb) }}</div>
+                </q-tooltip>
+              </q-btn>
+            </div>
           </q-card-section>
         </q-card>
       </div>
@@ -418,6 +476,60 @@
         </q-card-actions>
       </q-card>
     </q-dialog>
+
+
+    <q-dialog v-model="komunikacijaDialog">
+      <q-card class="communication-dialog" style="width: 430px; max-width: 90vw">
+        <q-card-section class="q-pb-sm">
+          <div class="text-h6">{{ odabraniKomunikacijskiGumb?.naziv }}</div>
+          <div class="text-body2 text-grey q-mt-sm">
+            {{ $t("auctionViewPage.item") }}:
+            {{
+              $pick(
+                odabraniKomunikacijskiPredmet?.naziv_predmeta,
+                odabraniKomunikacijskiPredmet?.naziv_predmeta_en,
+              )
+            }}
+          </div>
+        </q-card-section>
+
+        <q-card-section>
+          <q-option-group
+            v-model="komunikacijaForma.odabir"
+            :options="komunikacijskeOpcije"
+            type="radio"
+          />
+
+          <template v-if="odabraniKomunikacijskiGumb?.polje === 'poslano'">
+            <q-input
+              outlined
+              type="date"
+              v-model="komunikacijaForma.datum_slanja"
+              :label="$t('profilePage.shippingDate')"
+              class="q-mt-md"
+              :disable="komunikacijaForma.odabir === 'delete'"
+            />
+            <q-input
+              outlined
+              v-model="komunikacijaForma.broj_za_pracenje"
+              :label="$t('profilePage.trackingNumber')"
+              class="q-mt-md"
+              :disable="komunikacijaForma.odabir === 'delete'"
+            />
+          </template>
+        </q-card-section>
+
+        <q-card-actions align="right">
+          <q-btn flat :label="$t('common.cancel')" color="grey" v-close-popup />
+          <q-btn
+            unelevated
+            color="primary"
+            :label="$t('profilePage.saveCommunication')"
+            @click="spremiKomunikaciju"
+          />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
   </div>
 </template>
 
@@ -456,10 +568,45 @@
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
 }
 
-.rating-dialog {
+.rating-dialog,
+.communication-dialog {
   border-radius: 20px;
   overflow: hidden;
 }
+
+.communication-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.communication-btn {
+  min-width: 46px;
+  font-weight: 700;
+}
+
+.communication-btn--readonly {
+  opacity: 0.65;
+}
+
+.komunikacija-nakon-kupnje-title {
+    margin-top: 10px;
+    margin-bottom: 6px;
+    font-size: 13px;
+    font-weight: bold;
+    color: #666;
+    text-align: left;
+}
+
+.komunikacija-nakon-kupnje-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 5px;
+    flex-wrap: wrap;
+}
+
+white-space: pre-line;
+
 </style>
 
 <script>
@@ -483,7 +630,43 @@ export default {
       odabraniOsvojeniPredmet: null,
       ocjenaProdavatelja: null,
       komentarProdavatelja: "",
+      komunikacijaDialog: false,
+      odabraniKomunikacijskiPredmet: null,
+      odabraniKomunikacijskiGumb: null,
+      komunikacijaForma: {
+        odabir: null,
+        datum_slanja: null,
+        broj_za_pracenje: "",
+      },
+      komunikacijaKontekst: null,
+      komunikacijaGumbi: [
+        { polje: "placeno", vrijednost: "placeno", simbol: "$->", naziv: "Plaćeno", uloge: ["buyer"] },
+        { polje: "primljena_uplata", vrijednost: "primljena_uplata", simbol: "->$", naziv: "Primljena uplata", uloge: ["seller"] },
+        { polje: "poslano", vrijednost: "poslano", simbol: "\u2709->", naziv: "Poslano", uloge: ["seller"] },
+        { polje: "posiljka_primljena", vrijednost: "posiljka_primljena", simbol: "->\u2709", naziv: "Pošiljka primljena", uloge: ["buyer"] },
+        { polje: "posiljka_odgovara", vrijednost: "posiljka_odgovara", simbol: "✓/x", naziv: "Pošiljka odgovara oglašenom", uloge: ["buyer"] },
+      ],
     };
+  },
+
+  computed: {
+    komunikacijskeOpcije() {
+      const gumb = this.odabraniKomunikacijskiGumb;
+      if (!gumb) return [];
+
+      if (gumb.polje === "posiljka_odgovara") {
+        return [
+          { label: this.$t("profilePage.packageMatches"), value: "posiljka_odgovara" },
+          { label: this.$t("profilePage.packageDoesNotMatch"), value: "posiljka_ne_odgovara" },
+          { label: this.$t("profilePage.deleteCommunicationRecord"), value: "delete" },
+        ];
+      }
+
+      return [
+        { label: gumb.naziv, value: gumb.vrijednost },
+        { label: this.$t("profilePage.deleteCommunicationRecord"), value: "delete" },
+      ];
+    },
   },
 
   async mounted() {
@@ -630,7 +813,114 @@ export default {
     },
 
     provjeriDatum(predmet) {
-      return new Date(predmet.vrijeme_pocetka) > new Date();
+      return new Date(predmet.vrijeme_zavrsetka) > new Date();
+    },
+
+
+    mozeKliknutiKomunikaciju(kontekst, gumb, predmet) {
+      if (!gumb.uloge.includes(kontekst)) return false;
+
+      // Za prodavatelja su klikabilni samo gumbi "primljena uplata" i "poslano"
+      // u okviru "Vaši predmeti na aukciji", i to samo nakon završetka aukcije.
+
+      if (kontekst === "seller") {
+        return !this.provjeriDatum(predmet);
+      }
+
+      // Za kupca ostaje sigurnosna provjera da postoji transakcija.
+      return !!predmet.id_transakcije;
+    },
+
+    bojaKomunikacijskogGumba(predmet, gumb) {
+      const vrijednost = predmet[gumb.polje];
+      if (!vrijednost) return "grey";
+      if (gumb.polje === "posiljka_odgovara" && vrijednost === "posiljka_ne_odgovara") {
+        return "negative";
+      }
+      return "positive";
+    },
+
+    porukaKomunikacijskogGumba(predmet, gumb) {
+      const vrijednost = predmet[gumb.polje];
+      if (!vrijednost) return this.$t("profilePage.noCommunicationData");
+
+      const poruke = {
+        placeno: this.$t("profilePage.paidTooltip"),
+        primljena_uplata: this.$t("profilePage.paymentReceivedTooltip"),
+        posiljka_primljena: this.$t("profilePage.packageReceivedTooltip"),
+      };
+
+      if (gumb.polje === "poslano") {
+        const datum = predmet.datum_slanja ? this.formattedDate(predmet.datum_slanja) : "-";
+        const pracenje = predmet.broj_za_pracenje || "-";
+        const datumPrikaz = datum ? datum.toString().substring(0, 13) : "-";
+
+        return `${this.$t("profilePage.sentTooltip")}\n${this.$t("profilePage.shippingDate")}: ${datumPrikaz}\n${this.$t("profilePage.trackingNumber")}: ${pracenje}`;
+      }
+
+      if (gumb.polje === "posiljka_odgovara") {
+        return vrijednost === "posiljka_ne_odgovara"
+          ? this.$t("profilePage.packageDoesNotMatchTooltip")
+          : this.$t("profilePage.packageMatchesTooltip");
+      }
+
+      return poruke[gumb.polje] || this.$t("profilePage.noCommunicationData");
+    },
+
+    otvoriKomunikaciju(predmet, gumb, kontekst) {
+      if (!this.mozeKliknutiKomunikaciju(kontekst, gumb, predmet)) return;
+
+      this.odabraniKomunikacijskiPredmet = predmet;
+      this.odabraniKomunikacijskiGumb = gumb;
+      this.komunikacijaKontekst = kontekst;
+      this.komunikacijaForma = {
+        odabir: predmet[gumb.polje] || gumb.vrijednost,
+        datum_slanja: predmet.datum_slanja ? String(predmet.datum_slanja).substring(0, 10) : null,
+        broj_za_pracenje: predmet.broj_za_pracenje || "",
+      };
+      this.komunikacijaDialog = true;
+    },
+
+    async spremiKomunikaciju() {
+      try {
+        const token = localStorage.getItem("token");
+        const headers = { Authorization: `Bearer ${token}` };
+        const gumb = this.odabraniKomunikacijskiGumb;
+        const predmet = this.odabraniKomunikacijskiPredmet;
+
+        await axios.post(
+          "http://localhost:3000/api/komunikacija-nakon-prodaje",
+          {
+            id_transakcije: predmet.id_transakcije,
+            id_predmeta: predmet.id_predmeta,
+            polje: gumb.polje,
+            vrijednost: this.komunikacijaForma.odabir,
+            datum_slanja: this.komunikacijaForma.datum_slanja,
+            broj_za_pracenje: this.komunikacijaForma.broj_za_pracenje,
+          },
+          { headers },
+        );
+
+        if (this.komunikacijaForma.odabir === "delete") {
+          predmet[gumb.polje] = null;
+          if (gumb.polje === "poslano") {
+            predmet.datum_slanja = null;
+            predmet.broj_za_pracenje = null;
+          }
+        } else {
+          predmet[gumb.polje] = this.komunikacijaForma.odabir;
+          if (gumb.polje === "poslano") {
+            predmet.datum_slanja = this.komunikacijaForma.datum_slanja;
+            predmet.broj_za_pracenje = this.komunikacijaForma.broj_za_pracenje;
+          }
+        }
+
+        this.komunikacijaDialog = false;
+        this.$q.notify({ type: "positive", message: this.$t("profilePage.communicationSaved") });
+      } catch (error) {
+        console.error(error);
+        this.$q.notify({ type: "negative", message: this.$t("profilePage.communicationError") });
+      }
     },
 
     otvoriOcjenjivanje(osvojeniPredmet) {
