@@ -1068,7 +1068,7 @@ export default {
       }
       if (!this.odabranaCijena) return;
 
-      const selectedPrice = parseFloat(this.odabranaCijena);
+      const selectedPrice = parseFloat(this.odabranaCijena.value);
       if (selectedPrice <= this.item.trenutna_cijena) return;
 
       try {
