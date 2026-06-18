@@ -797,7 +797,7 @@ export default {
       if (!token) return;
 
       try {
-        const response = await axios.get(baseUrl + "spremljene-aukcije", {
+        const response = await axios.get(`${API_URL}/spremljene-aukcije`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         this.aukcijaSpremljena = response.data.some(
@@ -835,7 +835,7 @@ export default {
 
         if (this.aukcijaSpremljena) {
           await axios.delete(
-            baseUrl + "spremljene-aukcije/" + this.id_predmeta,
+            `${API_URL}/spremljene-aukcije/${this.id_predmeta}`,
             { headers },
           );
           this.aukcijaSpremljena = false;
@@ -845,7 +845,7 @@ export default {
           });
         } else {
           await axios.post(
-            baseUrl + "spremljene-aukcije/" + this.id_predmeta,
+            `${API_URL}/spremljene-aukcije/${this.id_predmeta}`,
             {},
             { headers },
           );
